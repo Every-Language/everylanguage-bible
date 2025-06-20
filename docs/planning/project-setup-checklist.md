@@ -126,8 +126,8 @@ npm install --save-dev @expo/cli eas-cli
 ```
 
 - [ ] Install all dev dependencies
-- [ ] Configure ESLint and Prettier
-- [ ] Set up pre-commit hooks with husky
+- [x] Configure ESLint and Prettier
+- [x] Set up pre-commit hooks with husky
 
 ## Phase 3: Project Configuration
 
