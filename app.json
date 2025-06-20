@@ -2,6 +2,7 @@
   "expo": {
     "name": "el-bible",
     "slug": "el-bible",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "plugins": ["expo-sqlite"]
   }
 }

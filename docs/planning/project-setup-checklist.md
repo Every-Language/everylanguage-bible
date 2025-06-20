@@ -1,11 +1,13 @@
 # Project Setup Checklist
 
 ## Overview
+
 This checklist covers everything needed to set up the multilingual audio Bible app project from scratch to a team-ready development environment. Complete each section in order.
 
 ## Prerequisites
 
 ### Required Accounts & Services
+
 - [x] **GitHub Account** - For code repository and CI/CD
 - [x] **Expo Account** - For builds and OTA updates
 - [x] **Apple Developer Account** - For iOS deployment ($99/year)
@@ -16,6 +18,7 @@ This checklist covers everything needed to set up the multilingual audio Bible a
 - [x] **Sentry Account** - For error monitoring
 
 ### Development Environment
+
 - [x] **Node.js** - Install LTS version (v18+) ✅ v20.19.0
 - [x] **npm/yarn** - Package manager (yarn recommended) ✅ npm v10.8.2, yarn v1.22.22
 - [x] **Git** - Version control ✅ v2.47.0
@@ -28,11 +31,12 @@ This checklist covers everything needed to set up the multilingual audio Bible a
   - [x] GitLens
 - [x] **Xcode** - For iOS development (macOS only) ✅ v16.4
 - [x] **Android Studio** - For Android development
-- [x] **Flipper** - For debugging and performance monitoring 
+- [x] **Flipper** - For debugging and performance monitoring
 
 ## Phase 1: Project Initialization
 
 ### 1.1 Create Repository
+
 - [x] Create new GitHub repository: https://github.com/Every-Language/everylanguage-bible.git
 - [x] Initialize with README.md
 - [x] Add `.gitignore` for React Native
@@ -40,6 +44,7 @@ This checklist covers everything needed to set up the multilingual audio Bible a
 - [x] Create `develop` branch as default branch
 
 ### 1.2 Initialize React Native Project
+
 ```bash
 # Create Expo project with bare workflow
 npx create-expo-app BibleApp --template bare-minimum
@@ -50,42 +55,20 @@ git init
 git remote add origin https://github.com/Every-Language/everylanguage-bible.git
 ```
 
-- [ ] Run project initialization command
-- [ ] Verify project structure is created
-- [ ] Test initial build on both platforms
+- [x] Run project initialization command
+- [x] Test initial build on both platforms
+- [x] Enable Fabric in `android/gradle.properties`:
 
-### 1.3 Enable New Architecture
-- [ ] Update `react-native.config.js`:
-```javascript
-module.exports = {
-  project: {
-    ios: {},
-    android: {},
-  },
-  dependencies: {
-    'react-native': {
-      platforms: {
-        android: {
-          sourceDir: '../node_modules/react-native/android',
-          packageImportPath: 'io.invertase.react-native',
-        },
-      },
-    },
-  },
-};
-```
-
-- [ ] Enable Fabric in `android/gradle.properties`:
 ```
 newArchEnabled=true
 ```
 
-- [ ] Enable Fabric in iOS project settings
-- [ ] Test build with new architecture enabled
+- [x] Enable Fabric in iOS project settings
 
 ## Phase 2: Core Dependencies Installation
 
 ### 2.1 Install Core Packages
+
 ```bash
 # Core framework dependencies
 npx expo install expo-dev-client
@@ -128,6 +111,7 @@ npx expo install expo-file-system expo-sharing
 - [ ] Test that project still builds
 
 ### 2.2 Install Development Dependencies
+
 ```bash
 # Testing
 npm install --save-dev jest @testing-library/react-native @testing-library/jest-native
@@ -148,52 +132,23 @@ npm install --save-dev @expo/cli eas-cli
 ## Phase 3: Project Configuration
 
 ### 3.1 TypeScript Configuration
-- [ ] Create/update `tsconfig.json`:
-```json
-{
-  "extends": "expo/tsconfig.base",
-  "compilerOptions": {
-    "strict": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"],
-      "@/components/*": ["src/components/*"],
-      "@/screens/*": ["src/screens/*"],
-      "@/services/*": ["src/services/*"],
-      "@/store/*": ["src/store/*"],
-      "@/types/*": ["src/types/*"],
-      "@/utils/*": ["src/utils/*"]
-    }
-  }
-}
-```
 
+- [ ] Create/update `tsconfig.json`:
 - [ ] Configure path aliases in Metro config
 - [ ] Test TypeScript compilation
 
 ### 3.2 Project Structure
-Create the following folder structure:
-```
-src/
-├── components/           # Reusable UI components
-├── screens/             # Screen components
-├── navigation/          # Navigation configuration
-├── services/           # API and external services
-├── store/              # Zustand stores
-├── hooks/              # Custom React hooks
-├── utils/              # Utility functions
-├── types/              # TypeScript type definitions
-├── constants/          # App constants
-├── assets/             # Images, fonts, etc.
-└── locales/            # Translation files
-```
+
+Create a feature first project structure
 
 - [ ] Create folder structure
 - [ ] Add index.ts files for clean imports
 - [ ] Set up absolute imports
 
 ### 3.3 Environment Configuration
+
 - [ ] Create `.env.example`:
+
 ```env
 # Supabase
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
@@ -222,6 +177,7 @@ POWERSYNC_URL=your_powersync_url
 ## Phase 4: Service Configuration
 
 ### 4.1 Supabase Setup
+
 - [ ] Create new Supabase project
 - [ ] Set up authentication providers (email, Google, Apple)
 - [ ] Create initial database schema
@@ -230,6 +186,7 @@ POWERSYNC_URL=your_powersync_url
 - [ ] Test connection from app
 
 ### 4.2 PowerSync Configuration
+
 - [ ] Create PowerSync account and project
 - [ ] Configure sync rules
 - [ ] Set up Supabase integration
@@ -237,6 +194,7 @@ POWERSYNC_URL=your_powersync_url
 - [ ] Document sync patterns
 
 ### 4.3 Backblaze B2 Setup
+
 - [ ] Create B2 bucket for audio files
 - [ ] Configure bucket permissions
 - [ ] Set up CDN (if needed)
@@ -244,6 +202,7 @@ POWERSYNC_URL=your_powersync_url
 - [ ] Test file upload/download
 
 ### 4.4 Analytics Setup
+
 - [ ] Create PostHog project
 - [ ] Configure event tracking
 - [ ] Set up custom properties
@@ -251,6 +210,7 @@ POWERSYNC_URL=your_powersync_url
 - [ ] Create analytics dashboard
 
 ### 4.5 Error Monitoring Setup
+
 - [ ] Create Sentry project
 - [ ] Configure React Native integration
 - [ ] Set up error boundaries
@@ -260,10 +220,12 @@ POWERSYNC_URL=your_powersync_url
 ## Phase 5: CI/CD Pipeline Setup
 
 ### 5.1 EAS Configuration
+
 - [ ] Install EAS CLI: `npm install -g eas-cli`
 - [ ] Login to Expo: `eas login`
 - [ ] Initialize EAS: `eas build:configure`
 - [ ] Configure `eas.json`:
+
 ```json
 {
   "cli": {
@@ -289,9 +251,11 @@ POWERSYNC_URL=your_powersync_url
 - [ ] Configure app signing
 
 ### 5.2 GitHub Actions Setup
+
 Create `.github/workflows/` directory and add:
 
 - [ ] **CI Pipeline** (`.github/workflows/ci.yml`):
+
 ```yaml
 name: CI
 
@@ -310,16 +274,16 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run linting
         run: npm run lint
-      
+
       - name: Run tests
         run: npm test
-      
+
       - name: Type check
         run: npx tsc --noEmit
 ```
@@ -329,6 +293,7 @@ jobs:
 - [ ] **Production Deployment** (`.github/workflows/cd-production.yml`)
 
 ### 5.3 Code Quality Setup
+
 - [ ] Set up code coverage reporting
 - [ ] Configure dependency scanning
 - [ ] Add quality gates to PR process
@@ -336,6 +301,7 @@ jobs:
 ## Phase 6: Testing Setup
 
 ### 6.1 Unit Testing Configuration
+
 - [ ] Configure Jest with React Native preset
 - [ ] Set up testing utilities
 - [ ] Create test setup file
@@ -343,6 +309,7 @@ jobs:
 - [ ] Configure coverage thresholds
 
 ### 6.2 E2E Testing Setup
+
 - [ ] Install and configure Detox
 - [ ] Set up test devices/simulators
 - [ ] Create initial E2E test suite
@@ -350,6 +317,7 @@ jobs:
 - [ ] Test on both platforms
 
 ### 6.3 Performance Testing
+
 - [ ] Set up Flipper integration
 - [ ] Configure performance monitoring
 - [ ] Create performance benchmarks
@@ -358,6 +326,7 @@ jobs:
 ## Phase 7: Development Tools & Standards
 
 ### 7.1 Code Quality Tools
+
 - [ ] Configure ESLint rules
 - [ ] Set up Prettier formatting
 - [ ] Configure import sorting
@@ -365,6 +334,7 @@ jobs:
 - [ ] Configure VS Code settings
 
 ### 7.2 Documentation Setup
+
 - [ ] Create README.md with setup instructions
 - [ ] Document coding standards
 - [ ] Create API documentation structure
@@ -372,6 +342,7 @@ jobs:
 - [ ] Create troubleshooting guide
 
 ### 7.3 Git Configuration
+
 - [ ] Set up conventional commit messages
 - [ ] Configure branch naming conventions
 - [ ] Set up PR templates
@@ -381,6 +352,7 @@ jobs:
 ## Phase 8: Team Onboarding Preparation
 
 ### 8.1 Developer Documentation
+
 - [ ] Create developer onboarding guide
 - [ ] Document local development setup
 - [ ] Create debugging guide
@@ -388,6 +360,7 @@ jobs:
 - [ ] Create architecture overview
 
 ### 8.2 Access Management
+
 - [ ] Set up GitHub team permissions
 - [ ] Configure service account access
 - [ ] Create development environment access
@@ -395,6 +368,7 @@ jobs:
 - [ ] Configure notification settings
 
 ### 8.3 Development Workflow
+
 - [ ] Document feature development process
 - [ ] Create PR review checklist
 - [ ] Set up issue tracking workflow
@@ -404,6 +378,7 @@ jobs:
 ## Phase 9: Initial Implementation
 
 ### 9.1 Core App Structure
+
 - [ ] Set up navigation structure
 - [ ] Create basic screen components
 - [ ] Implement theme system
@@ -411,6 +386,7 @@ jobs:
 - [ ] Create utility functions
 
 ### 9.2 Database Schema
+
 - [ ] Implement Drizzle schema
 - [ ] Set up migrations
 - [ ] Create seed data
@@ -418,6 +394,7 @@ jobs:
 - [ ] Set up sync configuration
 
 ### 9.3 Authentication Flow
+
 - [ ] Implement login/signup screens
 - [ ] Set up Supabase auth integration
 - [ ] Create auth state management
@@ -427,6 +404,7 @@ jobs:
 ## Phase 10: Verification & Testing
 
 ### 10.1 Build Verification
+
 - [ ] Test iOS development build
 - [ ] Test Android development build
 - [ ] Verify all dependencies work
@@ -434,6 +412,7 @@ jobs:
 - [ ] Verify performance on older devices
 
 ### 10.2 CI/CD Verification
+
 - [ ] Test CI pipeline with sample PR
 - [ ] Verify all quality gates work
 - [ ] Test staging deployment
@@ -441,6 +420,7 @@ jobs:
 - [ ] Test notification systems
 
 ### 10.3 Service Integration Testing
+
 - [ ] Test Supabase integration
 - [ ] Verify PowerSync functionality
 - [ ] Test file storage operations
@@ -450,6 +430,7 @@ jobs:
 ## Final Checklist
 
 ### Team Readiness
+
 - [ ] All services are configured and tested
 - [ ] CI/CD pipeline is working
 - [ ] Documentation is complete
@@ -460,6 +441,7 @@ jobs:
 - [ ] Testing infrastructure is in place
 
 ### Security Checklist
+
 - [ ] All secrets are properly managed
 - [ ] API keys are not committed to code
 - [ ] Service permissions are correctly configured
@@ -467,6 +449,7 @@ jobs:
 - [ ] Dependency vulnerabilities are addressed
 
 ### Performance Checklist
+
 - [ ] App builds and runs on target devices
 - [ ] Performance benchmarks are established
 - [ ] Memory usage is within targets
@@ -488,18 +471,21 @@ After completing this checklist:
 ## Troubleshooting Common Issues
 
 ### Build Issues
+
 - Ensure all native dependencies are properly linked
 - Clear Metro cache: `npx react-native start --reset-cache`
 - Clean builds: `cd ios && xcodebuild clean` / `cd android && ./gradlew clean`
 
 ### Environment Issues
+
 - Verify all environment variables are set
 - Check service connectivity
 - Validate API keys and permissions
 
 ### CI/CD Issues
+
 - Check GitHub Actions logs
 - Verify secrets are properly configured
 - Ensure service accounts have correct permissions
 
-This checklist ensures a production-ready development environment that can scale with your team and handle the complexity of your global Bible application. 
+This checklist ensures a production-ready development environment that can scale with your team and handle the complexity of your global Bible application.

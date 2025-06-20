@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+android/
+ios/
+dist/
+build/
+*.log
+*.lock
+package-lock.json
+yarn.lock
+.git/
+coverage/
+.nyc_output/ 

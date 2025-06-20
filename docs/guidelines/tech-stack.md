@@ -1,11 +1,13 @@
 # Bible App Technology Stack
 
 ## Overview
+
 This document outlines the complete technology stack and best practices for the multilingual audio Bible application. The stack is designed for offline-first operation, global scalability, accessibility, and performance on older Android devices.
 
 ## Core Framework
 
 ### React Native (New Architecture)
+
 - **Version**: Latest stable with New Architecture enabled (0.80 at time of writing)
 - **Architecture**: Fabric renderer + TurboModules for improved performance
 - **Best Practices**:
@@ -16,6 +18,7 @@ This document outlines the complete technology stack and best practices for the 
   - Use Flipper for debugging in development
 
 ### Expo Bare Workflow
+
 - **Configuration**: Custom development build with native modules
 - **Best Practices**:
   - Use EAS Build for consistent builds across platforms
@@ -27,6 +30,7 @@ This document outlines the complete technology stack and best practices for the 
 ## Data Layer
 
 ### SQLite + Drizzle ORM
+
 - **Purpose**: Local offline-first database
 - **Best Practices**:
   - Design schema with proper indexing for search performance
@@ -37,6 +41,7 @@ This document outlines the complete technology stack and best practices for the 
   - Optimize queries for large datasets (audio metadata, verses)
 
 ### Supabase Authentication
+
 - **Purpose**: User authentication and session management
 - **Best Practices**:
   - Implement anonymous authentication for offline users
@@ -46,6 +51,7 @@ This document outlines the complete technology stack and best practices for the 
   - Support social login providers where culturally appropriate
 
 ### PowerSync + Supabase PostgreSQL
+
 - **Purpose**: Real-time offline-first sync between local SQLite and cloud PostgreSQL
 - **Best Practices**:
   - Design sync rules based on user permissions and data requirements
@@ -56,6 +62,7 @@ This document outlines the complete technology stack and best practices for the 
   - Implement proper data partitioning for global scale
 
 ### Backblaze B2 File Storage
+
 - **Purpose**: Audio file storage and CDN delivery
 - **Best Practices**:
   - Implement proper bucket organization and naming conventions
@@ -68,6 +75,7 @@ This document outlines the complete technology stack and best practices for the 
 ## State Management
 
 ### Zustand
+
 - **Purpose**: Global application state management
 - **Best Practices**:
   - Keep stores focused and modular
@@ -78,6 +86,7 @@ This document outlines the complete technology stack and best practices for the 
   - Avoid storing large objects in global state
 
 ### TanStack Query
+
 - **Purpose**: Server state management, caching, and synchronization
 - **Best Practices**:
   - Implement proper query key factories
@@ -90,6 +99,7 @@ This document outlines the complete technology stack and best practices for the 
 ## Media & Audio
 
 ### Expo Audio
+
 - **Purpose**: Audio playback and recording
 - **Best Practices**:
   - Configure background audio playback properly
@@ -100,6 +110,7 @@ This document outlines the complete technology stack and best practices for the 
   - Support accessibility features (voice control, screen readers)
 
 ### Expo Video (Future)
+
 - **Purpose**: Video content playback for gospel films
 - **Best Practices**:
   - Implement adaptive bitrate streaming
@@ -110,6 +121,7 @@ This document outlines the complete technology stack and best practices for the 
 ## User Interface
 
 ### Tamagui
+
 - **Purpose**: UI component library and styling system
 - **Best Practices**:
   - Create consistent design tokens for the app theme
@@ -123,6 +135,7 @@ This document outlines the complete technology stack and best practices for the 
 ## Analytics & Monitoring
 
 ### PostHog
+
 - **Purpose**: Geographical user behavior tracking for later language mapping
 - **Best Practices**:
   - Implement privacy-compliant event tracking
@@ -133,6 +146,7 @@ This document outlines the complete technology stack and best practices for the 
   - Implement custom dashboards for ministry insights
 
 ### Custom Offline Analytics Queue
+
 - **Purpose**: Queue analytics events for offline scenarios
 - **Best Practices**:
   - Implement persistent queue using SQLite
@@ -143,6 +157,7 @@ This document outlines the complete technology stack and best practices for the 
   - Ensure data privacy in queued events
 
 ### Sentry
+
 - **Purpose**: Error monitoring and performance tracking
 - **Best Practices**:
   - Configure proper error filtering and sampling
@@ -155,6 +170,7 @@ This document outlines the complete technology stack and best practices for the 
 ## Internationalization
 
 ### i18n (React Native Localize + i18next)
+
 - **Purpose**: Multi-language support and localization
 - **Best Practices**:
   - Implement proper namespace organization for translations
@@ -169,6 +185,7 @@ This document outlines the complete technology stack and best practices for the 
 ## Push Notifications
 
 ### Expo Notifications
+
 - **Purpose**: Push notifications for engagement and updates
 - **Best Practices**:
   - Implement proper permission handling
