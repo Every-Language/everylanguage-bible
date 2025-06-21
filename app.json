@@ -3,6 +3,25 @@
     "name": "el-bible",
     "slug": "el-bible",
     "version": "1.0.0",
-    "plugins": ["expo-sqlite"]
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.everylanguage.elbible"
+    },
+    "android": {
+      "package": "com.everylanguage.elbible"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-router",
+      "expo-font",
+      "expo-localization",
+      "expo-audio",
+      "expo-notifications"
+    ],
+    "scheme": "el-bible",
+    "newArchEnabled": true
   }
 }

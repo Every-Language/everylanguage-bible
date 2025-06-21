@@ -1,8 +1,6 @@
 # Codebase Organization Guide
 
-## Overview
-
-This project uses a **feature-first** architecture with shared foundations. This approach prioritizes maintainability, team scalability, and clear feature boundaries while keeping commonly used utilities and components easily accessible.
+This project uses a **feature-first** architecture with shared foundation
 
 ## Folder Structure
 

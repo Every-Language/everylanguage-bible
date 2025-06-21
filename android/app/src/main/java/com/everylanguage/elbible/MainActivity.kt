@@ -1,4 +1,4 @@
-package com.elbible
+package com.everylanguage.elbible
 
 import android.os.Build
 import android.os.Bundle

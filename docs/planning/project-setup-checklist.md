@@ -106,9 +106,9 @@ npm install @react-native-async-storage/async-storage
 npx expo install expo-file-system expo-sharing
 ```
 
-- [ ] Install all core dependencies
-- [ ] Verify no peer dependency warnings
-- [ ] Test that project still builds
+- [x] Install all core dependencies
+- [x] Verify no peer dependency warnings
+- [x] Test that project still builds
 
 ### 2.2 Install Development Dependencies
 
@@ -125,7 +125,7 @@ npm install --save-dev @typescript-eslint/parser eslint-plugin-react-native
 npm install --save-dev @expo/cli eas-cli
 ```
 
-- [ ] Install all dev dependencies
+- [x] Install all dev dependencies
 - [x] Configure ESLint and Prettier
 - [x] Set up pre-commit hooks with husky
 
@@ -141,13 +141,13 @@ npm install --save-dev @expo/cli eas-cli
 
 Create a feature first project structure
 
-- [ ] Create folder structure
-- [ ] Add index.ts files for clean imports
-- [ ] Set up absolute imports
+- [x] Create folder structure
+- [x] Add index.ts files for clean imports
+- [x] Set up absolute imports
 
 ### 3.3 Environment Configuration
 
-- [ ] Create `.env.example`:
+- [x] Create `.env.example`:
 
 ```env
 # Supabase
