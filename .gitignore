@@ -37,3 +37,24 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# CI/CD artifacts
+npm-audit.json
+licenses.json
+security-summary.md
+*.sarif
+
+# Build artifacts
+*.aab
+*.apk
+
+# Test coverage
+coverage/
+*.lcov
+
+# Logs
+*.log
+logs/
+
+# npm registry configuration (contains tokens)
+.npmrc

@@ -178,10 +178,8 @@ POWERSYNC_URL=your_powersync_url
 
 ### 4.1 Supabase Setup
 
-- [ ] Create new Supabase project
-- [ ] Set up authentication providers (email, Google, Apple)
-- [ ] Create initial database schema
-- [ ] Configure Row Level Security (RLS) policies
+- [x] Create new Supabase project
+- [x] Set up authentication providers (email, phone)
 - [ ] Generate and save API keys
 - [ ] Test connection from app
 
