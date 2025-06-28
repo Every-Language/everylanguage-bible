@@ -1,0 +1,153 @@
+name: Production Deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build and submit (all, ios, android)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+      submit_to_stores:
+        description: 'Submit to app stores after build'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  CACHE_DEPENDENCY_PATH: package-lock.json
+
+jobs:
+  # Job 1: Build for Production
+  build:
+    name: EAS Production Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [ios, android]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Validate managed workflow
+        run: |
+          if [ -d "android" ] || [ -d "ios" ]; then
+            echo "❌ Native folders detected - should not exist in managed workflow"
+            exit 1
+          fi
+          npx expo-doctor
+          echo "✅ Production build validated"
+
+      - name: Build production
+        run: |
+          PLATFORM="${{ matrix.platform }}"
+          INPUT_PLATFORM="${{ github.event.inputs.platform }}"
+          
+          if [ "$INPUT_PLATFORM" = "all" ] || [ "$INPUT_PLATFORM" = "$PLATFORM" ] || [ -z "$INPUT_PLATFORM" ]; then
+            echo "🚀 Building production app for $PLATFORM..."
+            eas build --platform $PLATFORM --profile production --non-interactive --wait
+          else
+            echo "⏭️ Skipping production build for $PLATFORM"
+          fi
+
+  # Job 2: Submit to App Stores (Optional)
+  submit:
+    name: Submit to App Stores
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ github.event.inputs.submit_to_stores == 'true' || github.ref == 'refs/heads/main' }}
+    strategy:
+      matrix:
+        platform: [ios, android]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Submit to stores
+        run: |
+          PLATFORM="${{ matrix.platform }}"
+          INPUT_PLATFORM="${{ github.event.inputs.platform }}"
+          
+          if [ "$INPUT_PLATFORM" = "all" ] || [ "$INPUT_PLATFORM" = "$PLATFORM" ] || [ -z "$INPUT_PLATFORM" ]; then
+            echo "📱 Submitting $PLATFORM app to store..."
+            eas submit --platform $PLATFORM --profile production --non-interactive --wait
+          else
+            echo "⏭️ Skipping store submission for $PLATFORM"
+          fi
+
+  # Job 3: Deploy OTA Update
+  ota-update:
+    name: Deploy OTA Update
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Deploy OTA update
+        run: |
+          echo "🔄 Deploying OTA update to production..."
+          eas update --branch production --message "Production deployment from ${{ github.sha }}"
+
+  # Job 4: Notify Team
+  notify:
+    name: Notify Team
+    runs-on: ubuntu-latest
+    needs: [build, submit, ota-update]
+    if: always()
+    steps:
+      - name: Notify completion
+        run: |
+          if [ "${{ needs.build.result }}" = "success" ]; then
+            echo "✅ Production deployment completed successfully!"
+            echo "📱 Builds are available in your Expo dashboard:"
+            echo "   https://expo.dev/@every-language/el-bible"
+            echo "🔄 OTA update deployed to production channel"
+          else
+            echo "❌ Production deployment failed!"
+          fi 

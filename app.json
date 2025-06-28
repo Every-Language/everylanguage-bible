@@ -11,24 +11,21 @@
       "bundleIdentifier": "com.everylanguage.elbible"
     },
     "android": {
-      "package": "com.everylanguage.elbible",
-      "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
-      ]
+      "package": "com.everylanguage.elbible"
     },
+    "web": {},
     "plugins": [
-      "expo-sqlite",
       "expo-router",
       "expo-font",
       "expo-localization",
-      "expo-audio",
       "expo-notifications"
     ],
     "scheme": "el-bible",
     "newArchEnabled": true,
     "extra": {
-      "router": {},
+      "router": {
+        "origin": false
+      },
       "eas": {
         "projectId": "8d2fb795-58b5-4eda-98b7-2cf9c20cf82c"
       }

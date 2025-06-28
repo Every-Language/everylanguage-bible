@@ -17,15 +17,18 @@ This document outlines the complete technology stack and best practices for the 
   - Follow React Native performance guidelines
   - Use Flipper for debugging in development
 
-### Expo Bare Workflow
+### Expo Managed Workflow
 
-- **Configuration**: Custom development build with native modules
+- **Configuration**: Fully managed by Expo with no native folders
+- **Build System**: EAS Build handles all native compilation on cloud servers
 - **Best Practices**:
-  - Use EAS Build for consistent builds across platforms
-  - Configure app.json/app.config.js properly for all required permissions
-  - Leverage Expo SDK modules where possible for cross-platform consistency
-  - Use Expo Development Build for testing custom native modules
+  - Use EAS Build for all builds (development, staging, production)
+  - Configure app.json for all app settings and permissions
+  - Use Expo Go for instant development testing
+  - Leverage config plugins for native functionality
+  - Use OTA updates for instant JavaScript deployments
   - Implement proper deep linking configuration
+  - Use tunnel mode for restricted networks (`expo start --tunnel`)
 
 ## Data Layer
 

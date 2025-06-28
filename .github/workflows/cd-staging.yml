@@ -20,9 +20,9 @@ env:
   CACHE_DEPENDENCY_PATH: package-lock.json
 
 jobs:
-  # Job 1: Build for Staging
+  # Job 1: Build for Staging (Managed Workflow)
   build:
-    name: Build for Staging
+    name: EAS Build for Staging
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -47,6 +47,16 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      - name: Validate managed workflow
+        run: |
+          # Ensure we're in managed workflow
+          if [ -d "android" ] || [ -d "ios" ]; then
+            echo "❌ Native folders detected - should not exist in managed workflow"
+            exit 1
+          fi
+          npx expo-doctor
+          echo "✅ Managed workflow validated"
+
       - name: Build preview
         run: |
           PLATFORM="${{ matrix.platform }}"
@@ -54,22 +64,13 @@ jobs:
           
           # Build if platform matches or if 'all' is selected
           if [ "$INPUT_PLATFORM" = "all" ] || [ "$INPUT_PLATFORM" = "$PLATFORM" ] || [ -z "$INPUT_PLATFORM" ]; then
-            echo "Building for $PLATFORM..."
+            echo "🏗️ Building managed app for $PLATFORM..."
             eas build --platform $PLATFORM --profile preview --non-interactive --wait
           else
-            echo "Skipping build for $PLATFORM"
+            echo "⏭️ Skipping build for $PLATFORM"
           fi
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: staging-build-${{ matrix.platform }}
-          path: |
-            *.ipa
-            *.apk
-          retention-days: 30
-
-  # Job 2: Notify
+  # Job 2: Notify Team
   notify:
     name: Notify Team
     runs-on: ubuntu-latest
@@ -80,7 +81,8 @@ jobs:
         run: |
           if [ "${{ needs.build.result }}" = "success" ]; then
             echo "✅ Staging build completed successfully!"
+            echo "📱 Builds are available in your Expo dashboard:"
+            echo "   https://expo.dev/@every-language/el-bible"
           else
             echo "❌ Staging build failed!"
-          fi
-          echo "Build artifacts are available in the workflow artifacts." 
+          fi 

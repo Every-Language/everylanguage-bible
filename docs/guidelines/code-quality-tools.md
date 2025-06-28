@@ -65,6 +65,9 @@ npm run format
 # Verify everything is clean
 npm run lint
 npm run format:check
+
+# Test development server (optional)
+npm start
 ```
 
 ## Editor Integration

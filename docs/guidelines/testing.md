@@ -1,5 +1,14 @@
 # Testing Strategy
 
+## Managed Workflow Testing Benefits
+
+With Expo Managed Workflow, testing is simplified:
+
+- **No native compilation locally**: All builds happen on EAS servers
+- **Consistent environment**: Same test environment for all developers
+- **Universal device testing**: Use Expo Go for instant testing
+- **Cloud E2E testing**: EAS Build for reliable device testing
+
 ## Frameworks for testing
 
 ### 1. Unit Testing
@@ -45,22 +54,23 @@
 
 ### 3. End-to-End Testing
 
-**Framework**: Detox (React Native E2E testing)
+**Framework**: Detox with EAS Build for device testing
 **Scope**:
 
 - Critical user journeys (onboarding, audio playback, sharing)
-- Cross-platform compatibility
+- Cross-platform compatibility via EAS builds
 - Deep linking functionality
 - Push notification handling
 - Offline functionality
 
-**Best Practices**:
+**Managed Workflow Best Practices**:
 
-- Run on real devices in CI/CD
-- Test on multiple device types and OS versions
-- Include accessibility testing
-- Test with different network conditions
-- Validate analytics end-to-end
+- Use EAS Build development profile for E2E test builds
+- Test with Expo Go for rapid iteration
+- Use EAS Build for final device testing in CI/CD
+- Test tunnel mode for restricted network scenarios
+- Include accessibility testing via Expo modules
+- Validate analytics end-to-end with managed services
 
 ### 4. Performance Testing
 

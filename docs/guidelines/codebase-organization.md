@@ -1,6 +1,6 @@
 # Codebase Organization Guide
 
-This project uses a **feature-first** architecture with shared foundation
+This project uses a **feature-first** architecture with shared foundation, optimized for **Expo Managed Workflow**.
 
 ## Folder Structure
 
