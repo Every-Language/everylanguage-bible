@@ -31,7 +31,7 @@ This project uses a **feature-first architecture** with offline-first design pri
 ### Core Framework
 
 - **React Native** (New Architecture enabled)
-- **Expo** (Bare workflow with custom development builds)
+- **Expo** (Managed workflow with custom development builds)
 - **TypeScript** (Strict mode enabled)
 
 ### Data & Backend
@@ -82,8 +82,10 @@ This project uses a **feature-first architecture** with offline-first design pri
 - **Node.js** v18+ ([Download](https://nodejs.org/))
 - **npm** v10+ or **yarn** v1.22+
 - **Git** ([Download](https://git-scm.com/))
-- **Xcode** (macOS only, for iOS development)
-- **Android Studio** (for Android development)
+- **Expo CLI** v6+ (`npm install -g @expo/cli`)
+- **EAS CLI** for builds (`npm install -g eas-cli`)
+- **Xcode** 15+ (macOS only, for iOS simulator) - optional, only for local builds
+- **Android Studio** with Android SDK (for Android emulator) - optional, only for local builds
 
 ## 🚀 Getting Started
 
@@ -98,8 +100,6 @@ cd everylanguage-bible
 
 ```bash
 npm install
-# or
-yarn install
 ```
 
 ### 3. Environment Setup
@@ -110,32 +110,16 @@ Copy the environment template and fill in your values:
 cp .env.example .env
 ```
 
-### 4. Install iOS Dependencies (macOS only)
+### 4. Login to Expo
 
 ```bash
-cd ios && pod install && cd ..
+npx expo login
 ```
 
-### 5. Start Development Server
+### 6. Start Development Server
 
 ```bash
-npm start
-# or
-yarn start
-```
-
-### 6. Run on Device/Simulator
-
-```bash
-# iOS
-npm run ios
-# or
-yarn ios
-
-# Android
-npm run android
-# or
-yarn android
+npx expo start
 ```
 
 ## 📁 Project Structure
@@ -226,45 +210,40 @@ npm run format
 - `feature/*` - Feature development
 - `hotfix/*` - Emergency fixes
 
+### Expo Development Workflow
+
+This project uses Expo managed workflow with custom development builds:
+
+1. **Development**: Use `npx expo start` for hot reloading
+2. **Native Changes**: When adding native modules, rebuild with `eas build --profile development`
+3. **Testing**: Use development builds for comprehensive testing
+4. **Updates**: Push JavaScript-only updates via EAS Update for instant deployment
+5. **Builds**: All builds handled by EAS Build service in the cloud
+
 ## 🚢 Deployment
 
-### Development Builds
+### CI/CD Pipeline
 
-```bash
-# Install EAS CLI
-npm install -g eas-cli
+This project uses GitHub Actions with EAS Build for automated deployments:
 
-# Login to Expo
-eas login
+- **Pull Requests**: Automated testing and preview builds
+- **Develop Branch**: Development builds with internal distribution
+- **Main Branch**: Production builds and app store submission
+- **Release Tags**: Automated versioning and release notes
 
-# Build for development
-eas build --profile development --platform all
-```
+### Build Profiles
 
-### Production Release
+The project uses three build profiles defined in `eas.json`:
 
-```bash
-# Build for production
-eas build --profile production --platform all
-
-# Submit to app stores
-eas submit --platform all
-```
+- **development**: For local testing with debugging enabled
+- **preview**: For internal testing and TestFlight/Internal App Sharing
+- **production**: For app store releases with optimizations enabled
 
 ## 📊 Monitoring & Analytics
 
 - **Error Monitoring**: Sentry dashboard for crash reports and performance
 - **Analytics**: PostHog for user behavior and feature usage
 - **Performance**: Custom metrics for audio playback and sync performance
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes with tests
-4. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
 
 ### Code Style
 
@@ -273,24 +252,3 @@ eas submit --platform all
 - Maintain test coverage above 80%
 - Update documentation for new features
 - Use TypeScript strictly
-
-## 📖 Documentation
-
-- [Project Setup Checklist](docs/planning/project-setup-checklist.md)
-- [Codebase Organization](docs/guidelines/codebase-organization.md)
-- [Tech Stack Details](docs/guidelines/tech-stack.md)
-- [Testing Strategy](docs/guidelines/testing.md)
-- [CI/CD Pipeline](docs/guidelines/ci-cd.md)
-- [Code Quality Tools](docs/guidelines/code-quality-tools.md)
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 💬 Support
-
-- Create an [issue](https://github.com/Every-Language/everylanguage-bible/issues) for bug reports
-- Start a [discussion](https://github.com/Every-Language/everylanguage-bible/discussions) for questions
-- Contact the development team for urgent matters
-
----

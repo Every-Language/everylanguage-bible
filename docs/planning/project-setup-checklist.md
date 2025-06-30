@@ -133,9 +133,9 @@ npm install --save-dev @expo/cli eas-cli
 
 ### 3.1 TypeScript Configuration
 
-- [ ] Create/update `tsconfig.json`:
-- [ ] Configure path aliases in Metro config
-- [ ] Test TypeScript compilation
+- [x] Create/update `tsconfig.json`:
+- [x] Configure path aliases in Metro config
+- [x] Test TypeScript compilation
 
 ### 3.2 Project Structure
 
