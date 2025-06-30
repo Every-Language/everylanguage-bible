@@ -3,33 +3,32 @@ import { View, StyleSheet, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { BibleBooksScreen } from '@/features/bible/screens/BibleBooksScreen';
 import { MiniPlayer } from '@/features/audio/components/MiniPlayer';
+import { type Book } from '@/shared/utils';
 
 // Placeholder screens for now
-const BookmarksScreen = () => (
+const ResourcesScreen = () => (
   <View style={styles.placeholderScreen}>
-    <Text style={styles.placeholderText}>Bookmarks</Text>
+    <Text style={styles.placeholderText}>Resources</Text>
     <Text style={styles.placeholderSubtext}>Coming soon!</Text>
   </View>
 );
 
 const Tab = createBottomTabNavigator();
 
-interface Book {
-  id: string;
-  name: string;
-  testament: 'old' | 'new';
-  chapters: number;
-  order: number;
+interface CurrentAudio {
+  book: Book;
+  chapter: number;
 }
 
 export const MainNavigator: React.FC = () => {
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [currentAudio, setCurrentAudio] = useState<CurrentAudio | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const handleBookSelect = (book: Book) => {
-    setSelectedBook(book);
+  const handleChapterSelect = (book: Book, chapter: number) => {
+    setCurrentAudio({ book, chapter });
+    setIsPlaying(true); // Auto-start playback when chapter is selected
     // In a real app, this would start loading the audio
-    console.log('Selected book:', book.name);
+    console.log('Selected chapter:', `${book.name} ${chapter}`);
   };
 
   const handlePlayPause = () => {
@@ -62,7 +61,7 @@ export const MainNavigator: React.FC = () => {
           tabBarStyle: {
             backgroundColor: '#ffffff',
             borderTopColor: '#e0e0e0',
-            paddingBottom: selectedBook ? 70 : 0, // Make space for mini-player
+            paddingBottom: currentAudio ? 70 : 0, // Make space for mini-player
           },
         }}>
         <Tab.Screen
@@ -72,26 +71,26 @@ export const MainNavigator: React.FC = () => {
               <Text style={[styles.tabIcon, { color }]}>📖</Text>
             ),
           }}>
-          {() => <BibleBooksScreen onBookSelect={handleBookSelect} />}
+          {() => <BibleBooksScreen onChapterSelect={handleChapterSelect} />}
         </Tab.Screen>
 
         <Tab.Screen
-          name='Bookmarks'
-          component={BookmarksScreen}
+          name='Resources'
+          component={ResourcesScreen}
           options={{
             tabBarIcon: ({ color }) => (
-              <Text style={[styles.tabIcon, { color }]}>🔖</Text>
+              <Text style={[styles.tabIcon, { color }]}>📚</Text>
             ),
           }}
         />
       </Tab.Navigator>
 
       {/* Mini Player Overlay */}
-      {selectedBook && (
+      {currentAudio && (
         <View style={styles.miniPlayerContainer}>
           <MiniPlayer
-            title={selectedBook.name}
-            subtitle={`Chapter 1`} // This would be dynamic
+            title={currentAudio.book.name}
+            subtitle={`Chapter ${currentAudio.chapter}`}
             isPlaying={isPlaying}
             onPlayPause={handlePlayPause}
             onPrevious={handlePrevious}
