@@ -1,4 +1,4 @@
 // Main app exports
-export * from './app';
+export * from './app/index';
 export * from './shared';
 export * from './features';
