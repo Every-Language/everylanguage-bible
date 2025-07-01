@@ -1,31 +1,13 @@
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ThemeProvider } from '../shared/hooks';
+import { ThemeDemo } from '../shared/components/ui';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>🙏 Bible App - Feature-First Architecture Ready!</Text>
-      <Text style={styles.subtitle}>
-        Folder structure created. Ready for development.
-      </Text>
+    <ThemeProvider>
+      <ThemeDemo />
       <StatusBar style='auto' />
-    </View>
+    </ThemeProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  subtitle: {
-    marginTop: 10,
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-});
