@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { BibleBooksScreen } from '@/features/bible/screens/BibleBooksScreen';
 import { MiniPlayer } from '@/features/audio/components/MiniPlayer';
 import { type Book } from '@/shared/utils';
 import { Colors, Fonts, Dimensions } from '@/shared/constants';
+import { useAudioStore } from '@/shared/store';
 
 // Placeholder screens for now
 const ResourcesScreen = () => (
@@ -16,35 +17,33 @@ const ResourcesScreen = () => (
 
 const Tab = createBottomTabNavigator();
 
-interface CurrentAudio {
-  book: Book;
-  chapter: number;
-}
-
 export const MainNavigator: React.FC = () => {
-  const [currentAudio, setCurrentAudio] = useState<CurrentAudio | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const {
+    currentBook,
+    currentChapter,
+    isPlaying,
+    setCurrentAudio,
+    togglePlayPause,
+    playNext,
+    playPrevious,
+  } = useAudioStore();
 
   const handleChapterSelect = (book: Book, chapter: number) => {
-    setCurrentAudio({ book, chapter });
-    setIsPlaying(true); // Auto-start playback when chapter is selected
-    // In a real app, this would start loading the audio
+    setCurrentAudio(book, chapter);
+    // Auto-start playback when chapter is selected
     console.log('Selected chapter:', `${book.name} ${chapter}`);
   };
 
   const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-    // In a real app, this would control audio playback
+    togglePlayPause();
   };
 
   const handlePrevious = () => {
-    // In a real app, this would go to previous verse
-    console.log('Previous verse');
+    playPrevious();
   };
 
   const handleNext = () => {
-    // In a real app, this would go to next verse
-    console.log('Next verse');
+    playNext();
   };
 
   const handleExpand = () => {
@@ -62,9 +61,7 @@ export const MainNavigator: React.FC = () => {
           tabBarStyle: {
             backgroundColor: Colors.background.primary,
             borderTopColor: Colors.border.light,
-            paddingBottom: currentAudio
-              ? Dimensions.layout.miniPlayerHeight
-              : 0,
+            paddingBottom: currentBook ? Dimensions.layout.miniPlayerHeight : 0,
           },
         }}>
         <Tab.Screen
@@ -89,11 +86,11 @@ export const MainNavigator: React.FC = () => {
       </Tab.Navigator>
 
       {/* Mini Player Overlay */}
-      {currentAudio && (
+      {currentBook && currentChapter && (
         <View style={styles.miniPlayerContainer}>
           <MiniPlayer
-            title={currentAudio.book.name}
-            subtitle={`Chapter ${currentAudio.chapter}`}
+            title={currentBook.name}
+            subtitle={`Chapter ${currentChapter}`}
             isPlaying={isPlaying}
             onPlayPause={handlePlayPause}
             onPrevious={handlePrevious}

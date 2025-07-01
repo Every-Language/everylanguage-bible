@@ -25,11 +25,34 @@ jest.mock('@/shared/utils', () => ({
   ],
 }));
 
+// Mock the Zustand store
+const mockUseAudioStore = {
+  currentBook: null as any,
+  currentChapter: null as any,
+  isPlaying: false,
+  setCurrentAudio: jest.fn(),
+  togglePlayPause: jest.fn(),
+  playNext: jest.fn(),
+  playPrevious: jest.fn(),
+};
+
+jest.mock('@/shared/store', () => ({
+  useAudioStore: () => mockUseAudioStore,
+}));
+
 const NavigationWrapper: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => <NavigationContainer>{children}</NavigationContainer>;
 
 describe('MainNavigator', () => {
+  beforeEach(() => {
+    // Reset mock store before each test
+    mockUseAudioStore.currentBook = null;
+    mockUseAudioStore.currentChapter = null;
+    mockUseAudioStore.isPlaying = false;
+    jest.clearAllMocks();
+  });
+
   it('renders tab navigation correctly', () => {
     const { getByText } = render(
       <NavigationWrapper>
@@ -42,7 +65,7 @@ describe('MainNavigator', () => {
   });
 
   it('shows mini player when a chapter is selected', async () => {
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId, rerender } = render(
       <NavigationWrapper>
         <MainNavigator />
       </NavigationWrapper>
@@ -57,11 +80,29 @@ describe('MainNavigator', () => {
       fireEvent.press(genesisCard);
     });
 
-    // Select a chapter
+    // Select a chapter - simulate the store update
     await waitFor(() => {
       const chapterTile = getByTestId('chapter-tile-1');
       fireEvent.press(chapterTile);
     });
+
+    // Simulate store state update
+    mockUseAudioStore.currentBook = {
+      id: '01',
+      name: 'Genesis',
+      testament: 'old',
+      chapters: 50,
+      order: 1,
+      imagePath: '01_genesis.png',
+    };
+    mockUseAudioStore.currentChapter = 1;
+
+    // Rerender to reflect the state change
+    rerender(
+      <NavigationWrapper>
+        <MainNavigator />
+      </NavigationWrapper>
+    );
 
     // Mini player should now be visible
     await waitFor(() => {
@@ -80,8 +121,20 @@ describe('MainNavigator', () => {
     expect(getByText('Coming soon!')).toBeTruthy();
   });
 
-  it('handles mini player controls and displays correct chapter info', async () => {
+  it('handles mini player controls and calls store methods', async () => {
     const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    // Mock the store to have a current audio selection
+    mockUseAudioStore.currentBook = {
+      id: '01',
+      name: 'Genesis',
+      testament: 'old',
+      chapters: 50,
+      order: 1,
+      imagePath: '01_genesis.png',
+    };
+    mockUseAudioStore.currentChapter = 5;
+    mockUseAudioStore.isPlaying = false;
 
     const { getByTestId, getByText } = render(
       <NavigationWrapper>
@@ -101,6 +154,12 @@ describe('MainNavigator', () => {
       fireEvent.press(chapterTile);
     });
 
+    // Check that the store method was called
+    expect(mockUseAudioStore.setCurrentAudio).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Genesis' }),
+      5
+    );
+
     // Check that mini player shows correct info
     await waitFor(() => {
       const miniPlayer = getByTestId('main-mini-player');
@@ -114,11 +173,15 @@ describe('MainNavigator', () => {
       fireEvent.press(playButton);
     });
 
+    expect(mockUseAudioStore.togglePlayPause).toHaveBeenCalled();
+
     // Test previous button
     await waitFor(() => {
       const previousButton = getByTestId('mini-player-previous');
       fireEvent.press(previousButton);
     });
+
+    expect(mockUseAudioStore.playPrevious).toHaveBeenCalled();
 
     // Test next button
     await waitFor(() => {
@@ -126,9 +189,9 @@ describe('MainNavigator', () => {
       fireEvent.press(nextButton);
     });
 
+    expect(mockUseAudioStore.playNext).toHaveBeenCalled();
+
     expect(consoleSpy).toHaveBeenCalledWith('Selected chapter:', 'Genesis 5');
-    expect(consoleSpy).toHaveBeenCalledWith('Previous verse');
-    expect(consoleSpy).toHaveBeenCalledWith('Next verse');
 
     consoleSpy.mockRestore();
   });
