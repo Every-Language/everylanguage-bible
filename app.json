@@ -18,7 +18,8 @@
       "expo-router",
       "expo-font",
       "expo-localization",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-sqlite"
     ],
     "scheme": "el-bible",
     "newArchEnabled": true,
