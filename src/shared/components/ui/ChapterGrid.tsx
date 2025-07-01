@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
 import { ChapterTile } from './ChapterTile';
-import { Colors, Dimensions } from '@/shared/constants';
+import { Dimensions } from '@/shared/constants';
+import { useTheme } from '@/shared/store';
 
 interface ChapterGridProps {
   chapterCount: number;
@@ -9,6 +10,7 @@ interface ChapterGridProps {
   isVisible: boolean;
   testID?: string;
   onAnimationComplete?: () => void;
+  selectedChapter?: number | null;
 }
 
 const CHAPTERS_PER_ROW = Dimensions.layout.chaptersPerRow;
@@ -19,7 +21,9 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
   isVisible,
   testID,
   onAnimationComplete,
+  selectedChapter,
 }) => {
+  const { colors } = useTheme();
   const animatedHeight = useRef(new Animated.Value(0)).current;
   const animatedOpacity = useRef(new Animated.Value(0)).current;
   const [shouldRender, setShouldRender] = useState(false);
@@ -28,6 +32,29 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
   const numberOfRows = Math.ceil(chapterCount / CHAPTERS_PER_ROW);
   // Tile height (60) + vertical margins (8) + extra padding to prevent cut-off
   const maxHeight = numberOfRows * (60 + 8) + 24; // More generous padding
+
+  const styles = StyleSheet.create({
+    container: {
+      backgroundColor: colors.background,
+      paddingHorizontal: Dimensions.spacing.md,
+      marginTop: Dimensions.spacing.xs,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.primary + '20', // Add subtle border with theme color
+      borderRadius: Dimensions.radius.lg,
+    },
+    gridContainer: {
+      paddingVertical: Dimensions.spacing.md,
+      alignItems: 'center',
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginBottom: 0,
+      width: '100%',
+      maxWidth: 350,
+    },
+  });
 
   useEffect(() => {
     if (isVisible) {
@@ -95,6 +122,7 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
                 chapterNumber={chapterNumber}
                 onPress={onChapterPress}
                 testID={`chapter-tile-${chapterNumber}`}
+                isSelected={selectedChapter === chapterNumber}
               />
             ))}
           </View>
@@ -103,23 +131,3 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
     </Animated.View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.background.secondary,
-    paddingHorizontal: Dimensions.spacing.md,
-    marginTop: Dimensions.spacing.xs,
-    overflow: 'hidden',
-  },
-  gridContainer: {
-    paddingVertical: Dimensions.spacing.md,
-    alignItems: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 0,
-    width: '100%',
-    maxWidth: 350,
-  },
-});

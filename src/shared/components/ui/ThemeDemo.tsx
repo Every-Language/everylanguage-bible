@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '../../hooks';
+import { useTheme } from '@/shared/store';
 
 export const ThemeDemo: React.FC = () => {
   const { isDark, toggleTheme, colors } = useTheme();
@@ -58,11 +58,9 @@ export const ThemeDemo: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        🙏 Bible App - Feature-First Architecture Ready!
-      </Text>
+      <Text style={styles.title}>🙏 Bible App - Theme System Ready!</Text>
       <Text style={styles.subtitle}>
-        Folder structure created. Ready for development.
+        Zustand-powered theme switching with system sync.
       </Text>
 
       <TouchableOpacity style={styles.themeButton} onPress={toggleTheme}>

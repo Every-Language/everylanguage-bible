@@ -2,6 +2,20 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { ChapterTile } from '../ChapterTile';
 
+// Mock the theme store
+const mockUseTheme = {
+  colors: {
+    background: '#EBE5D9',
+    text: '#070707',
+    primary: '#264854',
+    secondary: '#AD915A',
+  },
+};
+
+jest.mock('@/shared/store', () => ({
+  useTheme: () => mockUseTheme,
+}));
+
 describe('ChapterTile', () => {
   const mockOnPress = jest.fn();
 
@@ -53,5 +67,41 @@ describe('ChapterTile', () => {
     );
 
     expect(getByText('150')).toBeTruthy();
+  });
+
+  it('highlights border when selected', () => {
+    const { getByTestId } = render(
+      <ChapterTile
+        chapterNumber={5}
+        onPress={mockOnPress}
+        testID='chapter-tile'
+        isSelected={true}
+      />
+    );
+
+    const chapterTile = getByTestId('chapter-tile');
+
+    // Should have full primary color border when selected
+    expect(chapterTile.props.style.borderColor).toBe(
+      mockUseTheme.colors.primary
+    );
+  });
+
+  it('uses subtle border when not selected', () => {
+    const { getByTestId } = render(
+      <ChapterTile
+        chapterNumber={5}
+        onPress={mockOnPress}
+        testID='chapter-tile'
+        isSelected={false}
+      />
+    );
+
+    const chapterTile = getByTestId('chapter-tile');
+
+    // Should have subtle border color when not selected
+    expect(chapterTile.props.style.borderColor).toBe(
+      mockUseTheme.colors.primary + '20'
+    );
   });
 });

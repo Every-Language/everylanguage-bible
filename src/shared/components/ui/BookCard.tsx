@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Image } from 'react-native';
-import { Colors, Fonts, Dimensions } from '@/shared/constants';
+import { Fonts, Dimensions } from '@/shared/constants';
+import { useTheme } from '@/shared/store';
 
 // Import all book images using ES6 imports
 // This is obviously going to need to get switched around to come the database, right?
@@ -147,6 +148,7 @@ interface BookCardProps {
   imagePath?: string;
   onPress: () => void;
   testID?: string;
+  isSelected?: boolean;
 }
 
 export const BookCard: React.FC<BookCardProps> = ({
@@ -154,7 +156,10 @@ export const BookCard: React.FC<BookCardProps> = ({
   imagePath,
   onPress,
   testID,
+  isSelected = false,
 }) => {
+  const { colors } = useTheme();
+
   const getImageSource = () => {
     if (!imagePath) {
       return null;
@@ -164,6 +169,52 @@ export const BookCard: React.FC<BookCardProps> = ({
   };
 
   const imageSource = getImageSource();
+
+  const styles = StyleSheet.create({
+    container: {
+      backgroundColor: colors.background,
+      borderRadius: Dimensions.radius.xl,
+      padding: Dimensions.spacing.sm,
+      marginHorizontal: Dimensions.spacing.xs,
+      marginVertical: Dimensions.spacing.xs,
+      ...Dimensions.shadow.md,
+      minHeight: 110,
+      flex: 1,
+      borderWidth: 1,
+      borderColor: isSelected ? colors.primary : colors.primary + '20', // Highlight border when selected
+    },
+    imageContainer: {
+      alignItems: 'center',
+      marginBottom: Dimensions.spacing.md,
+    },
+    bookImage: {
+      width: Dimensions.component.bookImage.width,
+      height: Dimensions.component.bookImage.height,
+      borderRadius: Dimensions.radius.lg,
+      tintColor: colors.text, // Apply theme-aware tinting: black in light mode, white in dark mode
+    },
+    fallbackIcon: {
+      width: Dimensions.component.bookImage.width,
+      height: Dimensions.component.bookImage.height,
+      borderRadius: Dimensions.radius.lg,
+      backgroundColor: colors.secondary + '30', // Use theme secondary with opacity
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    fallbackEmoji: {
+      fontSize: Fonts.size['2xl'],
+    },
+    textContainer: {
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: Fonts.size.sm,
+      fontWeight: Fonts.weight.semibold,
+      textAlign: 'center',
+      color: colors.text, // Use theme text color
+      lineHeight: Fonts.size.lg,
+    },
+  });
 
   return (
     <TouchableOpacity
@@ -193,46 +244,3 @@ export const BookCard: React.FC<BookCardProps> = ({
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.background.primary,
-    borderRadius: Dimensions.radius.xl,
-    padding: Dimensions.spacing.sm,
-    marginHorizontal: Dimensions.spacing.xs,
-    marginVertical: Dimensions.spacing.xs,
-    ...Dimensions.shadow.md,
-    minHeight: 110,
-    flex: 1,
-  },
-  imageContainer: {
-    alignItems: 'center',
-    marginBottom: Dimensions.spacing.md,
-  },
-  bookImage: {
-    width: Dimensions.component.bookImage.width,
-    height: Dimensions.component.bookImage.height,
-    borderRadius: Dimensions.radius.lg,
-  },
-  fallbackIcon: {
-    width: Dimensions.component.bookImage.width,
-    height: Dimensions.component.bookImage.height,
-    borderRadius: Dimensions.radius.lg,
-    backgroundColor: Colors.background.tertiary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fallbackEmoji: {
-    fontSize: Fonts.size['2xl'],
-  },
-  textContainer: {
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: Fonts.size.sm,
-    fontWeight: Fonts.weight.semibold,
-    textAlign: 'center',
-    color: Colors.text.primary,
-    lineHeight: Fonts.size.lg,
-  },
-});

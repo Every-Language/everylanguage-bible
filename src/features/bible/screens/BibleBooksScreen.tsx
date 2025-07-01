@@ -6,10 +6,12 @@ import {
   Text,
   ActivityIndicator,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { BookCard, ChapterGrid } from '@/shared/components/ui';
 import { loadBibleBooks, type Book } from '@/shared/utils';
-import { Colors, Fonts, Dimensions } from '@/shared/constants';
+import { Fonts, Dimensions } from '@/shared/constants';
+import { useTheme } from '@/shared/store';
 
 interface BibleBooksScreenProps {
   onChapterSelect: (book: Book, chapter: number) => void;
@@ -20,9 +22,11 @@ const BOOKS_PER_ROW = Dimensions.layout.booksPerRow;
 export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
 }) => {
+  const { colors, isDark, toggleTheme } = useTheme();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const lastExpandedBookRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -47,16 +51,19 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       // If same book is pressed, close the expansion
       lastExpandedBookRef.current = book.id; // Keep track for animation
       setExpandedBookId(null);
+      setSelectedChapter(null); // Clear chapter selection when closing book
     } else {
       // Open the expansion for this book
       lastExpandedBookRef.current = null; // Clear previous tracking
       setExpandedBookId(book.id);
+      setSelectedChapter(null); // Clear previous chapter selection
     }
   };
 
   const handleChapterPress = (chapterNumber: number) => {
     const expandedBook = books.find(book => book.id === expandedBookId);
     if (expandedBook) {
+      setSelectedChapter(chapterNumber); // Track the selected chapter
       onChapterSelect(expandedBook, chapterNumber);
     }
   };
@@ -69,6 +76,88 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     }
     return rows;
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      padding: Dimensions.spacing.xl,
+      paddingBottom: Dimensions.spacing.md,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: Dimensions.spacing.xs,
+    },
+    title: {
+      fontSize: Fonts.size['3xl'],
+      fontWeight: Fonts.weight.bold,
+      color: colors.text,
+      flex: 1,
+      textAlign: 'center',
+    },
+    themeToggle: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: Dimensions.spacing.md,
+      paddingVertical: Dimensions.spacing.sm,
+      borderRadius: Dimensions.radius.lg,
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    themeToggleText: {
+      fontSize: Fonts.size.sm,
+      color: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 100, // Extra space for mini-player
+    },
+    testamentSection: {
+      marginBottom: Dimensions.spacing['2xl'],
+    },
+    testamentTitle: {
+      fontSize: Fonts.size['2xl'],
+      fontWeight: Fonts.weight.bold,
+      color: colors.primary, // Use theme primary for testament titles
+      marginBottom: Dimensions.spacing.lg,
+      marginTop: Dimensions.spacing.sm,
+      textAlign: 'center',
+    },
+    booksContainer: {
+      paddingHorizontal: Dimensions.spacing.md,
+    },
+    bookRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginBottom: 0,
+    },
+    bookContainer: {
+      flex: 1,
+      maxWidth: '33.33%',
+    },
+    bookTouchable: {
+      borderRadius: Dimensions.radius.xl,
+      overflow: 'hidden',
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      marginTop: Dimensions.spacing.md,
+      fontSize: Fonts.size.base,
+      color: colors.secondary, // Use theme secondary for loading text
+    },
+  });
 
   const renderBookRow = (
     row: Book[],
@@ -93,16 +182,13 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         <View style={styles.bookRow}>
           {row.map(book => (
             <View key={book.id} style={styles.bookContainer}>
-              <View
-                style={[
-                  styles.bookTouchable,
-                  expandedBookId === book.id && styles.selectedBook,
-                ]}>
+              <View style={styles.bookTouchable}>
                 <BookCard
                   title={book.name}
                   imagePath={book.imagePath}
                   onPress={() => handleBookPress(book)}
                   testID={`book-card-${book.id}`}
+                  isSelected={expandedBookId === book.id}
                 />
               </View>
             </View>
@@ -116,6 +202,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
             onChapterPress={handleChapterPress}
             isVisible={!!expandedBookInRow}
             testID={`chapter-grid-${bookToShow.id}`}
+            selectedChapter={selectedChapter}
             onAnimationComplete={() => {
               if (!expandedBookInRow) {
                 lastExpandedBookRef.current = null;
@@ -130,7 +217,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size='large' color={Colors.feedback.loading} />
+        <ActivityIndicator size='large' color={colors.primary} />
         <Text style={styles.loadingText}>Loading Bible books...</Text>
       </View>
     );
@@ -146,7 +233,17 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Bible</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Bible</Text>
+          <TouchableOpacity
+            style={styles.themeToggle}
+            onPress={toggleTheme}
+            accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+            accessibilityRole='button'
+            testID='theme-toggle-button'>
+            <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -176,72 +273,3 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background.secondary,
-  },
-  header: {
-    padding: Dimensions.spacing.xl,
-    paddingBottom: Dimensions.spacing.md,
-  },
-  title: {
-    fontSize: Fonts.size['3xl'],
-    fontWeight: Fonts.weight.bold,
-    color: Colors.text.primary,
-    marginBottom: Dimensions.spacing.xs,
-    textAlign: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100, // Extra space for mini-player
-  },
-  testamentSection: {
-    marginBottom: Dimensions.spacing['2xl'],
-  },
-  testamentTitle: {
-    fontSize: Fonts.size['2xl'],
-    fontWeight: Fonts.weight.bold,
-    color: Colors.testament.oldTestament,
-    marginBottom: Dimensions.spacing.lg,
-    marginTop: Dimensions.spacing.sm,
-    textAlign: 'center',
-  },
-  booksContainer: {
-    paddingHorizontal: Dimensions.spacing.md,
-  },
-  bookRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 0,
-  },
-  bookContainer: {
-    flex: 1,
-    maxWidth: '33.33%',
-  },
-  bookTouchable: {
-    borderRadius: Dimensions.radius.xl,
-    overflow: 'hidden',
-  },
-  selectedBook: {
-    opacity: 0.7,
-    backgroundColor: Colors.interactive.pressed,
-    borderRadius: Dimensions.radius.xl,
-    borderWidth: 2,
-    borderColor: Colors.interactive.active,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.background.secondary,
-  },
-  loadingText: {
-    marginTop: Dimensions.spacing.md,
-    fontSize: Fonts.size.base,
-    color: Colors.text.secondary,
-  },
-});

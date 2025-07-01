@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { Colors, Fonts, Dimensions } from '@/shared/constants';
+import { Fonts, Dimensions } from '@/shared/constants';
+import { useTheme } from '@/shared/store';
 
 interface MiniPlayerProps {
   title?: string;
@@ -25,6 +26,82 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   onExpand,
   testID,
 }) => {
+  const { colors } = useTheme();
+
+  const styles = StyleSheet.create({
+    container: {
+      backgroundColor: colors.background,
+      borderTopWidth: 1,
+      borderTopColor: colors.primary + '30',
+      ...Dimensions.shadow.lg,
+      zIndex: 1000,
+    },
+    content: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: Dimensions.spacing.md,
+      paddingHorizontal: Dimensions.spacing.lg,
+      minHeight: Dimensions.layout.miniPlayerHeight,
+    },
+    imageContainer: {
+      marginRight: Dimensions.spacing.md,
+    },
+    image: {
+      width: Dimensions.component.miniPlayerImage.width,
+      height: Dimensions.component.miniPlayerImage.height,
+      borderRadius: Dimensions.radius.md,
+    },
+    fallbackImage: {
+      width: Dimensions.component.miniPlayerImage.width,
+      height: Dimensions.component.miniPlayerImage.height,
+      borderRadius: Dimensions.radius.md,
+      backgroundColor: colors.secondary + '30',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    fallbackIcon: {
+      fontSize: Fonts.size.xl,
+    },
+    textContainer: {
+      flex: 1,
+      marginRight: Dimensions.spacing.md,
+    },
+    title: {
+      fontSize: Fonts.size.base,
+      fontWeight: Fonts.weight.semibold,
+      color: colors.text,
+      marginBottom: 2,
+    },
+    subtitle: {
+      fontSize: Fonts.size.sm,
+      color: colors.secondary,
+    },
+    controls: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    controlButton: {
+      width: Dimensions.component.controlButton.width,
+      height: Dimensions.component.controlButton.height,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: Dimensions.radius.full,
+      marginHorizontal: Dimensions.spacing.xs,
+    },
+    playButton: {
+      backgroundColor: colors.primary,
+      marginHorizontal: Dimensions.spacing.sm,
+    },
+    controlIcon: {
+      fontSize: Fonts.size.base,
+      color: colors.text,
+    },
+    playIcon: {
+      fontSize: Fonts.size.base,
+      color: colors.background,
+    },
+  });
+
   return (
     <TouchableOpacity
       style={styles.container}
@@ -86,77 +163,3 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.audio.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.audio.border,
-    ...Dimensions.shadow.lg,
-    zIndex: 1000,
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Dimensions.spacing.md,
-    paddingHorizontal: Dimensions.spacing.lg,
-    minHeight: Dimensions.layout.miniPlayerHeight,
-  },
-  imageContainer: {
-    marginRight: Dimensions.spacing.md,
-  },
-  image: {
-    width: Dimensions.component.miniPlayerImage.width,
-    height: Dimensions.component.miniPlayerImage.height,
-    borderRadius: Dimensions.radius.md,
-  },
-  fallbackImage: {
-    width: Dimensions.component.miniPlayerImage.width,
-    height: Dimensions.component.miniPlayerImage.height,
-    borderRadius: Dimensions.radius.md,
-    backgroundColor: Colors.background.tertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fallbackIcon: {
-    fontSize: Fonts.size.xl,
-  },
-  textContainer: {
-    flex: 1,
-    marginRight: Dimensions.spacing.md,
-  },
-  title: {
-    fontSize: Fonts.size.base,
-    fontWeight: Fonts.weight.semibold,
-    color: Colors.text.primary,
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: Fonts.size.sm,
-    color: Colors.text.secondary,
-  },
-  controls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  controlButton: {
-    width: Dimensions.component.controlButton.width,
-    height: Dimensions.component.controlButton.height,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Dimensions.radius.full,
-    marginHorizontal: Dimensions.spacing.xs,
-  },
-  playButton: {
-    backgroundColor: Colors.primary,
-    marginHorizontal: Dimensions.spacing.sm,
-  },
-  controlIcon: {
-    fontSize: Fonts.size.base,
-    color: Colors.text.primary,
-  },
-  playIcon: {
-    fontSize: Fonts.size.base,
-    color: Colors.text.inverse,
-  },
-});

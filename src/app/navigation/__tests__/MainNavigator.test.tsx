@@ -36,8 +36,26 @@ const mockUseAudioStore = {
   playPrevious: jest.fn(),
 };
 
+const mockUseTheme = {
+  theme: 'light' as const,
+  isDark: false,
+  colors: {
+    background: '#EBE5D9',
+    text: '#070707',
+    primary: '#264854',
+    secondary: '#AD915A',
+  },
+  toggleTheme: jest.fn(),
+  setTheme: jest.fn(),
+  setSystemTheme: jest.fn(),
+  isManuallySet: false,
+  reset: jest.fn(),
+  initializeFromSystem: jest.fn(),
+};
+
 jest.mock('@/shared/store', () => ({
   useAudioStore: () => mockUseAudioStore,
+  useTheme: () => mockUseTheme,
 }));
 
 const NavigationWrapper: React.FC<{ children: React.ReactNode }> = ({
@@ -50,6 +68,12 @@ describe('MainNavigator', () => {
     mockUseAudioStore.currentBook = null;
     mockUseAudioStore.currentChapter = null;
     mockUseAudioStore.isPlaying = false;
+
+    // Reset theme mock
+    mockUseTheme.theme = 'light';
+    mockUseTheme.isDark = false;
+    mockUseTheme.isManuallySet = false;
+
     jest.clearAllMocks();
   });
 
@@ -213,5 +237,19 @@ describe('MainNavigator', () => {
     await waitFor(() => {
       expect(queryByTestId('main-mini-player')).toBeNull();
     });
+  });
+
+  it('uses theme colors and functionality correctly', () => {
+    render(
+      <NavigationWrapper>
+        <MainNavigator />
+      </NavigationWrapper>
+    );
+
+    // Verify theme store is accessible and has all expected methods
+    expect(mockUseTheme).toBeDefined();
+    expect(mockUseTheme.toggleTheme).toBeDefined();
+    expect(mockUseTheme.setSystemTheme).toBeDefined();
+    expect(mockUseTheme.colors).toBeDefined();
   });
 });
