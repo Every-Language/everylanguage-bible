@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { Colors, Fonts, Dimensions } from '@/shared/constants';
 
 interface MiniPlayerProps {
   title?: string;
@@ -88,81 +89,74 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.audio.background,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 8,
+    borderTopColor: Colors.audio.border,
+    ...Dimensions.shadow.lg,
     zIndex: 1000,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    paddingHorizontal: 16,
-    minHeight: 70,
+    padding: Dimensions.spacing.md,
+    paddingHorizontal: Dimensions.spacing.lg,
+    minHeight: Dimensions.layout.miniPlayerHeight,
   },
   imageContainer: {
-    marginRight: 12,
+    marginRight: Dimensions.spacing.md,
   },
   image: {
-    width: 48,
-    height: 48,
-    borderRadius: 6,
+    width: Dimensions.component.miniPlayerImage.width,
+    height: Dimensions.component.miniPlayerImage.height,
+    borderRadius: Dimensions.radius.md,
   },
   fallbackImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 6,
-    backgroundColor: '#f0f0f0',
+    width: Dimensions.component.miniPlayerImage.width,
+    height: Dimensions.component.miniPlayerImage.height,
+    borderRadius: Dimensions.radius.md,
+    backgroundColor: Colors.background.tertiary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   fallbackIcon: {
-    fontSize: 20,
+    fontSize: Fonts.size.xl,
   },
   textContainer: {
     flex: 1,
-    marginRight: 12,
+    marginRight: Dimensions.spacing.md,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: Fonts.size.base,
+    fontWeight: Fonts.weight.semibold,
+    color: Colors.text.primary,
     marginBottom: 2,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666666',
+    fontSize: Fonts.size.sm,
+    color: Colors.text.secondary,
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   controlButton: {
-    width: 40,
-    height: 40,
+    width: Dimensions.component.controlButton.width,
+    height: Dimensions.component.controlButton.height,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
-    marginHorizontal: 4,
+    borderRadius: Dimensions.radius.full,
+    marginHorizontal: Dimensions.spacing.xs,
   },
   playButton: {
-    backgroundColor: '#007AFF',
-    marginHorizontal: 8,
+    backgroundColor: Colors.primary,
+    marginHorizontal: Dimensions.spacing.sm,
   },
   controlIcon: {
-    fontSize: 16,
-    color: '#333333',
+    fontSize: Fonts.size.base,
+    color: Colors.text.primary,
   },
   playIcon: {
-    fontSize: 16,
-    color: '#ffffff',
+    fontSize: Fonts.size.base,
+    color: Colors.text.inverse,
   },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Image } from 'react-native';
+import { Colors, Fonts, Dimensions } from '@/shared/constants';
 
 // Import all book images using ES6 imports
 // This is obviously going to need to get switched around to come the database, right?
@@ -195,50 +196,43 @@ export const BookCard: React.FC<BookCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 8,
-    marginHorizontal: 4,
-    marginVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    backgroundColor: Colors.background.primary,
+    borderRadius: Dimensions.radius.xl,
+    padding: Dimensions.spacing.sm,
+    marginHorizontal: Dimensions.spacing.xs,
+    marginVertical: Dimensions.spacing.xs,
+    ...Dimensions.shadow.md,
     minHeight: 110,
     flex: 1,
   },
   imageContainer: {
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: Dimensions.spacing.md,
   },
   bookImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+    width: Dimensions.component.bookImage.width,
+    height: Dimensions.component.bookImage.height,
+    borderRadius: Dimensions.radius.lg,
   },
   fallbackIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    width: Dimensions.component.bookImage.width,
+    height: Dimensions.component.bookImage.height,
+    borderRadius: Dimensions.radius.lg,
+    backgroundColor: Colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   fallbackEmoji: {
-    fontSize: 24,
+    fontSize: Fonts.size['2xl'],
   },
   textContainer: {
     alignItems: 'center',
   },
   title: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: Fonts.size.sm,
+    fontWeight: Fonts.weight.semibold,
     textAlign: 'center',
-    color: '#333',
-    lineHeight: 18,
+    color: Colors.text.primary,
+    lineHeight: Fonts.size.lg,
   },
 });

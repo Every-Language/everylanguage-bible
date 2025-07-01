@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { BibleBooksScreen } from '@/features/bible/screens/BibleBooksScreen';
 import { MiniPlayer } from '@/features/audio/components/MiniPlayer';
 import { type Book } from '@/shared/utils';
+import { Colors, Fonts, Dimensions } from '@/shared/constants';
 
 // Placeholder screens for now
 const ResourcesScreen = () => (
@@ -56,12 +57,14 @@ export const MainNavigator: React.FC = () => {
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#007AFF',
-          tabBarInactiveTintColor: '#8E8E93',
+          tabBarActiveTintColor: Colors.interactive.active,
+          tabBarInactiveTintColor: Colors.interactive.inactive,
           tabBarStyle: {
-            backgroundColor: '#ffffff',
-            borderTopColor: '#e0e0e0',
-            paddingBottom: currentAudio ? 70 : 0, // Make space for mini-player
+            backgroundColor: Colors.background.primary,
+            borderTopColor: Colors.border.light,
+            paddingBottom: currentAudio
+              ? Dimensions.layout.miniPlayerHeight
+              : 0,
           },
         }}>
         <Tab.Screen
@@ -112,24 +115,24 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: Colors.background.secondary,
   },
   placeholderText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 8,
+    fontSize: Fonts.size['2xl'],
+    fontWeight: Fonts.weight.bold,
+    color: Colors.text.primary,
+    marginBottom: Dimensions.spacing.sm,
   },
   placeholderSubtext: {
-    fontSize: 16,
-    color: '#666666',
+    fontSize: Fonts.size.base,
+    color: Colors.text.secondary,
   },
   tabIcon: {
-    fontSize: 20,
+    fontSize: Dimensions.component.tabIcon.size,
   },
   miniPlayerContainer: {
     position: 'absolute',
-    bottom: 83, // Height of tab bar
+    bottom: Dimensions.layout.tabBarHeight,
     left: 0,
     right: 0,
     zIndex: 1000,

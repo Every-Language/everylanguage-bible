@@ -1,21 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
 import { ChapterTile } from './ChapterTile';
+import { Colors, Dimensions } from '@/shared/constants';
 
 interface ChapterGridProps {
   chapterCount: number;
   onChapterPress: (chapterNumber: number) => void;
   isVisible: boolean;
   testID?: string;
+  onAnimationComplete?: () => void;
 }
 
-const CHAPTERS_PER_ROW = 5;
+const CHAPTERS_PER_ROW = Dimensions.layout.chaptersPerRow;
 
 export const ChapterGrid: React.FC<ChapterGridProps> = ({
   chapterCount,
   onChapterPress,
   isVisible,
   testID,
+  onAnimationComplete,
 }) => {
   const animatedHeight = useRef(new Animated.Value(0)).current;
   const animatedOpacity = useRef(new Animated.Value(0)).current;
@@ -45,16 +48,17 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
       Animated.parallel([
         Animated.timing(animatedHeight, {
           toValue: 0,
-          duration: 200,
+          duration: 175,
           useNativeDriver: false,
         }),
         Animated.timing(animatedOpacity, {
           toValue: 0,
-          duration: 200,
+          duration: 175,
           useNativeDriver: false,
         }),
       ]).start(() => {
         setShouldRender(false);
+        onAnimationComplete?.();
       });
     }
   }, [isVisible, animatedHeight, animatedOpacity, maxHeight]);
@@ -102,20 +106,20 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f9f9f9',
-    paddingHorizontal: 12, // Match book container padding
-    marginTop: 4,
+    backgroundColor: Colors.background.secondary,
+    paddingHorizontal: Dimensions.spacing.md,
+    marginTop: Dimensions.spacing.xs,
     overflow: 'hidden',
   },
   gridContainer: {
-    paddingVertical: 12,
-    alignItems: 'center', // Center the grid
+    paddingVertical: Dimensions.spacing.md,
+    alignItems: 'center',
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'center', // Center each row
-    marginBottom: 0, // Remove extra margin, let ChapterTile margins handle spacing
+    justifyContent: 'center',
+    marginBottom: 0,
     width: '100%',
-    maxWidth: 350, // Constrain width for better centering on larger screens
+    maxWidth: 350,
   },
 });

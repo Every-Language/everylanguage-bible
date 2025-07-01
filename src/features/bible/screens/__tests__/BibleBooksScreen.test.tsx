@@ -54,7 +54,6 @@ describe('BibleBooksScreen', () => {
 
     await waitFor(() => {
       expect(getByText('Bible')).toBeTruthy();
-      expect(getByText('Choose a book to start listening')).toBeTruthy();
       expect(getByText('Old Testament')).toBeTruthy();
       expect(getByText('New Testament')).toBeTruthy();
     });

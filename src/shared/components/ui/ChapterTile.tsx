@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Colors, Fonts, Dimensions } from '@/shared/constants';
 
 interface ChapterTileProps {
   chapterNumber: number;
@@ -26,20 +27,20 @@ export const ChapterTile: React.FC<ChapterTileProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    width: 60,
-    height: 60,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    width: Dimensions.component.chapterTile.width,
+    height: Dimensions.component.chapterTile.height,
+    backgroundColor: Colors.chapter.background,
+    borderRadius: Dimensions.radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 4,
-    marginVertical: 4,
+    marginHorizontal: Dimensions.spacing.xs,
+    marginVertical: Dimensions.spacing.xs,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: Colors.chapter.border,
   },
   chapterNumber: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: Fonts.size.base,
+    fontWeight: Fonts.weight.semibold,
+    color: Colors.chapter.text,
   },
 });
