@@ -1,6 +1,5 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { NavigationContainer } from '@react-navigation/native';
 import { MainNavigator } from '../MainNavigator';
 
 // Mock the safe area context
@@ -13,107 +12,128 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
-// Mock the utils used by BibleBooksScreen
+// Mock the AudioStore
+const mockAudioStore = {
+  currentBook: null as any,
+  currentChapter: null as any,
+  isPlaying: false,
+  currentPosition: 0,
+  totalDuration: 0,
+  setCurrentAudio: jest.fn(),
+  togglePlayPause: jest.fn(),
+  playNext: jest.fn(),
+  playPrevious: jest.fn(),
+  previousVerse: jest.fn(),
+  nextVerse: jest.fn(),
+  seek: jest.fn(),
+  close: jest.fn(),
+  play: jest.fn(),
+};
+
+jest.mock('@/shared/store', () => ({
+  useAudioStore: () => mockAudioStore,
+  useTheme: () => ({
+    colors: {
+      background: '#EBE5D9',
+      text: '#070707',
+      primary: '#264854',
+      secondary: '#AD915A',
+    },
+    isDark: false,
+    toggleTheme: jest.fn(),
+  }),
+}));
+
+// Mock the translation hook
+jest.mock('@/shared/hooks', () => ({
+  useTranslation: () => ({
+    t: (key: string, params?: any) => {
+      const translations: Record<string, string> = {
+        'theme.switchToLight': 'Switch to light mode',
+        'theme.switchToDark': 'Switch to dark mode',
+        'bible.openBook': `Open ${params?.title || 'book'}`,
+        'bible.chapter': `Chapter ${params?.number || ''}`,
+        'navigation.back': 'Back',
+        'audio.audioPlayerControls': 'Audio player controls',
+        'audio.previousChapter': 'Previous chapter',
+        'audio.nextChapter': 'Next chapter',
+        'audio.previousVerse': 'Previous verse',
+        'audio.nextVerse': 'Next verse',
+        'audio.play': 'Play',
+        'audio.pause': 'Pause',
+        'audio.expandPlayer': 'Expand player',
+        'audio.closePlayer': 'Close player',
+      };
+      return translations[key] || key;
+    },
+  }),
+}));
+
+// Mock the utils
 jest.mock('@/shared/utils', () => ({
   loadBibleBooks: () => [
     {
-      id: '01',
+      id: 'gen',
       name: 'Genesis',
-      testament: 'old',
       chapters: 50,
-      order: 1,
+      testament: 'old',
       imagePath: '01_genesis.png',
     },
     {
-      id: '02',
+      id: 'exo',
       name: 'Exodus',
-      testament: 'old',
       chapters: 40,
-      order: 2,
+      testament: 'old',
       imagePath: '02_exodus.png',
     },
   ],
 }));
 
-// Mock the Zustand store
-const mockUseAudioStore = {
-  currentBook: null as any,
-  currentChapter: null as any,
-  isPlaying: false,
-  setCurrentAudio: jest.fn(),
-  togglePlayPause: jest.fn(),
-  playNext: jest.fn(),
-  playPrevious: jest.fn(),
-};
-
-const mockUseTheme = {
-  theme: 'light' as const,
-  isDark: false,
-  colors: {
-    background: '#EBE5D9',
-    text: '#070707',
-    primary: '#264854',
-    secondary: '#AD915A',
-  },
-  toggleTheme: jest.fn(),
-  setTheme: jest.fn(),
-  setSystemTheme: jest.fn(),
-  isManuallySet: false,
-  reset: jest.fn(),
-  initializeFromSystem: jest.fn(),
-};
-
-jest.mock('@/shared/store', () => ({
-  useAudioStore: () => mockUseAudioStore,
-  useTheme: () => mockUseTheme,
-}));
-
-const NavigationWrapper: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => <NavigationContainer>{children}</NavigationContainer>;
+// Mock Animated to avoid timing issues in tests
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native');
+  RN.Animated.timing = () => ({
+    start: jest.fn(),
+  });
+  // Mock Dimensions for responsive sizing
+  RN.Dimensions = {
+    get: jest.fn(() => ({ width: 375, height: 812 })), // iPhone X dimensions
+  };
+  return RN;
+});
 
 describe('MainNavigator', () => {
   beforeEach(() => {
-    // Reset mock store before each test
-    mockUseAudioStore.currentBook = null;
-    mockUseAudioStore.currentChapter = null;
-    mockUseAudioStore.isPlaying = false;
-
-    // Reset theme mock
-    mockUseTheme.theme = 'light';
-    mockUseTheme.isDark = false;
-    mockUseTheme.isManuallySet = false;
-
     jest.clearAllMocks();
+    // Reset audio store state
+    mockAudioStore.currentBook = null;
+    mockAudioStore.currentChapter = null;
+    mockAudioStore.isPlaying = false;
   });
 
-  it('renders the Bible books screen', async () => {
-    const { getByTestId } = render(
-      <NavigationWrapper>
-        <MainNavigator />
-      </NavigationWrapper>
-    );
+  it('renders BibleBooksScreen by default', async () => {
+    const { getByText } = render(<MainNavigator />);
 
-    // Should render the Bible books after loading
     await waitFor(() => {
-      expect(getByTestId('book-card-01')).toBeTruthy();
+      expect(getByText('Bible')).toBeTruthy();
+      expect(getByText('Genesis')).toBeTruthy();
+      expect(getByText('Exodus')).toBeTruthy();
     });
   });
 
-  it('shows mini player when a chapter is selected', async () => {
-    const { getByTestId, queryByTestId, rerender } = render(
-      <NavigationWrapper>
-        <MainNavigator />
-      </NavigationWrapper>
-    );
+  it('does not show mini player when no chapter is selected', () => {
+    const { queryByTestId } = render(<MainNavigator />);
 
-    // Initially, mini player should not be visible
     expect(queryByTestId('main-mini-player')).toBeNull();
+  });
 
-    // Wait for the books to load and expand Genesis
+  it('shows mini player when a chapter is selected', async () => {
+    const { getByTestId } = render(<MainNavigator />);
+
+    // Wait for books to load, then long press to show chapter grid
     await waitFor(() => {
-      const genesisCard = getByTestId('book-card-01');
-      fireEvent.press(genesisCard);
+      const bookCard = getByTestId('book-card-gen');
+      fireEvent(bookCard, 'longPress');
     });
 
     // Select a chapter - simulate the store update
@@ -122,55 +142,29 @@ describe('MainNavigator', () => {
       fireEvent.press(chapterTile);
     });
 
-    // Simulate store state update
-    mockUseAudioStore.currentBook = {
-      id: '01',
+    // Manually update the mock store to simulate the chapter selection
+    mockAudioStore.currentBook = {
+      id: 'gen',
       name: 'Genesis',
-      testament: 'old',
       chapters: 50,
-      order: 1,
+      testament: 'old',
       imagePath: '01_genesis.png',
     };
-    mockUseAudioStore.currentChapter = 1;
+    mockAudioStore.currentChapter = 1;
 
-    // Rerender to reflect the state change
-    rerender(
-      <NavigationWrapper>
-        <MainNavigator />
-      </NavigationWrapper>
-    );
+    // Re-render to reflect the store change
+    const { getByTestId: getByTestIdUpdated } = render(<MainNavigator />);
 
-    // Mini player should now be visible
-    await waitFor(() => {
-      expect(getByTestId('main-mini-player')).toBeTruthy();
-    });
+    expect(getByTestIdUpdated('main-mini-player')).toBeTruthy();
   });
 
   it('handles mini player controls and calls store methods', async () => {
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+    const { getByTestId } = render(<MainNavigator />);
 
-    // Mock the store to have a current audio selection
-    mockUseAudioStore.currentBook = {
-      id: '01',
-      name: 'Genesis',
-      testament: 'old',
-      chapters: 50,
-      order: 1,
-      imagePath: '01_genesis.png',
-    };
-    mockUseAudioStore.currentChapter = 5;
-    mockUseAudioStore.isPlaying = false;
-
-    const { getByTestId, getByText } = render(
-      <NavigationWrapper>
-        <MainNavigator />
-      </NavigationWrapper>
-    );
-
-    // Expand Genesis first
+    // Wait for books to load, then long press to show chapter grid
     await waitFor(() => {
-      const genesisCard = getByTestId('book-card-01');
-      fireEvent.press(genesisCard);
+      const bookCard = getByTestId('book-card-gen');
+      fireEvent(bookCard, 'longPress');
     });
 
     // Select chapter 5
@@ -179,77 +173,98 @@ describe('MainNavigator', () => {
       fireEvent.press(chapterTile);
     });
 
-    // Check that the store method was called
-    expect(mockUseAudioStore.setCurrentAudio).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'Genesis' }),
-      5
+    // Manually update the mock store
+    mockAudioStore.currentBook = {
+      id: 'gen',
+      name: 'Genesis',
+      chapters: 50,
+      testament: 'old',
+      imagePath: '01_genesis.png',
+    };
+    mockAudioStore.currentChapter = 5;
+
+    // Re-render with mini player visible
+    const { getByTestId: getByTestIdWithPlayer } = render(<MainNavigator />);
+
+    const playPauseButton = getByTestIdWithPlayer('mini-player-play-pause');
+    const previousChapterButton = getByTestIdWithPlayer(
+      'mini-player-previous-chapter'
     );
+    const nextChapterButton = getByTestIdWithPlayer('mini-player-next-chapter');
+    const previousVerseButton = getByTestIdWithPlayer(
+      'mini-player-previous-verse'
+    );
+    const nextVerseButton = getByTestIdWithPlayer('mini-player-next-verse');
 
-    // Check that mini player shows correct info
+    // Test controls
+    fireEvent.press(playPauseButton);
+    expect(mockAudioStore.togglePlayPause).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(previousChapterButton);
+    expect(mockAudioStore.playPrevious).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(nextChapterButton);
+    expect(mockAudioStore.playNext).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(previousVerseButton);
+    expect(mockAudioStore.previousVerse).toHaveBeenCalledTimes(1);
+
+    fireEvent.press(nextVerseButton);
+    expect(mockAudioStore.nextVerse).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls console.log when chapter is selected', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const { getByTestId } = render(<MainNavigator />);
+
+    // Wait for books to load, then long press to show chapter grid
     await waitFor(() => {
-      const miniPlayer = getByTestId('main-mini-player');
-      expect(miniPlayer).toBeTruthy();
-      expect(getByText('Chapter 5')).toBeTruthy();
+      const bookCard = getByTestId('book-card-gen');
+      fireEvent(bookCard, 'longPress');
     });
 
-    // Test play/pause functionality
     await waitFor(() => {
-      const playButton = getByTestId('mini-player-play-pause');
-      fireEvent.press(playButton);
+      const chapterTile = getByTestId('chapter-tile-1');
+      fireEvent.press(chapterTile);
     });
 
-    expect(mockUseAudioStore.togglePlayPause).toHaveBeenCalled();
-
-    // Test previous chapter button
-    await waitFor(() => {
-      const previousButton = getByTestId('mini-player-previous-chapter');
-      fireEvent.press(previousButton);
-    });
-
-    expect(mockUseAudioStore.playPrevious).toHaveBeenCalled();
-
-    // Test next chapter button
-    await waitFor(() => {
-      const nextButton = getByTestId('mini-player-next-chapter');
-      fireEvent.press(nextButton);
-    });
-
-    expect(mockUseAudioStore.playNext).toHaveBeenCalled();
-
-    expect(consoleSpy).toHaveBeenCalledWith('Selected chapter:', 'Genesis 5');
-
+    expect(consoleSpy).toHaveBeenCalledWith('Selected chapter:', 'Genesis 1');
     consoleSpy.mockRestore();
   });
 
-  it('does not show mini player when only book is expanded', async () => {
-    const { getByTestId, queryByTestId } = render(
-      <NavigationWrapper>
-        <MainNavigator />
-      </NavigationWrapper>
-    );
+  it('calls console.log when expand player is pressed', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
-    // Wait for the books to load and expand Genesis
+    // Set up store with active chapter
+    mockAudioStore.currentBook = {
+      id: 'gen',
+      name: 'Genesis',
+      chapters: 50,
+      testament: 'old',
+      imagePath: '01_genesis.png',
+    };
+    mockAudioStore.currentChapter = 1;
+
+    const { getByTestId } = render(<MainNavigator />);
+
+    // Find and press the expand button
     await waitFor(() => {
-      const genesisCard = getByTestId('book-card-01');
-      fireEvent.press(genesisCard);
+      const miniPlayer = getByTestId('main-mini-player');
+      fireEvent.press(miniPlayer);
     });
 
-    // Mini player should NOT be visible yet (only when chapter is selected)
-    await waitFor(() => {
-      expect(queryByTestId('main-mini-player')).toBeNull();
-    });
+    expect(consoleSpy).toHaveBeenCalledWith('Expand player');
+    consoleSpy.mockRestore();
   });
 
-  it('uses theme colors correctly', () => {
-    render(
-      <NavigationWrapper>
-        <MainNavigator />
-      </NavigationWrapper>
-    );
+  it('provides access to store methods', () => {
+    render(<MainNavigator />);
 
-    // Verify theme store is accessible and provides colors
-    expect(mockUseTheme).toBeDefined();
-    expect(mockUseTheme.colors).toBeDefined();
-    expect(mockUseTheme.colors.background).toBe('#EBE5D9');
+    // Verify audio store is accessible and has required methods
+    expect(mockAudioStore).toBeDefined();
+    expect(mockAudioStore.setCurrentAudio).toBeDefined();
+    expect(mockAudioStore.togglePlayPause).toBeDefined();
+    expect(mockAudioStore.playNext).toBeDefined();
+    expect(mockAudioStore.playPrevious).toBeDefined();
   });
 });

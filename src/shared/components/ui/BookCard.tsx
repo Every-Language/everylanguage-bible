@@ -148,6 +148,7 @@ interface BookCardProps {
   title: string;
   imagePath?: string;
   onPress: () => void;
+  onLongPress?: () => void; // Optional long press handler
   testID?: string;
   isSelected?: boolean;
 }
@@ -156,6 +157,7 @@ export const BookCard: React.FC<BookCardProps> = ({
   title,
   imagePath,
   onPress,
+  onLongPress,
   testID,
   isSelected = false,
 }) => {
@@ -222,6 +224,7 @@ export const BookCard: React.FC<BookCardProps> = ({
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
+      onLongPress={onLongPress}
       testID={testID}
       accessibilityRole='button'
       accessibilityLabel={t('bible.openBook', { title })}>

@@ -9,9 +9,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { BookCard, ChapterGrid } from '@/shared/components/ui';
+import { ChapterViewScreen } from './ChapterViewScreen';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
-import { useTheme } from '@/shared/store';
+import { useAudioStore, useTheme } from '@/shared/store';
 import { useTranslation } from '@/shared/hooks';
 
 interface BibleBooksScreenProps {
@@ -24,11 +25,15 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
 }) => {
   const { colors, isDark, toggleTheme } = useTheme();
+  const { currentBook, currentChapter } = useAudioStore();
   const { t } = useTranslation();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [currentScreen, setCurrentScreen] = useState<'books' | 'chapter'>(
+    'books'
+  );
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const lastExpandedBookRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -49,25 +54,51 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   }, []);
 
   const handleBookPress = (book: Book) => {
+    // If this book's chapter grid is currently open, close it
     if (expandedBookId === book.id) {
-      // If same book is pressed, close the expansion
+      lastExpandedBookRef.current = book.id;
+      setExpandedBookId(null);
+    } else {
+      // Otherwise, navigate to chapter view
+      setSelectedBook(book);
+      setCurrentScreen('chapter');
+    }
+  };
+
+  const handleBookLongPress = (book: Book) => {
+    // Long press: Show/hide chapter grid
+    if (expandedBookId === book.id) {
+      // If same book is long-pressed, close the expansion
       lastExpandedBookRef.current = book.id; // Keep track for animation
       setExpandedBookId(null);
-      setSelectedChapter(null); // Clear chapter selection when closing book
     } else {
       // Open the expansion for this book
       lastExpandedBookRef.current = null; // Clear previous tracking
       setExpandedBookId(book.id);
-      setSelectedChapter(null); // Clear previous chapter selection
     }
   };
 
   const handleChapterPress = (chapterNumber: number) => {
     const expandedBook = books.find(book => book.id === expandedBookId);
     if (expandedBook) {
-      setSelectedChapter(chapterNumber); // Track the selected chapter
       onChapterSelect(expandedBook, chapterNumber);
+      // Keep the chapter grid open so user can see highlighting and select other chapters
     }
+  };
+
+  const handleBackToBooks = () => {
+    setCurrentScreen('books');
+    setSelectedBook(null);
+  };
+
+  // Determine which chapter should be highlighted for a given book
+  const getSelectedChapterForBook = (book: Book) => {
+    // If this book matches the currently playing book, highlight the current chapter
+    if (currentBook && currentBook.id === book.id && currentChapter) {
+      return currentChapter;
+    }
+
+    return null;
   };
 
   // Group books into rows
@@ -189,6 +220,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
                   title={book.name}
                   imagePath={book.imagePath}
                   onPress={() => handleBookPress(book)}
+                  onLongPress={() => handleBookLongPress(book)}
                   testID={`book-card-${book.id}`}
                   isSelected={expandedBookId === book.id}
                 />
@@ -204,7 +236,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
             onChapterPress={handleChapterPress}
             isVisible={!!expandedBookInRow}
             testID={`chapter-grid-${bookToShow.id}`}
-            selectedChapter={selectedChapter}
+            selectedChapter={getSelectedChapterForBook(bookToShow)}
             onAnimationComplete={() => {
               if (!expandedBookInRow) {
                 lastExpandedBookRef.current = null;
@@ -215,6 +247,11 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       </View>
     );
   };
+
+  // Show chapter view screen
+  if (currentScreen === 'chapter' && selectedBook) {
+    return <ChapterViewScreen book={selectedBook} onBack={handleBackToBooks} />;
+  }
 
   if (loading) {
     return (

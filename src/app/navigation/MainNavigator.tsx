@@ -40,7 +40,7 @@ export const MainNavigator: React.FC = () => {
 
   const handleChapterSelect = (book: Book, chapter: number) => {
     setCurrentAudio(book, chapter);
-    // Auto-start playback when chapter is selected
+    audioStore.play();
     console.log('Selected chapter:', `${book.name} ${chapter}`);
   };
 

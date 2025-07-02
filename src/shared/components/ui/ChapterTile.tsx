@@ -45,10 +45,14 @@ export const ChapterTile: React.FC<ChapterTileProps> = ({
     },
   });
 
+  const handlePress = () => {
+    onPress(chapterNumber);
+  };
+
   return (
     <TouchableOpacity
       style={styles.container}
-      onPress={() => onPress(chapterNumber)}
+      onPress={handlePress}
       accessibilityLabel={t('bible.chapter', { number: chapterNumber })}
       accessibilityRole='button'
       testID={testID}>
