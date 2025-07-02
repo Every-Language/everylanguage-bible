@@ -20,8 +20,7 @@ jest.mock('expo-audio');
 // Import mocked functions for test assertions
 import { AudioModule, createAudioPlayer } from 'expo-audio';
 import { AudioTrack } from '../../types';
-// @ts-expect-error - importing audioService from file
-import { audioService } from '../audioService';
+import { audioService, type AudioSound } from '../audioService';
 
 // TypeScript: Cast to jest.MockedFunction for proper typing
 const mockAudioModule = AudioModule as jest.Mocked<typeof AudioModule>;
@@ -122,7 +121,9 @@ describe('audioService', () => {
         }),
       };
 
-      const result = await audioService.play(mockSound);
+      const result = await audioService.play(
+        mockSound as unknown as AudioSound
+      );
 
       expect(mockSound.playAsync).toHaveBeenCalled();
       expect(result.isPlaying).toBe(true);
@@ -137,7 +138,9 @@ describe('audioService', () => {
         }),
       };
 
-      const result = await audioService.pause(mockSound);
+      const result = await audioService.pause(
+        mockSound as unknown as AudioSound
+      );
 
       expect(mockSound.pauseAsync).toHaveBeenCalled();
       expect(result.isPlaying).toBe(false);
@@ -154,7 +157,9 @@ describe('audioService', () => {
         }),
       };
 
-      const result = await audioService.stop(mockSound);
+      const result = await audioService.stop(
+        mockSound as unknown as AudioSound
+      );
 
       expect(mockSound.stopAsync).toHaveBeenCalled();
       expect(mockSound.setPositionAsync).toHaveBeenCalledWith(0);
@@ -181,7 +186,10 @@ describe('audioService', () => {
           }),
       };
 
-      const result = await audioService.seekTo(mockSound, 60); // 60 seconds
+      const result = await audioService.seekTo(
+        mockSound as unknown as AudioSound,
+        60
+      ); // 60 seconds
 
       expect(mockSound.setPositionAsync).toHaveBeenCalledWith(60000);
       expect(result.positionMillis).toBe(60000);
@@ -198,7 +206,7 @@ describe('audioService', () => {
       };
 
       // Try to seek beyond duration
-      await audioService.seekTo(mockSound, 400); // 400 seconds, beyond 300s duration
+      await audioService.seekTo(mockSound as unknown as AudioSound, 400); // 400 seconds, beyond 300s duration
 
       // Should clamp to duration
       expect(mockSound.setPositionAsync).toHaveBeenCalledWith(300000);
@@ -215,7 +223,10 @@ describe('audioService', () => {
         }),
       };
 
-      const result = await audioService.setPlaybackRate(mockSound, 1.5);
+      const result = await audioService.setPlaybackRate(
+        mockSound as unknown as AudioSound,
+        1.5
+      );
 
       expect(mockSound.setRateAsync).toHaveBeenCalledWith(1.5, true); // true for pitch correction
       expect(result.rate).toBe(1.5);
@@ -231,7 +242,10 @@ describe('audioService', () => {
       };
 
       // Try to set rate beyond maximum
-      await audioService.setPlaybackRate(mockSound, 3.0);
+      await audioService.setPlaybackRate(
+        mockSound as unknown as AudioSound,
+        3.0 as any
+      );
 
       // Should clamp to maximum (2.0)
       expect(mockSound.setRateAsync).toHaveBeenCalledWith(2.0, true);
@@ -248,7 +262,10 @@ describe('audioService', () => {
         }),
       };
 
-      const result = await audioService.setVolume(mockSound, 0.5);
+      const result = await audioService.setVolume(
+        mockSound as unknown as AudioSound,
+        0.5
+      );
 
       expect(mockSound.setVolumeAsync).toHaveBeenCalledWith(0.5);
       expect(result.volume).toBe(0.5);
@@ -264,7 +281,7 @@ describe('audioService', () => {
       };
 
       // Try to set volume beyond maximum
-      await audioService.setVolume(mockSound, 1.5);
+      await audioService.setVolume(mockSound as unknown as AudioSound, 1.5);
 
       // Should clamp to maximum (1.0)
       expect(mockSound.setVolumeAsync).toHaveBeenCalledWith(1.0);
@@ -290,9 +307,9 @@ describe('audioService', () => {
           .mockRejectedValueOnce(new Error('Playback failed')),
       };
 
-      await expect(audioService.play(mockSound)).rejects.toThrow(
-        'Playback failed'
-      );
+      await expect(
+        audioService.play(mockSound as unknown as AudioSound)
+      ).rejects.toThrow('Playback failed');
     });
   });
 
@@ -309,7 +326,9 @@ describe('audioService', () => {
         }),
       };
 
-      const status = await audioService.getStatus(mockSound);
+      const status = await audioService.getStatus(
+        mockSound as unknown as AudioSound
+      );
 
       expect(status.isLoaded).toBe(true);
       expect(status.isPlaying).toBe(true);
@@ -324,7 +343,7 @@ describe('audioService', () => {
         unloadAsync: jest.fn().mockResolvedValueOnce({}),
       };
 
-      await audioService.unloadSound(mockSound);
+      await audioService.unloadSound(mockSound as unknown as AudioSound);
 
       expect(mockSound.unloadAsync).toHaveBeenCalled();
     });
