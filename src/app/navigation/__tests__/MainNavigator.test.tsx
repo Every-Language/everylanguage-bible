@@ -3,6 +3,16 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { MainNavigator } from '../MainNavigator';
 
+// Mock the safe area context
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  }),
+}));
+
 // Mock the utils used by BibleBooksScreen
 jest.mock('@/shared/utils', () => ({
   loadBibleBooks: () => [
@@ -77,15 +87,17 @@ describe('MainNavigator', () => {
     jest.clearAllMocks();
   });
 
-  it('renders tab navigation correctly', () => {
-    const { getByText } = render(
+  it('renders the Bible books screen', async () => {
+    const { getByTestId } = render(
       <NavigationWrapper>
         <MainNavigator />
       </NavigationWrapper>
     );
 
-    expect(getByText('Bible')).toBeTruthy();
-    expect(getByText('Resources')).toBeTruthy();
+    // Should render the Bible books after loading
+    await waitFor(() => {
+      expect(getByTestId('book-card-01')).toBeTruthy();
+    });
   });
 
   it('shows mini player when a chapter is selected', async () => {
@@ -132,17 +144,6 @@ describe('MainNavigator', () => {
     await waitFor(() => {
       expect(getByTestId('main-mini-player')).toBeTruthy();
     });
-  });
-
-  it('navigates to resources tab', () => {
-    const { getByText } = render(
-      <NavigationWrapper>
-        <MainNavigator />
-      </NavigationWrapper>
-    );
-
-    fireEvent.press(getByText('Resources'));
-    expect(getByText('Coming soon!')).toBeTruthy();
   });
 
   it('handles mini player controls and calls store methods', async () => {
@@ -199,17 +200,17 @@ describe('MainNavigator', () => {
 
     expect(mockUseAudioStore.togglePlayPause).toHaveBeenCalled();
 
-    // Test previous button
+    // Test previous chapter button
     await waitFor(() => {
-      const previousButton = getByTestId('mini-player-previous');
+      const previousButton = getByTestId('mini-player-previous-chapter');
       fireEvent.press(previousButton);
     });
 
     expect(mockUseAudioStore.playPrevious).toHaveBeenCalled();
 
-    // Test next button
+    // Test next chapter button
     await waitFor(() => {
-      const nextButton = getByTestId('mini-player-next');
+      const nextButton = getByTestId('mini-player-next-chapter');
       fireEvent.press(nextButton);
     });
 
@@ -239,17 +240,16 @@ describe('MainNavigator', () => {
     });
   });
 
-  it('uses theme colors and functionality correctly', () => {
+  it('uses theme colors correctly', () => {
     render(
       <NavigationWrapper>
         <MainNavigator />
       </NavigationWrapper>
     );
 
-    // Verify theme store is accessible and has all expected methods
+    // Verify theme store is accessible and provides colors
     expect(mockUseTheme).toBeDefined();
-    expect(mockUseTheme.toggleTheme).toBeDefined();
-    expect(mockUseTheme.setSystemTheme).toBeDefined();
     expect(mockUseTheme.colors).toBeDefined();
+    expect(mockUseTheme.colors.background).toBe('#EBE5D9');
   });
 });

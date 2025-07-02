@@ -1,7 +1,2 @@
-export {
-  useTheme,
-  ThemeProvider,
-  type Theme,
-  type ThemeColors,
-  type ThemeContextType,
-} from './useTheme';
+export { useTheme } from './useTheme';
+export { useTranslation } from './useTranslation';

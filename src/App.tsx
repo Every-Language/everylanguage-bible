@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MainNavigator } from '@/app/navigation/MainNavigator';
 import { useTheme } from '@/shared/store';
+import '@/shared/services/i18n';
 
 const AppContent: React.FC = () => {
   const { isDark } = useTheme();

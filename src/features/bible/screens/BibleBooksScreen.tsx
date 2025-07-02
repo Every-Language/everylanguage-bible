@@ -12,6 +12,7 @@ import { BookCard, ChapterGrid } from '@/shared/components/ui';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
+import { useTranslation } from '@/shared/hooks';
 
 interface BibleBooksScreenProps {
   onChapterSelect: (book: Book, chapter: number) => void;
@@ -23,6 +24,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
 }) => {
   const { colors, isDark, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
@@ -238,7 +240,9 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
           <TouchableOpacity
             style={styles.themeToggle}
             onPress={toggleTheme}
-            accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+            accessibilityLabel={
+              isDark ? t('theme.switchToLight') : t('theme.switchToDark')
+            }
             accessibilityRole='button'
             testID='theme-toggle-button'>
             <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>

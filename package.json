@@ -113,6 +113,9 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/shared/test-utils/i18n-test-setup.ts"
+    ],
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/.expo/",

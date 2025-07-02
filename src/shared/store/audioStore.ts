@@ -24,6 +24,10 @@ interface AudioState {
   setLoading: (isLoading: boolean) => void;
   setBuffering: (isBuffering: boolean) => void;
 
+  // Verse navigation actions
+  previousVerse: () => void;
+  nextVerse: () => void;
+
   // Playlist actions
   addToPlaylist: (book: Book, chapter: number) => void;
   removeFromPlaylist: (index: number) => void;
@@ -37,6 +41,7 @@ interface AudioState {
   togglePlayPause: () => void;
   stop: () => void;
   seek: (position: number) => void;
+  close: () => void; // Clear current audio and hide player
 }
 
 export const useAudioStore = create<AudioState>((set, get) => ({
@@ -57,7 +62,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       currentBook: book,
       currentChapter: chapter,
       currentPosition: 0,
-      totalDuration: 0,
+      totalDuration: 912, // Mock 15:12 duration for demo
     });
   },
 
@@ -157,6 +162,17 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   // Control actions
   play: () => {
     set({ isPlaying: true });
+
+    // Mock progress simulation for demo
+    const simulateProgress = () => {
+      const { isPlaying, currentPosition, totalDuration } = get();
+      if (isPlaying && currentPosition < totalDuration) {
+        set({ currentPosition: currentPosition + 1 });
+        setTimeout(simulateProgress, 1000);
+      }
+    };
+    setTimeout(simulateProgress, 1000);
+
     // TODO: Integrate with actual audio player service
   },
 
@@ -185,5 +201,32 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   seek: (position: number) => {
     set({ currentPosition: position });
     // TODO: Integrate with actual audio player service
+  },
+
+  // Verse navigation functions
+  previousVerse: () => {
+    // Mock verse navigation - in real implementation this would seek to previous verse
+    const { currentPosition } = get();
+    const newPosition = Math.max(0, currentPosition - 30); // Mock: go back to previous verse
+    get().seek(newPosition);
+    // TODO: Integrate with actual verse timing data
+  },
+
+  nextVerse: () => {
+    // Mock verse navigation - in real implementation this would seek to next verse
+    const { currentPosition, totalDuration } = get();
+    const newPosition = Math.min(totalDuration, currentPosition + 30); // Mock: go forward to next verse
+    get().seek(newPosition);
+    // TODO: Integrate with actual verse timing data
+  },
+
+  close: () => {
+    set({
+      currentBook: null,
+      currentChapter: null,
+      isPlaying: false,
+      currentPosition: 0,
+      totalDuration: 0,
+    });
   },
 }));

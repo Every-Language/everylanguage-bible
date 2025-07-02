@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Image } from 'react-native';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
+import { useTranslation } from '@/shared/hooks';
 
 // Import all book images using ES6 imports
 // This is obviously going to need to get switched around to come the database, right?
@@ -159,6 +160,7 @@ export const BookCard: React.FC<BookCardProps> = ({
   isSelected = false,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const getImageSource = () => {
     if (!imagePath) {
@@ -222,7 +224,7 @@ export const BookCard: React.FC<BookCardProps> = ({
       onPress={onPress}
       testID={testID}
       accessibilityRole='button'
-      accessibilityLabel={`Open ${title}`}>
+      accessibilityLabel={t('bible.openBook', { title })}>
       <View style={styles.imageContainer}>
         {imageSource ? (
           <Image

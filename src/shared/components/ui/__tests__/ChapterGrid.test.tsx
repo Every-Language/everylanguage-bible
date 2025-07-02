@@ -8,6 +8,10 @@ jest.mock('react-native', () => {
   RN.Animated.timing = () => ({
     start: jest.fn(),
   });
+  // Mock Dimensions for responsive sizing
+  RN.Dimensions = {
+    get: jest.fn(() => ({ width: 375, height: 812 })), // iPhone X dimensions
+  };
   return RN;
 });
 

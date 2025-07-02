@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTranslation } from '@/shared/hooks';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -8,25 +9,22 @@ interface WelcomeScreenProps {
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onGetStarted,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to El Bible</Text>
-        <Text style={styles.subtitle}>
-          Experience the Bible in every language with audio narration
-        </Text>
-        <Text style={styles.description}>
-          Discover God&apos;s word through multilingual audio Bible readings,
-          offline access, and personalized study tools.
-        </Text>
+        <Text style={styles.title}>{t('welcome.title')}</Text>
+        <Text style={styles.subtitle}>{t('welcome.subtitle')}</Text>
+        <Text style={styles.description}>{t('welcome.description')}</Text>
       </View>
 
       <TouchableOpacity
         style={styles.button}
         onPress={onGetStarted}
         accessibilityRole='button'
-        accessibilityLabel='Get started with El Bible'>
-        <Text style={styles.buttonText}>Get Started</Text>
+        accessibilityLabel={t('welcome.getStartedAccessibility')}>
+        <Text style={styles.buttonText}>{t('welcome.getStarted')}</Text>
       </TouchableOpacity>
     </View>
   );

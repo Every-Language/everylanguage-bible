@@ -1,5 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Animated, StyleSheet } from 'react-native';
+import {
+  View,
+  Animated,
+  StyleSheet,
+  Dimensions as RNDimensions,
+} from 'react-native';
 import { ChapterTile } from './ChapterTile';
 import { Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
@@ -28,10 +33,26 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
   const animatedOpacity = useRef(new Animated.Value(0)).current;
   const [shouldRender, setShouldRender] = useState(false);
 
+  // Calculate responsive tile size based on screen width
+  const screenWidth = RNDimensions.get('window').width;
+  const gridPadding = Dimensions.spacing.md * 2; // Left and right padding
+  const tileMargins = Dimensions.spacing.xs * 2; // Horizontal margin for each tile
+  const totalMargins = tileMargins * CHAPTERS_PER_ROW;
+  const availableWidth = screenWidth - gridPadding - totalMargins;
+  const calculatedTileSize = Math.floor(availableWidth / CHAPTERS_PER_ROW);
+
+  // Set minimum and maximum tile sizes for better UX
+  const minTileSize = 45; // Ensure tiles aren't too small
+  const maxTileSize = 70; // Ensure tiles aren't too large on tablets
+  const tileSize = Math.max(
+    minTileSize,
+    Math.min(maxTileSize, calculatedTileSize)
+  );
+
   // Calculate the number of rows needed
   const numberOfRows = Math.ceil(chapterCount / CHAPTERS_PER_ROW);
-  // Tile height (60) + vertical margins (8) + extra padding to prevent cut-off
-  const maxHeight = numberOfRows * (60 + 8) + 24; // More generous padding
+  // Use calculated tile size + vertical margins (no extra padding needed)
+  const maxHeight = numberOfRows * (tileSize + Dimensions.spacing.xs * 2);
 
   const styles = StyleSheet.create({
     container: {
@@ -39,12 +60,9 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
       paddingHorizontal: Dimensions.spacing.md,
       marginTop: Dimensions.spacing.xs,
       overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: colors.primary + '20', // Add subtle border with theme color
-      borderRadius: Dimensions.radius.lg,
     },
     gridContainer: {
-      paddingVertical: Dimensions.spacing.md,
+      paddingVertical: 0,
       alignItems: 'center',
     },
     row: {
@@ -52,7 +70,6 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
       justifyContent: 'center',
       marginBottom: 0,
       width: '100%',
-      maxWidth: 350,
     },
   });
 
@@ -123,6 +140,7 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
                 onPress={onChapterPress}
                 testID={`chapter-tile-${chapterNumber}`}
                 isSelected={selectedChapter === chapterNumber}
+                size={tileSize}
               />
             ))}
           </View>

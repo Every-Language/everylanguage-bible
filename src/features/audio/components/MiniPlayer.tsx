@@ -1,66 +1,103 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
+import { useTranslation } from '@/shared/hooks';
+import { ProgressBar } from '@/shared/components/ui/ProgressBar';
+import {
+  PlayIcon,
+  PauseIcon,
+  PreviousChapterIcon,
+  PreviousVerseIcon,
+  NextVerseIcon,
+  NextChapterIcon,
+  ChevronDownIcon,
+} from '@/shared/components/ui/icons/AudioIcons';
 
 interface MiniPlayerProps {
   title?: string;
   subtitle?: string;
   imagePath?: string;
-  isPlaying: boolean;
-  onPlayPause: () => void;
-  onPrevious: () => void;
-  onNext: () => void;
-  onExpand: () => void;
+  isPlaying?: boolean;
+  currentTime?: number; // in seconds
+  totalTime?: number; // in seconds
+  onPlayPause?: () => void;
+  onPreviousChapter?: () => void;
+  onNextChapter?: () => void;
+  onPreviousVerse?: () => void;
+  onNextVerse?: () => void;
+  onSeek?: (time: number) => void;
+  onExpand?: () => void;
+  onClose?: () => void; // Close/hide the player
   testID?: string;
 }
 
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({
-  title = 'No audio selected',
+  title,
   subtitle,
   imagePath,
-  isPlaying,
+  isPlaying = false,
+  currentTime = 0,
+  totalTime = 0,
   onPlayPause,
-  onPrevious,
-  onNext,
+  onPreviousChapter,
+  onNextChapter,
+  onPreviousVerse,
+  onNextVerse,
+  onSeek,
   onExpand,
+  onClose,
   testID,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const styles = StyleSheet.create({
     container: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: Dimensions.layout.miniPlayerHeight + insets.bottom,
       backgroundColor: colors.background,
+      paddingHorizontal: Dimensions.spacing.md,
+      paddingVertical: Dimensions.spacing.md,
+      paddingBottom: Dimensions.spacing.md + insets.bottom,
       borderTopWidth: 1,
-      borderTopColor: colors.primary + '30',
+      borderLeftWidth: 1,
+      borderRightWidth: 1,
+      borderTopColor: colors.primary,
+      borderLeftColor: colors.primary,
+      borderRightColor: colors.primary,
+      borderTopLeftRadius: Dimensions.radius.xl,
+      borderTopRightRadius: Dimensions.radius.xl,
       ...Dimensions.shadow.lg,
-      zIndex: 1000,
     },
-    content: {
+    topRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: Dimensions.spacing.md,
-      paddingHorizontal: Dimensions.spacing.lg,
-      minHeight: Dimensions.layout.miniPlayerHeight,
+      marginBottom: Dimensions.spacing.sm,
     },
-    imageContainer: {
+    albumArt: {
+      width: Dimensions.component.miniPlayerImage.width,
+      height: Dimensions.component.miniPlayerImage.height,
+      borderRadius: Dimensions.radius.md,
       marginRight: Dimensions.spacing.md,
     },
-    image: {
+    fallbackArt: {
       width: Dimensions.component.miniPlayerImage.width,
       height: Dimensions.component.miniPlayerImage.height,
       borderRadius: Dimensions.radius.md,
-    },
-    fallbackImage: {
-      width: Dimensions.component.miniPlayerImage.width,
-      height: Dimensions.component.miniPlayerImage.height,
-      borderRadius: Dimensions.radius.md,
-      backgroundColor: colors.secondary + '30',
-      alignItems: 'center',
+      backgroundColor: colors.primary + '20',
       justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: Dimensions.spacing.md,
     },
-    fallbackIcon: {
-      fontSize: Fonts.size.xl,
+    fallbackText: {
+      fontSize: 32,
+      color: colors.primary,
     },
     textContainer: {
       flex: 1,
@@ -68,7 +105,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     },
     title: {
       fontSize: Fonts.size.base,
-      fontWeight: Fonts.weight.semibold,
+      fontWeight: Fonts.weight.medium,
       color: colors.text,
       marginBottom: 2,
     },
@@ -76,29 +113,35 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       fontSize: Fonts.size.sm,
       color: colors.secondary,
     },
-    controls: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    subtitleButton: {
+      paddingVertical: 2,
+      paddingHorizontal: 4,
+      borderRadius: 4,
     },
-    controlButton: {
+    expandButton: {
       width: Dimensions.component.controlButton.width,
       height: Dimensions.component.controlButton.height,
-      alignItems: 'center',
       justifyContent: 'center',
+      alignItems: 'center',
       borderRadius: Dimensions.radius.full,
-      marginHorizontal: Dimensions.spacing.xs,
+      backgroundColor: colors.background,
     },
-    playButton: {
-      backgroundColor: colors.primary,
-      marginHorizontal: Dimensions.spacing.sm,
+    controlsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      paddingHorizontal: Dimensions.spacing.lg,
     },
-    controlIcon: {
-      fontSize: Fonts.size.base,
-      color: colors.text,
+    circularButton: {
+      width: Dimensions.component.controlButton.width,
+      height: Dimensions.component.controlButton.height,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: Dimensions.radius.full,
     },
-    playIcon: {
-      fontSize: Fonts.size.base,
-      color: colors.background,
+    primaryButton: {
+      width: Dimensions.component.primaryControlButton.width,
+      height: Dimensions.component.primaryControlButton.height,
     },
   });
 
@@ -107,58 +150,118 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       style={styles.container}
       onPress={onExpand}
       testID={testID}
-      accessibilityLabel='Audio player controls'
+      accessibilityLabel={t('audio.audioPlayerControls')}
       activeOpacity={0.9}>
-      <View style={styles.content}>
-        {/* Album Art / Book Image */}
-        <View style={styles.imageContainer}>
-          {imagePath ? (
-            <Image source={{ uri: imagePath }} style={styles.image} />
-          ) : (
-            <View style={styles.fallbackImage}>
-              <Text style={styles.fallbackIcon}>🎵</Text>
-            </View>
-          )}
-        </View>
+      {/* Top Row: Album Art, Text, Expand Button */}
+      <View style={styles.topRow}>
+        {imagePath ? (
+          <Image source={{ uri: imagePath }} style={styles.albumArt} />
+        ) : (
+          <View style={styles.fallbackArt}>
+            <Text style={styles.fallbackText}>📖</Text>
+          </View>
+        )}
 
-        {/* Title and Subtitle */}
         <View style={styles.textContainer}>
           <Text style={styles.title} numberOfLines={1}>
-            {title}
+            {title || t('audio.noAudioSelected')}
           </Text>
           {subtitle && (
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {subtitle}
-            </Text>
+            <TouchableOpacity
+              style={styles.subtitleButton}
+              onPress={onClose}
+              accessibilityLabel={t('audio.closePlayer')}
+              testID='mini-player-close-subtitle'>
+              <Text style={styles.subtitle} numberOfLines={1}>
+                {subtitle}
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
 
-        {/* Control Buttons */}
-        <View style={styles.controls}>
-          <TouchableOpacity
-            onPress={onPrevious}
-            style={styles.controlButton}
-            testID='mini-player-previous'
-            accessibilityLabel='Previous verse'>
-            <Text style={styles.controlIcon}>⏮</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.expandButton}
+          onPress={onExpand}
+          accessibilityLabel={t('audio.expandPlayer')}>
+          <ChevronDownIcon size={20} color={colors.text} />
+        </TouchableOpacity>
+      </View>
 
-          <TouchableOpacity
-            onPress={onPlayPause}
-            style={[styles.controlButton, styles.playButton]}
-            testID='mini-player-play-pause'
-            accessibilityLabel={isPlaying ? 'Pause' : 'Play'}>
-            <Text style={styles.playIcon}>{isPlaying ? '⏸' : '▶️'}</Text>
-          </TouchableOpacity>
+      {/* Progress Bar */}
+      <ProgressBar
+        currentTime={currentTime}
+        totalTime={totalTime}
+        onSeek={onSeek}
+        seekable={!!onSeek && totalTime > 0}
+        testID='mini-player-progress'
+      />
 
-          <TouchableOpacity
-            onPress={onNext}
-            style={styles.controlButton}
-            testID='mini-player-next'
-            accessibilityLabel='Next verse'>
-            <Text style={styles.controlIcon}>⏭</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Five Circular Control Buttons */}
+      <View style={styles.controlsRow}>
+        {/* Previous Chapter - « */}
+        <TouchableOpacity
+          onPress={onPreviousChapter}
+          style={[
+            styles.circularButton,
+            { backgroundColor: colors.primary + '20' },
+          ]}
+          testID='mini-player-previous-chapter'
+          accessibilityLabel={t('audio.previousChapter')}>
+          <PreviousChapterIcon size={20} color={colors.primary} />
+        </TouchableOpacity>
+
+        {/* Previous Verse - ‹ */}
+        <TouchableOpacity
+          onPress={onPreviousVerse}
+          style={[
+            styles.circularButton,
+            { backgroundColor: colors.primary + '20' },
+          ]}
+          testID='mini-player-previous-verse'
+          accessibilityLabel={t('audio.previousVerse')}>
+          <PreviousVerseIcon size={20} color={colors.primary} />
+        </TouchableOpacity>
+
+        {/* Play/Pause - Center button */}
+        <TouchableOpacity
+          onPress={onPlayPause}
+          style={[
+            styles.circularButton,
+            styles.primaryButton,
+            { backgroundColor: colors.primary },
+          ]}
+          testID='mini-player-play-pause'
+          accessibilityLabel={isPlaying ? t('audio.pause') : t('audio.play')}>
+          {isPlaying ? (
+            <PauseIcon size={28} color={colors.background} />
+          ) : (
+            <PlayIcon size={28} color={colors.background} />
+          )}
+        </TouchableOpacity>
+
+        {/* Next Verse - › */}
+        <TouchableOpacity
+          onPress={onNextVerse}
+          style={[
+            styles.circularButton,
+            { backgroundColor: colors.primary + '20' },
+          ]}
+          testID='mini-player-next-verse'
+          accessibilityLabel={t('audio.nextVerse')}>
+          <NextVerseIcon size={20} color={colors.primary} />
+        </TouchableOpacity>
+
+        {/* Next Chapter - » */}
+        <TouchableOpacity
+          onPress={onNextChapter}
+          style={[
+            styles.circularButton,
+            { backgroundColor: colors.primary + '20' },
+          ]}
+          testID='mini-player-next-chapter'
+          accessibilityLabel={t('audio.nextChapter')}>
+          <NextChapterIcon size={20} color={colors.primary} />
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );

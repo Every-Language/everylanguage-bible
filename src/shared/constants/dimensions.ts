@@ -34,12 +34,16 @@ export const Dimensions = {
       height: 60,
     },
     miniPlayerImage: {
-      width: 48,
-      height: 48,
+      width: 80,
+      height: 80,
     },
     controlButton: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
+    },
+    primaryControlButton: {
+      width: 56,
+      height: 56,
     },
     tabIcon: {
       size: 20,
@@ -74,7 +78,7 @@ export const Dimensions = {
   // Layout
   layout: {
     tabBarHeight: 83,
-    miniPlayerHeight: 70,
+    miniPlayerHeight: 210, // Final height for modern player
     booksPerRow: 3,
     chaptersPerRow: 5,
   },

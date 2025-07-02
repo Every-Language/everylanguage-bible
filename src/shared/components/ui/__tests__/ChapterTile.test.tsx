@@ -69,6 +69,23 @@ describe('ChapterTile', () => {
     expect(getByText('150')).toBeTruthy();
   });
 
+  it('uses custom size when provided', () => {
+    const { getByTestId } = render(
+      <ChapterTile
+        chapterNumber={5}
+        onPress={mockOnPress}
+        testID='chapter-tile'
+        size={50}
+      />
+    );
+
+    const chapterTile = getByTestId('chapter-tile');
+
+    // Should use the custom size provided
+    expect(chapterTile.props.style.width).toBe(50);
+    expect(chapterTile.props.style.height).toBe(50);
+  });
+
   it('highlights border when selected', () => {
     const { getByTestId } = render(
       <ChapterTile
