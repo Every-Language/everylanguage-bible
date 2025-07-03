@@ -9,10 +9,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { BookCard, ChapterGrid } from '@/shared/components/ui';
-import { ChapterViewScreen } from './ChapterViewScreen';
+import { ChapterView } from '../components/ChapterView';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
-import { useAudioStore, useTheme } from '@/shared/store';
+import { useAudioStore, useTheme, useChapterViewStore } from '@/shared/store';
 import { useTranslation } from '@/shared/hooks';
 
 interface BibleBooksScreenProps {
@@ -26,14 +26,12 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
 }) => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { currentBook, currentChapter } = useAudioStore();
+  const { openChapterView, closeChapterView, isOpen, selectedBook } =
+    useChapterViewStore();
   const { t } = useTranslation();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
-  const [currentScreen, setCurrentScreen] = useState<'books' | 'chapter'>(
-    'books'
-  );
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const lastExpandedBookRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -58,10 +56,12 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     if (expandedBookId === book.id) {
       lastExpandedBookRef.current = book.id;
       setExpandedBookId(null);
+    } else if (isOpen && selectedBook?.id === book.id) {
+      // If chapter view is open for this book, close it
+      closeChapterView();
     } else {
-      // Otherwise, navigate to chapter view
-      setSelectedBook(book);
-      setCurrentScreen('chapter');
+      // Otherwise, open chapter view overlay
+      openChapterView(book);
     }
   };
 
@@ -84,11 +84,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       onChapterSelect(expandedBook, chapterNumber);
       // Keep the chapter grid open so user can see highlighting and select other chapters
     }
-  };
-
-  const handleBackToBooks = () => {
-    setCurrentScreen('books');
-    setSelectedBook(null);
   };
 
   // Determine which chapter should be highlighted for a given book
@@ -217,11 +212,11 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
             <View key={book.id} style={styles.bookContainer}>
               <View style={styles.bookTouchable}>
                 <BookCard
-                  title={book.name}
-                  imagePath={book.imagePath}
+                  bookName={book.name}
+                  bookId={book.id}
+                  bookImage={book.imagePath}
                   onPress={() => handleBookPress(book)}
                   onLongPress={() => handleBookLongPress(book)}
-                  testID={`book-card-${book.id}`}
                   isSelected={expandedBookId === book.id}
                 />
               </View>
@@ -247,11 +242,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       </View>
     );
   };
-
-  // Show chapter view screen
-  if (currentScreen === 'chapter' && selectedBook) {
-    return <ChapterViewScreen book={selectedBook} onBack={handleBackToBooks} />;
-  }
 
   if (loading) {
     return (
@@ -311,6 +301,9 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
           </View>
         </View>
       </ScrollView>
+
+      {/* Chapter View Overlay */}
+      <ChapterView onChapterSelect={onChapterSelect} />
     </SafeAreaView>
   );
 };

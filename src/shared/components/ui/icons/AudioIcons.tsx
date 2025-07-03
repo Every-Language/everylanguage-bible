@@ -137,6 +137,43 @@ export const ChevronDownIcon: React.FC<IconProps> = ({
   />
 );
 
+export const PlusIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => (
+  <View
+    style={{
+      width: size,
+      height: size,
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}>
+    {/* Horizontal line */}
+    <View
+      style={[
+        styles.plusLine,
+        {
+          width: size * 0.6,
+          height: size * 0.08,
+          backgroundColor: color,
+        },
+      ]}
+    />
+    {/* Vertical line */}
+    <View
+      style={[
+        styles.plusLine,
+        {
+          position: 'absolute',
+          width: size * 0.08,
+          height: size * 0.6,
+          backgroundColor: color,
+        },
+      ]}
+    />
+  </View>
+);
+
 const styles = StyleSheet.create({
   playIcon: {
     // Container for the triangle
@@ -165,5 +202,8 @@ const styles = StyleSheet.create({
   chevronDown: {
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
+  },
+  plusLine: {
+    borderRadius: 1,
   },
 });

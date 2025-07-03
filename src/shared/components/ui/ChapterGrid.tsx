@@ -137,7 +137,7 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
               <ChapterTile
                 key={chapterNumber}
                 chapterNumber={chapterNumber}
-                onPress={onChapterPress}
+                onPress={() => onChapterPress(chapterNumber)}
                 testID={`chapter-tile-${chapterNumber}`}
                 isSelected={selectedChapter === chapterNumber}
                 size={tileSize}

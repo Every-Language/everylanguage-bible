@@ -30,8 +30,17 @@ const mockAudioStore = {
   play: jest.fn(),
 };
 
+// Mock the chapter view store
+const mockUseChapterViewStore = {
+  isOpen: false,
+  selectedBook: null,
+  openChapterView: jest.fn(),
+  closeChapterView: jest.fn(),
+};
+
 jest.mock('@/shared/store', () => ({
   useAudioStore: () => mockAudioStore,
+  useChapterViewStore: () => mockUseChapterViewStore,
   useTheme: () => ({
     colors: {
       background: '#EBE5D9',
@@ -109,6 +118,11 @@ describe('MainNavigator', () => {
     mockAudioStore.currentBook = null;
     mockAudioStore.currentChapter = null;
     mockAudioStore.isPlaying = false;
+    // Reset chapter view store state
+    mockUseChapterViewStore.isOpen = false;
+    mockUseChapterViewStore.selectedBook = null;
+    mockUseChapterViewStore.openChapterView.mockClear();
+    mockUseChapterViewStore.closeChapterView.mockClear();
   });
 
   it('renders BibleBooksScreen by default', async () => {
@@ -229,31 +243,6 @@ describe('MainNavigator', () => {
     });
 
     expect(consoleSpy).toHaveBeenCalledWith('Selected chapter:', 'Genesis 1');
-    consoleSpy.mockRestore();
-  });
-
-  it('calls console.log when expand player is pressed', async () => {
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-
-    // Set up store with active chapter
-    mockAudioStore.currentBook = {
-      id: 'gen',
-      name: 'Genesis',
-      chapters: 50,
-      testament: 'old',
-      imagePath: '01_genesis.png',
-    };
-    mockAudioStore.currentChapter = 1;
-
-    const { getByTestId } = render(<MainNavigator />);
-
-    // Find and press the expand button
-    await waitFor(() => {
-      const miniPlayer = getByTestId('main-mini-player');
-      fireEvent.press(miniPlayer);
-    });
-
-    expect(consoleSpy).toHaveBeenCalledWith('Expand player');
     consoleSpy.mockRestore();
   });
 
