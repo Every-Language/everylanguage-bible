@@ -68,10 +68,30 @@ const mockUseChapterViewStore = {
   }),
 };
 
+// Mock the verse view store
+const mockUseVerseViewStore = {
+  isOpen: false,
+  selectedBook: null as any,
+  selectedChapter: null as any,
+  openVerseView: jest.fn((book: any, chapter: number) => {
+    console.log('openVerseView called with:', book, chapter);
+    mockUseVerseViewStore.isOpen = true;
+    mockUseVerseViewStore.selectedBook = book;
+    mockUseVerseViewStore.selectedChapter = chapter;
+  }),
+  closeVerseView: jest.fn(() => {
+    console.log('closeVerseView called');
+    mockUseVerseViewStore.isOpen = false;
+    mockUseVerseViewStore.selectedBook = null;
+    mockUseVerseViewStore.selectedChapter = null;
+  }),
+};
+
 jest.mock('@/shared/store', () => ({
   useTheme: () => mockUseTheme,
   useAudioStore: () => mockUseAudioStore,
   useChapterViewStore: () => mockUseChapterViewStore,
+  useVerseViewStore: () => mockUseVerseViewStore,
 }));
 
 // Mock the translation hook
@@ -134,6 +154,7 @@ jest.mock('react-native', () => {
 
 describe('BibleBooksScreen', () => {
   const mockOnChapterSelect = jest.fn();
+  const mockOnVerseSelect = jest.fn();
 
   beforeEach(() => {
     mockOnChapterSelect.mockClear();
@@ -157,7 +178,10 @@ describe('BibleBooksScreen', () => {
 
   it('renders loading state initially', () => {
     const { getByText } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     expect(getByText('Loading Bible books...')).toBeTruthy();
@@ -165,7 +189,10 @@ describe('BibleBooksScreen', () => {
 
   it('renders Bible title', async () => {
     const { getByText } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {
@@ -175,7 +202,10 @@ describe('BibleBooksScreen', () => {
 
   it('renders theme toggle button', async () => {
     const { getByTestId } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {
@@ -186,7 +216,10 @@ describe('BibleBooksScreen', () => {
 
   it('calls toggleTheme when theme button is pressed', async () => {
     const { getByTestId } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {
@@ -198,7 +231,10 @@ describe('BibleBooksScreen', () => {
 
   it('renders books after loading', async () => {
     const { getByText } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {

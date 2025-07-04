@@ -38,9 +38,19 @@ const mockUseChapterViewStore = {
   closeChapterView: jest.fn(),
 };
 
+// Mock the verse view store
+const mockUseVerseViewStore = {
+  isOpen: false,
+  selectedBook: null,
+  selectedChapter: null,
+  openVerseView: jest.fn(),
+  closeVerseView: jest.fn(),
+};
+
 jest.mock('@/shared/store', () => ({
   useAudioStore: () => mockAudioStore,
   useChapterViewStore: () => mockUseChapterViewStore,
+  useVerseViewStore: () => mockUseVerseViewStore,
   useTheme: () => ({
     colors: {
       background: '#EBE5D9',

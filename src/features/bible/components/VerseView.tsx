@@ -5,32 +5,30 @@ import { Stack, Text } from '@tamagui/core';
 import { Card } from '@tamagui/card';
 import { Button } from '@tamagui/button';
 import { Image } from '@tamagui/image';
-import { useChapterViewStore } from '@/shared/store';
+import { useVerseViewStore } from '@/shared/store';
 import { getBookImageSource } from '@/shared/services';
 import { type Book } from '@/shared/utils';
 import { useTheme } from '@/shared/store';
 import { PlayIcon, PlusIcon } from '@/shared/components/ui/icons/AudioIcons';
 import { TouchableOpacity } from 'react-native';
 
-interface ChapterViewProps {
+interface VerseViewProps {
+  onVerseSelect: (book: Book, chapter: number, verse: number) => void;
   onChapterSelect: (book: Book, chapter: number) => void;
-  onVerseViewOpen: (book: Book, chapter: number) => void;
 }
 
-interface ChapterItemProps {
-  chapterNumber: number;
-  verseCount: number;
+interface VerseItemProps {
+  verseNumber: number;
+  verseText: string;
   onPlay: () => void;
-  onCardPress: () => void;
   onAddToQueue: () => void;
   testID?: string;
 }
 
-const ChapterItem: React.FC<ChapterItemProps> = ({
-  chapterNumber,
-  verseCount,
+const VerseItem: React.FC<VerseItemProps> = ({
+  verseNumber,
+  verseText,
   onPlay,
-  onCardPress,
   onAddToQueue,
   testID,
 }) => {
@@ -47,18 +45,23 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
       borderColor={colors.primary + '20'}
       borderWidth={1}
       testID={testID}
-      onPress={onCardPress}>
+      onPress={onPlay}>
       <Stack
         flexDirection='row'
         alignItems='center'
         justifyContent='space-between'
         flex={1}>
-        <Stack flexDirection='row' alignItems='center' gap='$2'>
+        <Stack flexDirection='column' flex={1} gap='$1'>
           <Text fontSize='$4' fontWeight='600' color={colors.text}>
-            Chapter {chapterNumber}
+            Verse {verseNumber}
           </Text>
-          <Text fontSize='$2' fontWeight='400' color={colors.secondary}>
-            {verseCount} verses
+          <Text
+            fontSize='$3'
+            fontWeight='400'
+            color={colors.text}
+            numberOfLines={2}
+            ellipsizeMode='tail'>
+            {verseText}
           </Text>
         </Stack>
 
@@ -80,7 +83,6 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
           {/* Play Button */}
           <TouchableOpacity
             onPress={onPlay}
-            testID='play-button'
             style={{
               width: 36,
               height: 36,
@@ -97,65 +99,62 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
   );
 };
 
-export const ChapterView: React.FC<ChapterViewProps> = ({
+export const VerseView: React.FC<VerseViewProps> = ({
+  onVerseSelect,
   onChapterSelect,
-  onVerseViewOpen,
 }) => {
-  const { isOpen, selectedBook, closeChapterView } = useChapterViewStore();
+  const { isOpen, selectedBook, selectedChapter, closeVerseView } =
+    useVerseViewStore();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  if (!isOpen || !selectedBook) {
+  if (!isOpen || !selectedBook || !selectedChapter) {
     return null;
   }
 
-  const handleChapterPress = (chapterNumber: number) => {
-    onChapterSelect(selectedBook, chapterNumber);
+  const handleVersePress = (verseNumber: number) => {
+    onVerseSelect(selectedBook, selectedChapter, verseNumber);
   };
 
-  const handleChapterCardPress = (chapterNumber: number) => {
-    onVerseViewOpen(selectedBook, chapterNumber);
-  };
-
-  const handleAddToQueue = (chapterNumber: number) => {
+  const handleAddToQueue = (verseNumber: number) => {
     // TODO: Implement add to queue functionality
-    console.log(`Add chapter ${chapterNumber} to queue`);
+    console.log(`Add verse ${verseNumber} to queue`);
   };
 
-  const handlePlayBook = () => {
-    // Play all chapters starting from chapter 1
-    onChapterSelect(selectedBook, 1);
+  const handlePlayChapter = () => {
+    // Play the entire chapter from the beginning
+    onChapterSelect(selectedBook, selectedChapter);
     console.log(
-      `Playing all chapters of ${selectedBook.name} starting from chapter 1`
+      `Playing entire chapter ${selectedChapter} of ${selectedBook.name}`
     );
   };
 
-  const handleAddBookToQueue = () => {
-    // Add all chapters to queue
-    const allChapters = Array.from(
-      { length: selectedBook.chapters },
+  const handleAddChapterToQueue = () => {
+    // Add all verses to queue
+    const allVerses = Array.from(
+      { length: getDummyVerseCount(selectedChapter) },
       (_, i) => i + 1
     );
     console.log(
-      `Adding all ${allChapters.length} chapters of ${selectedBook.name} to queue:`,
-      allChapters
+      `Adding all ${allVerses.length} verses of ${selectedBook.name} chapter ${selectedChapter} to queue:`,
+      allVerses
     );
-    // TODO: Implement actual add all chapters to queue functionality
+    // TODO: Implement actual add all verses to queue functionality
   };
 
-  // Generate dummy playback time based on chapter count
+  // Generate dummy playback time based on verse count
   // TODO: Replace with actual audio duration data
-  const getDummyPlaybackTime = (chapters: number): string => {
-    // Assume average of 8-12 minutes per chapter
-    const avgMinutesPerChapter = 10;
-    const totalMinutes = chapters * avgMinutesPerChapter;
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
+  const getDummyPlaybackTime = (verses: number): string => {
+    // Assume average of 15-25 seconds per verse
+    const avgSecondsPerVerse = 20;
+    const totalSeconds = verses * avgSecondsPerVerse;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
 
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
+    if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
     }
-    return `${minutes}m`;
+    return `${seconds}s`;
   };
 
   // Generate dummy verse count for a chapter
@@ -167,20 +166,44 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
     return 15 + (seed % 35); // Results in 15-49 verses
   };
 
-  const renderChapterItem = (chapterNumber: number) => (
-    <ChapterItem
-      key={chapterNumber}
-      chapterNumber={chapterNumber}
-      verseCount={getDummyVerseCount(chapterNumber)}
-      onPlay={() => handleChapterPress(chapterNumber)}
-      onCardPress={() => handleChapterCardPress(chapterNumber)}
-      onAddToQueue={() => handleAddToQueue(chapterNumber)}
-      testID={`chapter-tile-${chapterNumber}`}
+  // Generate dummy verse text
+  // TODO: Replace with actual verse text data
+  const getDummyVerseText = (verseNumber: number): string => {
+    const verseTexts = [
+      'In the beginning God created the heaven and the earth.',
+      'And the earth was without form, and void; and darkness was upon the face of the deep.',
+      'And the Spirit of God moved upon the face of the waters.',
+      'And God said, Let there be light: and there was light.',
+      'And God saw the light, that it was good: and God divided the light from the darkness.',
+      'And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day.',
+      'And God said, Let there be a firmament in the midst of the waters, and let it divide the waters from the waters.',
+      'And God made the firmament, and divided the waters which were under the firmament from the waters which were above the firmament: and it was so.',
+      'And God called the firmament Heaven. And the evening and the morning were the second day.',
+      'And God said, Let the waters under the heaven be gathered together unto one place, and let the dry land appear: and it was so.',
+      'And God called the dry land Earth; and the gathering together of the waters called he Seas: and God saw that it was good.',
+      'And God said, Let the earth bring forth grass, the herb yielding seed, and the fruit tree yielding fruit after his kind, whose seed is in itself, upon the earth: and it was so.',
+      'And the earth brought forth grass, and herb yielding seed after his kind, and the tree yielding fruit, whose seed was in itself, after his kind: and God saw that it was good.',
+      'And the evening and the morning were the third day.',
+      'And God said, Let there be lights in the firmament of the heaven to divide the day from the night; and let them be for signs, and for seasons, and for days, and years.',
+    ];
+
+    // Use verse number as index, cycling through the array
+    return verseTexts[(verseNumber - 1) % verseTexts.length];
+  };
+
+  const renderVerseItem = (verseNumber: number) => (
+    <VerseItem
+      key={verseNumber}
+      verseNumber={verseNumber}
+      verseText={getDummyVerseText(verseNumber)}
+      onPlay={() => handleVersePress(verseNumber)}
+      onAddToQueue={() => handleAddToQueue(verseNumber)}
+      testID={`verse-tile-${verseNumber}`}
     />
   );
 
-  const chapters = Array.from(
-    { length: selectedBook.chapters },
+  const verses = Array.from(
+    { length: getDummyVerseCount(selectedChapter) },
     (_, i) => i + 1
   );
 
@@ -211,7 +234,7 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
             borderWidth={1}
             borderColor={colors.primary}
             padding={0}
-            onPress={closeChapterView}
+            onPress={closeVerseView}
             pressStyle={{ scale: 0.9 }}
             testID='close-button'>
             <Stack
@@ -248,7 +271,7 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
           justifyContent='center'>
           {selectedBook.imagePath ? (
             <Image
-              source={getBookImageSource(selectedBook.imagePath)}
+              source={getBookImageSource(selectedBook.imagePath) as any}
               width={156}
               height={156}
               borderRadius='$4'
@@ -283,14 +306,14 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
                 fontWeight='bold'
                 color={colors.text}
                 textAlign='left'>
-                {selectedBook.name}
+                {selectedBook.name} - Chapter {selectedChapter}
               </Text>
             </Stack>
 
             <Stack flexDirection='row' alignItems='center' gap='$2'>
-              {/* Add Book to Queue Button */}
+              {/* Add Chapter to Queue Button */}
               <TouchableOpacity
-                onPress={handleAddBookToQueue}
+                onPress={handleAddChapterToQueue}
                 style={{
                   width: 36,
                   height: 36,
@@ -302,9 +325,9 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
                 <PlusIcon size={18} color={colors.background} />
               </TouchableOpacity>
 
-              {/* Play Book Button */}
+              {/* Play Chapter Button */}
               <TouchableOpacity
-                onPress={handlePlayBook}
+                onPress={handlePlayChapter}
                 style={{
                   width: 36,
                   height: 36,
@@ -313,7 +336,7 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}
-                testID='play-book-button'>
+                testID='play-chapter-button'>
                 <PlayIcon size={20} color={colors.background} />
               </TouchableOpacity>
             </Stack>
@@ -324,16 +347,14 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
             color={colors.secondary}
             marginTop='$1'
             textAlign='center'>
-            {selectedBook.chapters} chapters •{' '}
-            {selectedBook.testament === 'old' ? 'Old' : 'New'} Testament •{' '}
-            {getDummyPlaybackTime(selectedBook.chapters)}
+            {verses.length} verses • {getDummyPlaybackTime(verses.length)}
           </Text>
         </Stack>
 
-        {/* Chapters section */}
+        {/* Verses section */}
         <Stack flex={1}>
           <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-            <Stack paddingBottom='$4'>{chapters.map(renderChapterItem)}</Stack>
+            <Stack paddingBottom='$4'>{verses.map(renderVerseItem)}</Stack>
           </ScrollView>
         </Stack>
       </Stack>

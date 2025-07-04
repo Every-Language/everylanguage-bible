@@ -65,6 +65,7 @@ jest.mock('@/shared/components/ui/icons/AudioIcons', () => ({
 
 describe('ChapterView', () => {
   const mockOnChapterSelect = jest.fn();
+  const mockOnVerseViewOpen = jest.fn();
 
   beforeEach(() => {
     mockOnChapterSelect.mockClear();
@@ -75,7 +76,10 @@ describe('ChapterView', () => {
 
   it('renders nothing when not open', () => {
     const { queryByText } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
     expect(queryByText('Genesis')).toBeNull();
@@ -86,7 +90,10 @@ describe('ChapterView', () => {
     mockUseChapterViewStore.selectedBook = null;
 
     const { queryByText } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
     expect(queryByText('Genesis')).toBeNull();
@@ -103,7 +110,10 @@ describe('ChapterView', () => {
     };
 
     const { getByText } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
     expect(getByText('Genesis')).toBeTruthy();
@@ -121,7 +131,10 @@ describe('ChapterView', () => {
     };
 
     const { getByText } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
     expect(getByText('Chapter 1')).toBeTruthy();
@@ -129,7 +142,7 @@ describe('ChapterView', () => {
     expect(getByText('Chapter 3')).toBeTruthy();
   });
 
-  it('calls onChapterSelect when a chapter is pressed', () => {
+  it('calls onVerseViewOpen when a chapter card is pressed', () => {
     mockUseChapterViewStore.isOpen = true;
     mockUseChapterViewStore.selectedBook = {
       id: 'gen',
@@ -140,12 +153,44 @@ describe('ChapterView', () => {
     };
 
     const { getByTestId } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
-    // Find the first chapter tile and press it
+    // Find the first chapter tile and press it (this should open verse view)
     const chapterTile = getByTestId('chapter-tile-1');
     fireEvent.press(chapterTile);
+
+    expect(mockOnVerseViewOpen).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'gen', name: 'Genesis' }),
+      1
+    );
+  });
+
+  it('calls onChapterSelect when a chapter play button is pressed', () => {
+    mockUseChapterViewStore.isOpen = true;
+    mockUseChapterViewStore.selectedBook = {
+      id: 'gen',
+      name: 'Genesis',
+      chapters: 50,
+      testament: 'old',
+      imagePath: '01_genesis.png',
+    };
+
+    const { getByTestId } = render(
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
+    );
+
+    // Find the first chapter tile and press its play button
+    const chapterTile = getByTestId('chapter-tile-1');
+    // The play button is the last TouchableOpacity in the chapter tile
+    const playButton = chapterTile.findByProps({ testID: 'play-button' });
+    fireEvent.press(playButton);
 
     expect(mockOnChapterSelect).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'gen', name: 'Genesis' }),
@@ -164,7 +209,10 @@ describe('ChapterView', () => {
     };
 
     const { getByTestId } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
     // Find the close button (it's a Button component)
@@ -185,7 +233,10 @@ describe('ChapterView', () => {
     };
 
     const { getByTestId } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
     const playBookButton = getByTestId('play-book-button');
@@ -208,7 +259,10 @@ describe('ChapterView', () => {
     };
 
     const { getByText } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
     expect(getByText('28 chapters • New Testament • 4h 40m')).toBeTruthy();
@@ -225,7 +279,10 @@ describe('ChapterView', () => {
     };
 
     const { getByText } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
     expect(getByText('📖')).toBeTruthy();
@@ -242,7 +299,10 @@ describe('ChapterView', () => {
     };
 
     const { getAllByText } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
     // Chapter 1 should have a specific verse count based on the algorithm
@@ -262,7 +322,10 @@ describe('ChapterView', () => {
     };
 
     const { getByText } = render(
-      <ChapterView onChapterSelect={mockOnChapterSelect} />
+      <ChapterView
+        onChapterSelect={mockOnChapterSelect}
+        onVerseViewOpen={mockOnVerseViewOpen}
+      />
     );
 
     // 150 chapters * 10 minutes = 1500 minutes = 25 hours

@@ -9,25 +9,33 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { BookCard, ChapterGrid } from '@/shared/components/ui';
-import { ChapterView } from '../components/ChapterView';
+import { ChapterView, VerseView } from '../components';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
-import { useAudioStore, useTheme, useChapterViewStore } from '@/shared/store';
+import {
+  useAudioStore,
+  useTheme,
+  useChapterViewStore,
+  useVerseViewStore,
+} from '@/shared/store';
 import { useTranslation } from '@/shared/hooks';
 
 interface BibleBooksScreenProps {
   onChapterSelect: (book: Book, chapter: number) => void;
+  onVerseSelect: (book: Book, chapter: number, verse: number) => void;
 }
 
 const BOOKS_PER_ROW = Dimensions.layout.booksPerRow;
 
 export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
+  onVerseSelect,
 }) => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { currentBook, currentChapter } = useAudioStore();
   const { openChapterView, closeChapterView, isOpen, selectedBook } =
     useChapterViewStore();
+  const { openVerseView } = useVerseViewStore();
   const { t } = useTranslation();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +92,16 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       onChapterSelect(expandedBook, chapterNumber);
       // Keep the chapter grid open so user can see highlighting and select other chapters
     }
+  };
+
+  const handleChapterViewChapterSelect = (book: Book, chapter: number) => {
+    // Play the chapter when play button is pressed
+    onChapterSelect(book, chapter);
+  };
+
+  const handleChapterViewVerseViewOpen = (book: Book, chapter: number) => {
+    // Open verse view when chapter card is pressed
+    openVerseView(book, chapter);
   };
 
   // Determine which chapter should be highlighted for a given book
@@ -303,7 +321,16 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       </ScrollView>
 
       {/* Chapter View Overlay */}
-      <ChapterView onChapterSelect={onChapterSelect} />
+      <ChapterView
+        onChapterSelect={handleChapterViewChapterSelect}
+        onVerseViewOpen={handleChapterViewVerseViewOpen}
+      />
+
+      {/* Verse View Overlay - positioned in front of ChapterView but behind media player */}
+      <VerseView
+        onVerseSelect={onVerseSelect}
+        onChapterSelect={onChapterSelect}
+      />
     </SafeAreaView>
   );
 };
