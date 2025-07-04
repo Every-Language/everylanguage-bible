@@ -120,6 +120,7 @@ export const useTheme = () => {
       }
     }
   }, [
+    store,
     systemColorScheme,
     store.isManuallySet,
     store.theme,
