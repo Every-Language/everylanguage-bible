@@ -3,4 +3,5 @@ export type Slide = {
   title: string;
   subTitle: string;
   image: string;
+  component: 'LanguageDetection' | 'AudioSample' | 'BasicSetup';
 };

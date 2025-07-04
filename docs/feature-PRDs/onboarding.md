@@ -43,7 +43,7 @@ Comprehensive onboarding experience that introduces new users to the app's core 
 1. **Splash Screen**: Brief branded loading with progress indicator
 2. **Language Detection**: "We think you speak [Language]. Is this correct?"
 3. **Audio Sample**: "Tap to hear God's Word in your language"
-4. **Basic Setup**: Essential preferences with smart defaults
+4. **BasicSetup**: Essential preferences with smart defaults
 5. **Content Preview**: Sample of popular content in their language
 6. **Quick Start**: "Start listening now" or "Explore more"
 

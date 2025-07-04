@@ -10,8 +10,9 @@ import {
 import React from 'react';
 import { Dimensions, useTheme } from '@/shared';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
 import Paginator from './Paginator';
+
+import { navigate } from '@/app/navigation/NavigationService';
 
 const TopBar = (props: {
   scrollX: Animated.Value;
@@ -19,7 +20,6 @@ const TopBar = (props: {
   scrollBackWards: () => void;
 }) => {
   const { colors } = useTheme();
-  const navigation = useNavigation();
 
   const { scrollX, currentIndex, scrollBackWards } = props;
 
@@ -76,7 +76,7 @@ const TopBar = (props: {
 
       <TouchableOpacity
         onPress={() => {
-          navigation.navigate('Home');
+          navigate('Home');
         }}>
         <Text style={styles.skipText}>skip</Text>
       </TouchableOpacity>

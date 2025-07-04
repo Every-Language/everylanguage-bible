@@ -3,12 +3,12 @@ import React, { useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/shared/store';
 import { StatusBar } from 'expo-status-bar';
-import Slides from './slides';
+import Slides from './Slides';
 import OnBoardingItem from '../components/OnBoardingItem';
 import TopBar from '../components/TopBar';
 import BottomBar from '../components/BottomBar';
 
-const OnBoardingScreen = () => {
+export const OnBoardingScreen = () => {
   // Check list
   // 1. **Splash Screen**: Brief branded loading with progress indicator
   // 2. **Language Detection**: "We think you speak [Language]. Is this correct?"
@@ -85,6 +85,7 @@ const OnBoardingScreen = () => {
               title={item.title}
               subTitle={item.subTitle}
               image={item.image}
+              component={item.component}
             />
           )}
         />
@@ -93,5 +94,3 @@ const OnBoardingScreen = () => {
     </SafeAreaView>
   );
 };
-
-export default OnBoardingScreen;

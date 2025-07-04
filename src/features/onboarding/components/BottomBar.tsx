@@ -1,8 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import React from 'react';
 import { Dimensions, useTheme } from '@/shared';
-import { useNavigation } from '@react-navigation/native';
-import Slides from '../screens/slides';
+import Slides from '../screens/Slides';
+import { navigate } from '@/app/navigation/NavigationService';
 
 const BottomBar = (props: {
   scrollForward: () => void;
@@ -11,8 +11,6 @@ const BottomBar = (props: {
   const { colors } = useTheme();
 
   const { scrollForward, currentIndex } = props;
-
-  const navigation = useNavigation();
 
   const styles = StyleSheet.create({
     container: {
@@ -39,7 +37,7 @@ const BottomBar = (props: {
       {currentIndex == Slides.length - 1 ? (
         <TouchableOpacity
           onPress={() => {
-            navigation.navigate('Home');
+            navigate('Home');
           }}
           style={styles.nextButton}>
           <Text style={styles.nextText}>Finish</Text>

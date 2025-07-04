@@ -1,0 +1,1 @@
+export { OnBoardingScreen } from './OnBoardingScreen';

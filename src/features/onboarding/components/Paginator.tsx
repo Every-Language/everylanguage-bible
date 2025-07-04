@@ -1,6 +1,6 @@
 import { View, StyleSheet, Animated, useWindowDimensions } from 'react-native';
 import React from 'react';
-import Slides from '../screens/slides';
+import Slides from '../screens/Slides';
 import { useTheme } from '@/shared';
 
 const Paginator = (props: { scrollX: Animated.Value }) => {
