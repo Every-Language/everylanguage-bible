@@ -4,6 +4,40 @@ import { VerseView } from '../VerseView';
 import { useVerseViewStore } from '@/shared/store';
 import { getBookImageSource } from '@/shared/services';
 
+// Mock Tamagui components to avoid configuration issues
+jest.mock('@tamagui/core', () => ({
+  styled: () => () => 'View',
+  Stack: 'View',
+  Text: 'Text',
+  Button: 'TouchableOpacity',
+  Card: 'View',
+  XStack: 'View',
+  YStack: 'View',
+  ScrollView: 'ScrollView',
+}));
+
+jest.mock('@tamagui/button', () => ({
+  Button: 'TouchableOpacity',
+}));
+
+jest.mock('@tamagui/card', () => ({
+  Card: 'View',
+}));
+
+jest.mock('@tamagui/stacks', () => ({
+  Stack: 'View',
+  XStack: 'View',
+  YStack: 'View',
+}));
+
+jest.mock('@tamagui/text', () => ({
+  Text: 'Text',
+}));
+
+jest.mock('@tamagui/image', () => ({
+  Image: 'Image',
+}));
+
 // Mock the stores and services
 jest.mock('@/shared/store', () => ({
   useVerseViewStore: jest.fn(),
@@ -43,6 +77,11 @@ describe('VerseView', () => {
   };
 
   const mockOnVerseSelect = jest.fn();
+  const mockOnChapterSelect = jest.fn();
+
+  const renderWithProvider = (ui: React.ReactElement) => {
+    return render(ui);
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -58,8 +97,11 @@ describe('VerseView', () => {
       closeVerseView: jest.fn(),
     });
 
-    const { queryByTestId } = render(
-      <VerseView onVerseSelect={mockOnVerseSelect} />
+    const { queryByTestId } = renderWithProvider(
+      <VerseView
+        onVerseSelect={mockOnVerseSelect}
+        onChapterSelect={mockOnChapterSelect}
+      />
     );
 
     expect(queryByTestId('close-button')).toBeNull();
@@ -74,8 +116,11 @@ describe('VerseView', () => {
       closeVerseView: jest.fn(),
     });
 
-    const { getByTestId, getByText } = render(
-      <VerseView onVerseSelect={mockOnVerseSelect} />
+    const { getByTestId, getByText } = renderWithProvider(
+      <VerseView
+        onVerseSelect={mockOnVerseSelect}
+        onChapterSelect={mockOnChapterSelect}
+      />
     );
 
     expect(getByTestId('close-button')).toBeTruthy();
@@ -91,8 +136,11 @@ describe('VerseView', () => {
       closeVerseView: jest.fn(),
     });
 
-    const { getByTestId, getByText } = render(
-      <VerseView onVerseSelect={mockOnVerseSelect} />
+    const { getByTestId, getByText } = renderWithProvider(
+      <VerseView
+        onVerseSelect={mockOnVerseSelect}
+        onChapterSelect={mockOnChapterSelect}
+      />
     );
 
     // Should display verse items (the dummy function generates 15-49 verses)
@@ -110,8 +158,11 @@ describe('VerseView', () => {
       closeVerseView: mockCloseVerseView,
     });
 
-    const { getByTestId } = render(
-      <VerseView onVerseSelect={mockOnVerseSelect} />
+    const { getByTestId } = renderWithProvider(
+      <VerseView
+        onVerseSelect={mockOnVerseSelect}
+        onChapterSelect={mockOnChapterSelect}
+      />
     );
 
     const verseTile = getByTestId('verse-tile-1');
@@ -130,8 +181,11 @@ describe('VerseView', () => {
       closeVerseView: mockCloseVerseView,
     });
 
-    const { getByTestId } = render(
-      <VerseView onVerseSelect={mockOnVerseSelect} />
+    const { getByTestId } = renderWithProvider(
+      <VerseView
+        onVerseSelect={mockOnVerseSelect}
+        onChapterSelect={mockOnChapterSelect}
+      />
     );
 
     const closeButton = getByTestId('close-button');
@@ -149,14 +203,17 @@ describe('VerseView', () => {
       closeVerseView: jest.fn(),
     });
 
-    const { getByTestId } = render(
-      <VerseView onVerseSelect={mockOnVerseSelect} />
+    const { getByTestId } = renderWithProvider(
+      <VerseView
+        onVerseSelect={mockOnVerseSelect}
+        onChapterSelect={mockOnChapterSelect}
+      />
     );
 
     const playButton = getByTestId('play-chapter-button');
     fireEvent.press(playButton);
 
-    expect(mockOnVerseSelect).toHaveBeenCalledWith(mockBook, 1, 1);
+    expect(mockOnChapterSelect).toHaveBeenCalledWith(mockBook, 1);
   });
 
   it('should display fallback icon when no image path', () => {
@@ -169,8 +226,11 @@ describe('VerseView', () => {
       closeVerseView: jest.fn(),
     });
 
-    const { getByText } = render(
-      <VerseView onVerseSelect={mockOnVerseSelect} />
+    const { getByText } = renderWithProvider(
+      <VerseView
+        onVerseSelect={mockOnVerseSelect}
+        onChapterSelect={mockOnChapterSelect}
+      />
     );
 
     expect(getByText('📖')).toBeTruthy();
@@ -186,8 +246,11 @@ describe('VerseView', () => {
       closeVerseView: jest.fn(),
     });
 
-    const { getByText } = render(
-      <VerseView onVerseSelect={mockOnVerseSelect} />
+    const { getByText } = renderWithProvider(
+      <VerseView
+        onVerseSelect={mockOnVerseSelect}
+        onChapterSelect={mockOnChapterSelect}
+      />
     );
 
     expect(getByText('📖')).toBeTruthy();

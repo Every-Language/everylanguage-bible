@@ -4,4 +4,5 @@ export { ChapterTile } from './ChapterTile';
 export { ChapterGrid } from './ChapterGrid';
 export { ThemeDemo } from './ThemeDemo';
 export { ProgressBar } from './ProgressBar';
+export { OptionsPanel } from './OptionsPanel';
 export * from './icons/AudioIcons';

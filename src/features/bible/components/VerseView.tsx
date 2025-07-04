@@ -187,8 +187,9 @@ export const VerseView: React.FC<VerseViewProps> = ({
       'And God said, Let there be lights in the firmament of the heaven to divide the day from the night; and let them be for signs, and for seasons, and for days, and years.',
     ];
 
-    // Use verse number as index, cycling through the array
-    return verseTexts[(verseNumber - 1) % verseTexts.length];
+    // Use verse number as index, cycling through the array with safe access
+    const index = (verseNumber - 1) % verseTexts.length;
+    return verseTexts[index] || 'Default verse text';
   };
 
   const renderVerseItem = (verseNumber: number) => (
@@ -269,7 +270,8 @@ export const VerseView: React.FC<VerseViewProps> = ({
           paddingTop='$2'
           paddingBottom='$1'
           justifyContent='center'>
-          {selectedBook.imagePath ? (
+          {selectedBook.imagePath &&
+          getBookImageSource(selectedBook.imagePath) ? (
             <Image
               source={getBookImageSource(selectedBook.imagePath) as any}
               width={156}

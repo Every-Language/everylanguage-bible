@@ -55,12 +55,19 @@ const getBooksAsync = async (): Promise<Book[]> => {
 };
 
 export const useAudioStore = create<AudioState>((set, get) => ({
-  // Initial state
-  currentBook: null,
-  currentChapter: null,
+  // Initial state - start with John chapter 1
+  currentBook: {
+    id: '43', // John is the 43rd book (New Testament)
+    name: 'John',
+    testament: 'new',
+    chapters: 21,
+    order: 43,
+    imagePath: '43_john.png',
+  },
+  currentChapter: 1,
   isPlaying: false,
   currentPosition: 0,
-  totalDuration: 0,
+  totalDuration: 912, // Mock 15:12 duration for John chapter 1
   playlist: [],
   currentPlaylistIndex: -1,
   isLoading: false,

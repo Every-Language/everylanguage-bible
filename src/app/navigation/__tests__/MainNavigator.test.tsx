@@ -124,9 +124,16 @@ jest.mock('react-native', () => {
 describe('MainNavigator', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset audio store state
-    mockAudioStore.currentBook = null;
-    mockAudioStore.currentChapter = null;
+    // Reset audio store state to default (John chapter 1)
+    mockAudioStore.currentBook = {
+      id: '43',
+      name: 'John',
+      testament: 'new',
+      chapters: 21,
+      order: 43,
+      imagePath: '43_john.png',
+    };
+    mockAudioStore.currentChapter = 1;
     mockAudioStore.isPlaying = false;
     // Reset chapter view store state
     mockUseChapterViewStore.isOpen = false;
@@ -145,10 +152,10 @@ describe('MainNavigator', () => {
     });
   });
 
-  it('does not show mini player when no chapter is selected', () => {
-    const { queryByTestId } = render(<MainNavigator />);
+  it('shows mini player by default with John chapter 1', () => {
+    const { getByTestId } = render(<MainNavigator />);
 
-    expect(queryByTestId('main-mini-player')).toBeNull();
+    expect(getByTestId('main-mini-player')).toBeTruthy();
   });
 
   it('shows mini player when a chapter is selected', async () => {

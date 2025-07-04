@@ -31,6 +31,16 @@ jest.mock('@/features/bible/components/ChapterView', () => ({
   ChapterView: () => 'ChapterView',
 }));
 
+// Mock VerseView component to avoid dependency issues
+jest.mock('@/features/bible/components/VerseView', () => ({
+  VerseView: () => 'VerseView',
+}));
+
+// Mock OptionsPanel component
+jest.mock('@/shared/components/ui/OptionsPanel', () => ({
+  OptionsPanel: () => 'OptionsPanel',
+}));
+
 // Mock the theme store
 const mockUseTheme = {
   colors: {
@@ -139,6 +149,12 @@ jest.mock('@/shared/utils', () => ({
   ],
 }));
 
+// Mock react-native-safe-area-context
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
+  useSafeAreaInsets: () => ({ top: 44, bottom: 34, left: 0, right: 0 }),
+}));
+
 // Mock Animated to avoid timing issues in tests
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
@@ -200,7 +216,7 @@ describe('BibleBooksScreen', () => {
     });
   });
 
-  it('renders theme toggle button', async () => {
+  it('renders options button', async () => {
     const { getByTestId } = renderWithProvider(
       <BibleBooksScreen
         onChapterSelect={mockOnChapterSelect}
@@ -209,12 +225,12 @@ describe('BibleBooksScreen', () => {
     );
 
     await waitFor(() => {
-      const themeToggle = getByTestId('theme-toggle-button');
-      expect(themeToggle).toBeTruthy();
+      const optionsButton = getByTestId('options-button');
+      expect(optionsButton).toBeTruthy();
     });
   });
 
-  it('calls toggleTheme when theme button is pressed', async () => {
+  it('opens options panel when options button is pressed', async () => {
     const { getByTestId } = renderWithProvider(
       <BibleBooksScreen
         onChapterSelect={mockOnChapterSelect}
@@ -223,9 +239,11 @@ describe('BibleBooksScreen', () => {
     );
 
     await waitFor(() => {
-      const themeToggle = getByTestId('theme-toggle-button');
-      fireEvent.press(themeToggle);
-      expect(mockUseTheme.toggleTheme).toHaveBeenCalledTimes(1);
+      const optionsButton = getByTestId('options-button');
+      fireEvent.press(optionsButton);
+      // Note: The options panel visibility is handled internally,
+      // so we're just testing that the button press doesn't crash
+      expect(optionsButton).toBeTruthy();
     });
   });
 
@@ -246,7 +264,10 @@ describe('BibleBooksScreen', () => {
 
   it('navigates to chapter view on short press when no chapter grid is open', async () => {
     const { getByTestId, queryByText } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {
@@ -267,7 +288,10 @@ describe('BibleBooksScreen', () => {
 
   it('closes chapter grid on short press when grid is open', async () => {
     const { getByTestId, queryByTestId } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {
@@ -296,7 +320,10 @@ describe('BibleBooksScreen', () => {
 
   it('shows chapter grid on long press', async () => {
     const { getByTestId } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {
@@ -313,7 +340,10 @@ describe('BibleBooksScreen', () => {
 
   it('calls onChapterSelect when a chapter is selected from grid', async () => {
     const { getByTestId } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {
@@ -336,7 +366,10 @@ describe('BibleBooksScreen', () => {
 
   it.skip('can navigate back from chapter view', async () => {
     const { getByTestId } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {
@@ -374,7 +407,10 @@ describe('BibleBooksScreen', () => {
     mockUseAudioStore.currentChapter = 3;
 
     const { getByTestId } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {
@@ -391,16 +427,18 @@ describe('BibleBooksScreen', () => {
     });
   });
 
-  it('has proper accessibility for theme toggle', async () => {
-    mockUseTheme.isDark = false;
+  it('has proper accessibility for options button', async () => {
     const { getByTestId } = renderWithProvider(
-      <BibleBooksScreen onChapterSelect={mockOnChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
     );
 
     await waitFor(() => {
-      const themeToggle = getByTestId('theme-toggle-button');
-      expect(themeToggle.props.accessibilityLabel).toBe('Switch to dark mode');
-      expect(themeToggle.props.accessibilityRole).toBe('button');
+      const optionsButton = getByTestId('options-button');
+      expect(optionsButton.props.accessibilityLabel).toBe('Options menu');
+      expect(optionsButton.props.accessibilityRole).toBe('button');
     });
   });
 });

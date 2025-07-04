@@ -2,13 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   Text,
   ActivityIndicator,
   ScrollView,
   TouchableOpacity,
+  Dimensions as RNDimensions,
 } from 'react-native';
-import { BookCard, ChapterGrid } from '@/shared/components/ui';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BookCard, ChapterGrid, OptionsPanel } from '@/shared/components/ui';
+import { MoreIcon } from '@/shared/components/ui/icons/AudioIcons';
 import { ChapterView, VerseView } from '../components';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
@@ -18,7 +20,6 @@ import {
   useChapterViewStore,
   useVerseViewStore,
 } from '@/shared/store';
-import { useTranslation } from '@/shared/hooks';
 
 interface BibleBooksScreenProps {
   onChapterSelect: (book: Book, chapter: number) => void;
@@ -31,16 +32,22 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
   onVerseSelect,
 }) => {
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, toggleTheme } = useTheme();
   const { currentBook, currentChapter } = useAudioStore();
   const { openChapterView, closeChapterView, isOpen, selectedBook } =
     useChapterViewStore();
   const { openVerseView } = useVerseViewStore();
-  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
+  const [showOptionsPanel, setShowOptionsPanel] = useState(false);
+  const [optionsButtonPosition, setOptionsButtonPosition] = useState({
+    top: 0,
+    right: 0,
+  });
   const lastExpandedBookRef = useRef<string | null>(null);
+  const optionsButtonRef = useRef<View>(null);
 
   useEffect(() => {
     const loadBooks = async () => {
@@ -104,6 +111,25 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     openVerseView(book, chapter);
   };
 
+  const handleOptionsPress = () => {
+    if (optionsButtonRef.current) {
+      optionsButtonRef.current.measure(
+        (_x, _y, width, height, pageX, pageY) => {
+          const screenWidth = RNDimensions.get('window').width;
+          setOptionsButtonPosition({
+            top: pageY + height,
+            right: screenWidth - pageX - width,
+          });
+          setShowOptionsPanel(true);
+        }
+      );
+    }
+  };
+
+  const handleCloseOptions = () => {
+    setShowOptionsPanel(false);
+  };
+
   // Determine which chapter should be highlighted for a given book
   const getSelectedChapterForBook = (book: Book) => {
     // If this book matches the currently playing book, highlight the current chapter
@@ -129,23 +155,26 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       backgroundColor: colors.background,
     },
     header: {
-      padding: Dimensions.spacing.xl,
+      paddingTop: insets.top + Dimensions.spacing.md,
+      paddingHorizontal: Dimensions.spacing.xl,
       paddingBottom: Dimensions.spacing.md,
     },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
+      justifyContent: 'center', // Center the content
       marginBottom: Dimensions.spacing.xs,
+      position: 'relative', // For absolute positioning of options button
     },
     title: {
       fontSize: Fonts.size['3xl'],
       fontWeight: Fonts.weight.bold,
       color: colors.text,
-      flex: 1,
       textAlign: 'center',
     },
-    themeToggle: {
+    optionsButton: {
+      position: 'absolute',
+      right: 0,
       backgroundColor: colors.primary,
       paddingHorizontal: Dimensions.spacing.md,
       paddingVertical: Dimensions.spacing.sm,
@@ -154,10 +183,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       minHeight: 44,
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    themeToggleText: {
-      fontSize: Fonts.size.sm,
-      color: colors.background,
     },
     scrollView: {
       flex: 1,
@@ -278,19 +303,18 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   const newTestamentRows = createBookRows(newTestamentBooks);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Bible</Text>
           <TouchableOpacity
-            style={styles.themeToggle}
-            onPress={toggleTheme}
-            accessibilityLabel={
-              isDark ? t('theme.switchToLight') : t('theme.switchToDark')
-            }
+            ref={optionsButtonRef}
+            style={styles.optionsButton}
+            onPress={handleOptionsPress}
+            accessibilityLabel='Options menu'
             accessibilityRole='button'
-            testID='theme-toggle-button'>
-            <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
+            testID='options-button'>
+            <MoreIcon size={18} color={colors.background} />
           </TouchableOpacity>
         </View>
       </View>
@@ -331,6 +355,14 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         onVerseSelect={onVerseSelect}
         onChapterSelect={onChapterSelect}
       />
-    </SafeAreaView>
+
+      {/* Options Panel */}
+      <OptionsPanel
+        isVisible={showOptionsPanel}
+        onClose={handleCloseOptions}
+        onThemeToggle={toggleTheme}
+        position={optionsButtonPosition}
+      />
+    </View>
   );
 };
