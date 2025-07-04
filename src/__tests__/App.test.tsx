@@ -8,6 +8,13 @@ jest.mock('@react-navigation/native', () => ({
     children,
 }));
 
+jest.mock('@react-navigation/native-stack', () => ({
+  createNativeStackNavigator: () => ({
+    Navigator: ({ children }: { children: React.ReactNode }) => children,
+    Screen: ({ children }: { children: React.ReactNode }) => children,
+  }),
+}));
+
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -31,6 +38,11 @@ jest.mock('@/shared/store', () => ({
 jest.mock('@/shared/services/i18n', () => ({
   // Mock the i18n service
 }));
+
+jest.mock(
+  '@/features/onboarding/screens/OnBoardingScreen',
+  () => 'OnBoardingScreen'
+);
 
 describe('App', () => {
   it('should render without crashing', () => {
