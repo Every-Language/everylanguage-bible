@@ -1,6 +1,17 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions as RNDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
 import { useTranslation } from '@/shared/hooks';
@@ -50,6 +61,32 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
+  // Expansion state management
+  const [isExpanded, setIsExpanded] = useState(false);
+  const screenHeight = RNDimensions.get('window').height;
+
+  const expansionValue = useSharedValue(0);
+
+  // Handle expand/contract functionality
+  const handleExpandContractPress = () => {
+    const newExpanded = !isExpanded;
+    setIsExpanded(newExpanded);
+
+    if (newExpanded) {
+      // Expand
+      expansionValue.value = withSpring(1, {
+        damping: 20,
+        stiffness: 300,
+      });
+    } else {
+      // Contract
+      expansionValue.value = withSpring(0, {
+        damping: 20,
+        stiffness: 300,
+      });
+    }
+  };
+
   // Combine title and subtitle into a single display text
   const displayText = () => {
     if (title && subtitle) {
@@ -58,16 +95,43 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     return title || t('audio.noAudioSelected');
   };
 
+  // Calculate the height of the bottom controls section
+  const bottomControlsHeight = 190; // Increased height for all controls: expand bar + title + progress + buttons + padding
+
+  // Container animation - expands from bottom to fill most of screen
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    const expansion = expansionValue.value;
+
+    if (expansion === 0) {
+      // Collapsed state - container extends to bottom of screen, content above safe area
+      return {
+        position: 'absolute',
+        bottom: 0, // Extend to bottom of screen
+        left: 0,
+        right: 0,
+        height: bottomControlsHeight + insets.bottom, // Add safe area to height
+      };
+    } else {
+      // Expanded state - fills from top safe area to bottom of screen
+      const expandedHeight = screenHeight - insets.top;
+      const currentHeight =
+        bottomControlsHeight +
+        insets.bottom +
+        (expandedHeight - (bottomControlsHeight + insets.bottom)) * expansion;
+
+      return {
+        position: 'absolute',
+        bottom: 0, // Extend to bottom of screen
+        left: 0,
+        right: 0,
+        height: currentHeight,
+      };
+    }
+  });
+
   const styles = StyleSheet.create({
     container: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
       backgroundColor: colors.background,
-      paddingHorizontal: Dimensions.spacing.md,
-      paddingVertical: Dimensions.spacing.md,
-      paddingBottom: Dimensions.spacing.md + insets.bottom,
       borderTopWidth: 2,
       borderLeftWidth: 2,
       borderRightWidth: 2,
@@ -79,6 +143,30 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       ...Dimensions.shadow.lg,
       zIndex: 1000,
       opacity: 1, // Always 100% opaque
+      flexDirection: 'column',
+    },
+    expandContractTouchArea: {
+      paddingVertical: Dimensions.spacing.md,
+      paddingHorizontal: Dimensions.spacing.xl,
+      alignSelf: 'center',
+    },
+    expandContractBar: {
+      width: 100,
+      height: 5,
+      backgroundColor: '#666666',
+      borderRadius: 2.5,
+      alignSelf: 'center',
+    },
+    middleArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+      // This area can be used for additional content when expanded
+    },
+    bottomControlsContainer: {
+      paddingHorizontal: Dimensions.spacing.md,
+      paddingTop: Dimensions.spacing.sm, // Reduced from md to sm for less space between expand bar and title
+      paddingBottom: Dimensions.spacing.md + insets.bottom, // Add safe area padding back
+      backgroundColor: colors.background,
     },
     topRow: {
       flexDirection: 'row',
@@ -110,26 +198,34 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       width: Dimensions.component.primaryControlButton.width,
       height: Dimensions.component.primaryControlButton.height,
     },
-    expandContractBar: {
-      width: 100,
-      height: 5,
-      backgroundColor: '#666666',
-      borderRadius: 2.5,
-      alignSelf: 'center',
-      marginBottom: Dimensions.spacing.sm,
-    },
   });
 
   return (
-    <View
-      style={styles.container}
+    <Animated.View
+      style={[styles.container, animatedContainerStyle]}
       testID={testID}
       accessibilityLabel={t('audio.audioPlayerControls')}>
-      {/* Decorative Bar - No functionality */}
-      <View style={styles.expandContractBar} />
+      {/* Expand/Contract Bar - Always at the top of the container */}
+      <TouchableOpacity
+        style={styles.expandContractTouchArea}
+        onPress={handleExpandContractPress}
+        testID='mini-player-expand-contract-bar'
+        accessibilityLabel={
+          isExpanded ? t('audio.contractPlayer') : t('audio.expandPlayer')
+        }
+        accessibilityRole='button'>
+        <View style={styles.expandContractBar} />
+      </TouchableOpacity>
 
-      {/* Content */}
-      <View>
+      {/* Middle Area - Only visible when expanded */}
+      {isExpanded && (
+        <View style={styles.middleArea}>
+          {/* This area can be used for additional content like album art, lyrics, etc. */}
+        </View>
+      )}
+
+      {/* Bottom Controls - Fixed at bottom of container */}
+      <View style={styles.bottomControlsContainer}>
         {/* Top Row: Text Only */}
         <View style={styles.topRow}>
           <View style={styles.textContainer}>
@@ -216,6 +312,6 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 };
