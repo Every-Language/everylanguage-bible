@@ -10,6 +10,7 @@
 // Core audio components
 import { AudioPlayer } from './AudioPlayer';
 import { VerseNavigator } from './VerseNavigator';
+import { MiniPlayer } from './MiniPlayer';
 
 export { AudioPlayer } from './AudioPlayer';
 export type { AudioPlayerProps } from './AudioPlayer';
@@ -17,16 +18,19 @@ export type { AudioPlayerProps } from './AudioPlayer';
 export { VerseNavigator } from './VerseNavigator';
 export type { VerseNavigatorProps } from './VerseNavigator';
 
+export { MiniPlayer } from './MiniPlayer';
+
 // Component categories for easy imports
 export const AudioComponents = {
   AudioPlayer,
   VerseNavigator,
+  MiniPlayer,
 } as const;
 
 /**
  * @example Basic usage:
  * ```tsx
- * import { AudioPlayer, VerseNavigator } from '@/features/audio/components';
+ * import { AudioPlayer, VerseNavigator, MiniPlayer } from '@/features/audio/components';
  *
  * function BiblePage() {
  *   const [currentVerse, setCurrentVerse] = useState(1);
@@ -45,6 +49,8 @@ export const AudioComponents = {
  *         currentVerse={currentVerse}
  *         onVerseSelect={setCurrentVerse}
  *       />
+ *
+ *       <MiniPlayer />
  *     </View>
  *   );
  * }

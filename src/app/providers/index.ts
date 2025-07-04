@@ -5,3 +5,5 @@
 
 // Providers will be added here as features are developed
 export {};
+
+export { TamaguiProvider } from './TamaguiProvider';

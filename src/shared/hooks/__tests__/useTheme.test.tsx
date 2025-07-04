@@ -1,123 +1,44 @@
-import React from 'react';
 import { renderHook, act } from '@testing-library/react-native';
+import { useTheme, useThemeStore } from '../useTheme';
 
-// This import will fail initially - that's the point of TDD!
-import { useTheme, ThemeProvider } from '../useTheme';
+// Mock for useColorScheme that we can control
+const mockUseColorScheme = jest.fn<'light' | 'dark' | null | undefined, []>(
+  () => 'light'
+);
 
-// Mock only useColorScheme to avoid native module issues
 jest.mock('react-native', () => ({
-  useColorScheme: jest.fn(),
+  useColorScheme: () => mockUseColorScheme(),
 }));
 
-// Import after mocking
-import { useColorScheme } from 'react-native';
-const mockUseColorScheme = useColorScheme as jest.MockedFunction<
-  typeof useColorScheme
->;
-
-// Test wrapper component
-const ThemeTestWrapper: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => <ThemeProvider>{children}</ThemeProvider>;
-
-describe('useTheme Hook - TDD Implementation', () => {
+describe('useTheme Hook - Zustand Implementation', () => {
   beforeEach(() => {
+    // Reset Zustand store before each test
+    useThemeStore.getState().reset();
     jest.clearAllMocks();
+    mockUseColorScheme.mockReturnValue('light');
   });
 
   describe('Basic Theme Functionality', () => {
-    it('should provide theme state and toggle function', () => {
-      mockUseColorScheme.mockReturnValue('light');
+    it('should provide theme state and functions', () => {
+      const { result } = renderHook(() => useTheme());
 
-      const { result } = renderHook(() => useTheme(), {
-        wrapper: ThemeTestWrapper,
-      });
-
-      // Basic API structure
-      expect(result.current).toHaveProperty('theme');
-      expect(result.current).toHaveProperty('isDark');
-      expect(result.current).toHaveProperty('toggleTheme');
-      expect(result.current).toHaveProperty('setTheme');
-      expect(result.current).toHaveProperty('colors');
+      expect(result.current.theme).toBeDefined();
+      expect(result.current.isDark).toBeDefined();
+      expect(result.current.colors).toBeDefined();
+      expect(typeof result.current.toggleTheme).toBe('function');
+      expect(typeof result.current.setTheme).toBe('function');
+      expect(typeof result.current.setSystemTheme).toBe('function');
     });
 
     it('should start with light theme by default', () => {
-      mockUseColorScheme.mockReturnValue('light');
-
-      const { result } = renderHook(() => useTheme(), {
-        wrapper: ThemeTestWrapper,
-      });
+      const { result } = renderHook(() => useTheme());
 
       expect(result.current.theme).toBe('light');
       expect(result.current.isDark).toBe(false);
     });
 
-    it('should start with dark theme when system prefers dark', () => {
-      mockUseColorScheme.mockReturnValue('dark');
-
-      const { result } = renderHook(() => useTheme(), {
-        wrapper: ThemeTestWrapper,
-      });
-
-      expect(result.current.theme).toBe('dark');
-      expect(result.current.isDark).toBe(true);
-    });
-  });
-
-  describe('Theme Switching', () => {
-    it('should toggle from light to dark', () => {
-      mockUseColorScheme.mockReturnValue('light');
-
-      const { result } = renderHook(() => useTheme(), {
-        wrapper: ThemeTestWrapper,
-      });
-
-      act(() => {
-        result.current.toggleTheme();
-      });
-
-      expect(result.current.theme).toBe('dark');
-      expect(result.current.isDark).toBe(true);
-    });
-
-    it('should toggle from dark to light', () => {
-      mockUseColorScheme.mockReturnValue('dark');
-
-      const { result } = renderHook(() => useTheme(), {
-        wrapper: ThemeTestWrapper,
-      });
-
-      act(() => {
-        result.current.toggleTheme();
-      });
-
-      expect(result.current.theme).toBe('light');
-      expect(result.current.isDark).toBe(false);
-    });
-
-    it('should set theme directly', () => {
-      mockUseColorScheme.mockReturnValue('light');
-
-      const { result } = renderHook(() => useTheme(), {
-        wrapper: ThemeTestWrapper,
-      });
-
-      act(() => {
-        result.current.setTheme('dark');
-      });
-
-      expect(result.current.theme).toBe('dark');
-      expect(result.current.isDark).toBe(true);
-    });
-  });
-
-  describe('Theme Colors', () => {
     it('should provide correct light theme colors', () => {
-      mockUseColorScheme.mockReturnValue('light');
-
-      const { result } = renderHook(() => useTheme(), {
-        wrapper: ThemeTestWrapper,
-      });
+      const { result } = renderHook(() => useTheme());
 
       expect(result.current.colors).toEqual({
         background: '#EBE5D9',
@@ -126,48 +47,165 @@ describe('useTheme Hook - TDD Implementation', () => {
         secondary: '#AD915A',
       });
     });
+  });
 
-    it('should provide correct dark theme colors', () => {
-      mockUseColorScheme.mockReturnValue('dark');
-
-      const { result } = renderHook(() => useTheme(), {
-        wrapper: ThemeTestWrapper,
-      });
-
-      expect(result.current.colors).toEqual({
-        background: '#282827',
-        text: '#EBE5D9',
-        primary: '#92BEC3',
-        secondary: '#AD915A',
-      });
-    });
-
-    it('should update colors when theme changes', () => {
-      mockUseColorScheme.mockReturnValue('light');
-
-      const { result } = renderHook(() => useTheme(), {
-        wrapper: ThemeTestWrapper,
-      });
-
-      expect(result.current.colors.background).toBe('#EBE5D9');
+  describe('Theme Switching', () => {
+    it('should toggle from light to dark', () => {
+      const { result } = renderHook(() => useTheme());
 
       act(() => {
         result.current.toggleTheme();
       });
 
-      expect(result.current.colors.background).toBe('#282827');
+      expect(result.current.theme).toBe('dark');
+      expect(result.current.isDark).toBe(true);
+    });
+
+    it('should set theme directly', () => {
+      const { result } = renderHook(() => useTheme());
+
+      act(() => {
+        result.current.setTheme('dark');
+      });
+
+      expect(result.current.theme).toBe('dark');
+      expect(result.current.isDark).toBe(true);
+
+      act(() => {
+        result.current.setTheme('light');
+      });
+
+      expect(result.current.theme).toBe('light');
+      expect(result.current.isDark).toBe(false);
+    });
+
+    it('should update colors when theme changes', () => {
+      const { result } = renderHook(() => useTheme());
+
+      const lightColors = result.current.colors;
+
+      act(() => {
+        result.current.toggleTheme();
+      });
+
+      const darkColors = result.current.colors;
+
+      expect(lightColors).not.toEqual(darkColors);
+      expect(darkColors.background).toBe('#282827');
+      expect(darkColors.text).toBe('#EBE5D9');
     });
   });
 
-  describe('Error Handling', () => {
-    it('should throw error when used outside provider', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+  describe('Automatic System Theme Synchronization', () => {
+    it('should initialize with system theme when not manually set', () => {
+      mockUseColorScheme.mockReturnValue('dark');
+      const { result } = renderHook(() => useTheme());
 
-      expect(() => {
-        renderHook(() => useTheme());
-      }).toThrow('useTheme must be used within a ThemeProvider');
+      expect(result.current.theme).toBe('dark');
+      expect(result.current.isDark).toBe(true);
+      expect(result.current.isManuallySet).toBe(false);
+    });
 
-      consoleSpy.mockRestore();
+    it('should not override manually set theme', () => {
+      const { result } = renderHook(() => useTheme());
+
+      // Manually set theme to dark
+      act(() => {
+        result.current.setTheme('dark');
+      });
+
+      expect(result.current.isManuallySet).toBe(true);
+      expect(result.current.theme).toBe('dark');
+
+      // System changes to light - should not override
+      mockUseColorScheme.mockReturnValue('light');
+
+      // Re-render to trigger useEffect
+      const { result: result2 } = renderHook(() => useTheme());
+
+      expect(result2.current.theme).toBe('dark'); // Should stay dark
+      expect(result2.current.isManuallySet).toBe(true);
+    });
+
+    it('should use setSystemTheme for automatic updates', () => {
+      // Directly test the store method
+      act(() => {
+        useThemeStore.getState().setSystemTheme('dark');
+      });
+
+      // Get the updated state
+      const updatedState = useThemeStore.getState();
+
+      expect(updatedState.theme).toBe('dark');
+      expect(updatedState.isDark).toBe(true);
+      expect(updatedState.isManuallySet).toBe(false); // Should not be marked as manual
+    });
+
+    it('should respond to system theme changes when not manually set', () => {
+      // Start with light system theme
+      mockUseColorScheme.mockReturnValue('light');
+      const { result, rerender } = renderHook(() => useTheme());
+
+      expect(result.current.theme).toBe('light');
+
+      // Change system theme to dark
+      mockUseColorScheme.mockReturnValue('dark');
+      rerender({});
+
+      expect(result.current.theme).toBe('dark');
+      expect(result.current.isManuallySet).toBe(false);
+    });
+
+    it('should handle null/undefined system theme gracefully', () => {
+      mockUseColorScheme.mockReturnValue(null);
+      const { result } = renderHook(() => useTheme());
+
+      // Should default to light when system theme is unavailable
+      expect(result.current.theme).toBe('light');
+      expect(result.current.isDark).toBe(false);
+    });
+  });
+
+  describe('Manual Theme Override', () => {
+    it('should mark theme as manually set when using toggleTheme', () => {
+      const { result } = renderHook(() => useTheme());
+
+      expect(result.current.isManuallySet).toBe(false);
+
+      act(() => {
+        result.current.toggleTheme();
+      });
+
+      expect(result.current.isManuallySet).toBe(true);
+    });
+
+    it('should mark theme as manually set when using setTheme', () => {
+      const { result } = renderHook(() => useTheme());
+
+      expect(result.current.isManuallySet).toBe(false);
+
+      act(() => {
+        result.current.setTheme('dark');
+      });
+
+      expect(result.current.isManuallySet).toBe(true);
+    });
+
+    it('should reset manual flag when using reset', () => {
+      const { result } = renderHook(() => useTheme());
+
+      act(() => {
+        result.current.setTheme('dark');
+      });
+
+      expect(result.current.isManuallySet).toBe(true);
+
+      act(() => {
+        result.current.reset();
+      });
+
+      expect(result.current.isManuallySet).toBe(false);
+      expect(result.current.theme).toBe('light');
     });
   });
 });

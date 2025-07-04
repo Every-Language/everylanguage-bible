@@ -1,0 +1,30 @@
+{
+  "audio": {
+    "noAudioSelected": "No audio selected",
+    "audioPlayerControls": "Audio player controls",
+    "previousVerse": "Previous verse",
+    "play": "Play",
+    "pause": "Pause",
+    "nextVerse": "Next verse",
+    "previousChapter": "Previous chapter",
+    "nextChapter": "Next chapter",
+    "expandPlayer": "Expand player",
+    "collapsePlayer": "Collapse player",
+    "closePlayer": "Close player"
+  },
+  "bible": {
+    "chapter": "Chapter {{number}}",
+    "openBook": "Open {{title}}"
+  },
+  "theme": {
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode"
+  },
+  "welcome": {
+    "title": "Welcome to El Bible",
+    "subtitle": "Experience the Bible in every language with audio narration",
+    "description": "Discover God's word through multilingual audio Bible readings, offline access, and personalized study tools.",
+    "getStarted": "Get Started",
+    "getStartedAccessibility": "Get started with El Bible"
+  }
+}

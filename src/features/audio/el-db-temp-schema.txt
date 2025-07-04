@@ -1,0 +1,344 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.app_downloads (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  source_share_id uuid,
+  anon_user_id uuid,
+  device_id text NOT NULL,
+  installed_at timestamp with time zone DEFAULT now(),
+  location USER-DEFINED,
+  app_version text NOT NULL,
+  platform USER-DEFINED NOT NULL,
+  os text,
+  os_version text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT app_downloads_pkey PRIMARY KEY (id),
+  CONSTRAINT app_downloads_anon_user_id_fkey FOREIGN KEY (anon_user_id) REFERENCES public.users_anon(id),
+  CONSTRAINT app_downloads_source_share_id_fkey FOREIGN KEY (source_share_id) REFERENCES public.shares(id)
+);
+CREATE TABLE public.bases (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  location point,
+  region_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT bases_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.bases_teams (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  team_id uuid NOT NULL,
+  base_id uuid NOT NULL,
+  role_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT bases_teams_pkey PRIMARY KEY (id),
+  CONSTRAINT bases_teams_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id),
+  CONSTRAINT bases_teams_base_id_fkey FOREIGN KEY (base_id) REFERENCES public.bases(id),
+  CONSTRAINT bases_teams_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id)
+);
+CREATE TABLE public.language_aliases (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  language_entity_id uuid NOT NULL,
+  alias_name text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  CONSTRAINT language_aliases_pkey PRIMARY KEY (id),
+  CONSTRAINT language_aliases_language_entity_id_fkey FOREIGN KEY (language_entity_id) REFERENCES public.language_entities(id)
+);
+CREATE TABLE public.language_entities (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  parent_id uuid,
+  name text NOT NULL,
+  level USER-DEFINED NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  CONSTRAINT language_entities_pkey PRIMARY KEY (id),
+  CONSTRAINT language_entities_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.language_entities(id)
+);
+CREATE TABLE public.language_entities_regions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  language_entity_id uuid NOT NULL,
+  region_id uuid NOT NULL,
+  dominance_level double precision CHECK (dominance_level >= 0::double precision AND dominance_level <= 1::double precision),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  CONSTRAINT language_entities_regions_pkey PRIMARY KEY (id),
+  CONSTRAINT language_entities_regions_language_entity_id_fkey FOREIGN KEY (language_entity_id) REFERENCES public.language_entities(id),
+  CONSTRAINT language_entities_regions_region_id_fkey FOREIGN KEY (region_id) REFERENCES public.regions(id)
+);
+CREATE TABLE public.language_entity_sources (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  language_entity_id uuid NOT NULL,
+  source text NOT NULL,
+  version text,
+  is_external boolean NOT NULL DEFAULT false,
+  external_id text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  CONSTRAINT language_entity_sources_pkey PRIMARY KEY (id),
+  CONSTRAINT language_entity_sources_language_entity_id_fkey FOREIGN KEY (language_entity_id) REFERENCES public.language_entities(id),
+  CONSTRAINT language_entity_sources_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.language_entity_versions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  language_entity_id uuid NOT NULL,
+  parent_id uuid,
+  name text NOT NULL,
+  level USER-DEFINED NOT NULL,
+  change_type USER-DEFINED NOT NULL,
+  changed_at timestamp with time zone DEFAULT now(),
+  changed_by uuid NOT NULL,
+  version integer NOT NULL,
+  reviewed_by uuid,
+  reviewed_at timestamp with time zone,
+  CONSTRAINT language_entity_versions_pkey PRIMARY KEY (id),
+  CONSTRAINT language_entity_versions_language_entity_id_fkey FOREIGN KEY (language_entity_id) REFERENCES public.language_entities(id),
+  CONSTRAINT language_entity_versions_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES public.users(id),
+  CONSTRAINT language_entity_versions_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.language_properties (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  language_entity_id uuid NOT NULL,
+  key text NOT NULL,
+  value text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  CONSTRAINT language_properties_pkey PRIMARY KEY (id),
+  CONSTRAINT language_properties_language_entity_id_fkey FOREIGN KEY (language_entity_id) REFERENCES public.language_entities(id)
+);
+CREATE TABLE public.media_file_listens (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  anon_user_id uuid NOT NULL,
+  device_id text NOT NULL,
+  session_id uuid NOT NULL,
+  media_file_id uuid NOT NULL,
+  language_entity_id uuid NOT NULL,
+  position_seconds integer NOT NULL CHECK (position_seconds >= 0),
+  duration_seconds integer NOT NULL CHECK (duration_seconds > 0),
+  listened_at timestamp with time zone DEFAULT now(),
+  location USER-DEFINED,
+  connectivity USER-DEFINED DEFAULT 'unknown'::connectivity_type,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT media_file_listens_pkey PRIMARY KEY (id),
+  CONSTRAINT media_file_listens_anon_user_id_fkey FOREIGN KEY (anon_user_id) REFERENCES public.users_anon(id),
+  CONSTRAINT media_file_listens_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.sessions(id),
+  CONSTRAINT media_file_listens_language_entity_id_fkey FOREIGN KEY (language_entity_id) REFERENCES public.language_entities(id)
+);
+CREATE TABLE public.permissions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  role_id uuid NOT NULL,
+  context_type text NOT NULL,
+  context_id uuid,
+  description text NOT NULL,
+  allow_deny boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT permissions_pkey PRIMARY KEY (id),
+  CONSTRAINT permissions_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id)
+);
+CREATE TABLE public.region_aliases (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  region_id uuid NOT NULL,
+  alias_name text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  CONSTRAINT region_aliases_pkey PRIMARY KEY (id),
+  CONSTRAINT region_aliases_region_id_fkey FOREIGN KEY (region_id) REFERENCES public.regions(id)
+);
+CREATE TABLE public.region_properties (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  region_id uuid NOT NULL,
+  key text NOT NULL,
+  value text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  CONSTRAINT region_properties_pkey PRIMARY KEY (id),
+  CONSTRAINT region_properties_region_id_fkey FOREIGN KEY (region_id) REFERENCES public.regions(id)
+);
+CREATE TABLE public.region_sources (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  region_id uuid NOT NULL,
+  source text NOT NULL,
+  version text,
+  is_external boolean NOT NULL DEFAULT false,
+  external_id text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  CONSTRAINT region_sources_pkey PRIMARY KEY (id),
+  CONSTRAINT region_sources_region_id_fkey FOREIGN KEY (region_id) REFERENCES public.regions(id),
+  CONSTRAINT region_sources_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.region_versions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  region_id uuid NOT NULL,
+  parent_id uuid,
+  name text NOT NULL,
+  level USER-DEFINED NOT NULL,
+  change_type USER-DEFINED NOT NULL,
+  changed_at timestamp with time zone DEFAULT now(),
+  changed_by uuid NOT NULL,
+  version integer NOT NULL,
+  reviewed_by uuid,
+  reviewed_at timestamp with time zone,
+  CONSTRAINT region_versions_pkey PRIMARY KEY (id),
+  CONSTRAINT region_versions_region_id_fkey FOREIGN KEY (region_id) REFERENCES public.regions(id),
+  CONSTRAINT region_versions_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES public.users(id),
+  CONSTRAINT region_versions_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.regions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  parent_id uuid,
+  name text NOT NULL,
+  level USER-DEFINED NOT NULL,
+  boundary USER-DEFINED,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  CONSTRAINT regions_pkey PRIMARY KEY (id),
+  CONSTRAINT regions_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.regions(id)
+);
+CREATE TABLE public.roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT roles_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.sessions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  anon_user_id uuid NOT NULL,
+  device_id text NOT NULL,
+  started_at timestamp with time zone DEFAULT now(),
+  ended_at timestamp with time zone,
+  connectivity USER-DEFINED DEFAULT 'unknown'::connectivity_type,
+  location USER-DEFINED,
+  platform USER-DEFINED NOT NULL,
+  app_version text NOT NULL,
+  os text,
+  os_version text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT sessions_anon_user_id_fkey FOREIGN KEY (anon_user_id) REFERENCES public.users_anon(id)
+);
+CREATE TABLE public.share_opens (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  share_id uuid NOT NULL,
+  opened_by_anon_user_id uuid,
+  device_id text,
+  session_id uuid,
+  opened_at timestamp with time zone DEFAULT now(),
+  language_entity_id uuid NOT NULL,
+  location USER-DEFINED,
+  origin_share_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT share_opens_pkey PRIMARY KEY (id),
+  CONSTRAINT share_opens_share_id_fkey FOREIGN KEY (share_id) REFERENCES public.shares(id),
+  CONSTRAINT share_opens_opened_by_anon_user_id_fkey FOREIGN KEY (opened_by_anon_user_id) REFERENCES public.users_anon(id),
+  CONSTRAINT share_opens_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.sessions(id),
+  CONSTRAINT share_opens_language_entity_id_fkey FOREIGN KEY (language_entity_id) REFERENCES public.language_entities(id),
+  CONSTRAINT share_opens_origin_share_id_fkey FOREIGN KEY (origin_share_id) REFERENCES public.shares(id)
+);
+CREATE TABLE public.shares (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  anon_user_id uuid NOT NULL,
+  device_id text NOT NULL,
+  session_id uuid NOT NULL,
+  shared_at timestamp with time zone DEFAULT now(),
+  share_entity_type USER-DEFINED NOT NULL,
+  share_entity_id uuid NOT NULL,
+  language_entity_id uuid NOT NULL,
+  location USER-DEFINED,
+  origin_share_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT shares_pkey PRIMARY KEY (id),
+  CONSTRAINT shares_anon_user_id_fkey FOREIGN KEY (anon_user_id) REFERENCES public.users_anon(id),
+  CONSTRAINT shares_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.sessions(id),
+  CONSTRAINT shares_language_entity_id_fkey FOREIGN KEY (language_entity_id) REFERENCES public.language_entities(id),
+  CONSTRAINT shares_origin_share_id_fkey FOREIGN KEY (origin_share_id) REFERENCES public.shares(id)
+);
+CREATE TABLE public.spatial_ref_sys (
+  srid integer NOT NULL CHECK (srid > 0 AND srid <= 998999),
+  auth_name character varying,
+  auth_srid integer,
+  srtext character varying,
+  proj4text character varying,
+  CONSTRAINT spatial_ref_sys_pkey PRIMARY KEY (srid)
+);
+CREATE TABLE public.teams (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  type text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT teams_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.user_contributions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  target_table text NOT NULL,
+  target_id uuid NOT NULL,
+  change_type USER-DEFINED NOT NULL,
+  status USER-DEFINED NOT NULL DEFAULT 'not_approved'::contribution_status,
+  changed_at timestamp with time zone DEFAULT now(),
+  changed_by uuid NOT NULL,
+  version integer NOT NULL DEFAULT 1,
+  reviewed_by uuid,
+  reviewed_at timestamp with time zone,
+  CONSTRAINT user_contributions_pkey PRIMARY KEY (id),
+  CONSTRAINT user_contributions_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES public.users(id),
+  CONSTRAINT user_contributions_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.user_roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  role_id uuid NOT NULL,
+  context_type text,
+  context_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_roles_pkey PRIMARY KEY (id),
+  CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  auth_uid uuid NOT NULL UNIQUE,
+  first_name text,
+  last_name text,
+  email text NOT NULL UNIQUE,
+  phone_number text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT users_pkey PRIMARY KEY (id),
+  CONSTRAINT users_auth_uid_fkey FOREIGN KEY (auth_uid) REFERENCES auth.users(id)
+);
+CREATE TABLE public.users_anon (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  device_id text NOT NULL UNIQUE,
+  user_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT users_anon_pkey PRIMARY KEY (id),
+  CONSTRAINT users_anon_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.verse_listens (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  anon_user_id uuid NOT NULL,
+  device_id text NOT NULL,
+  session_id uuid NOT NULL,
+  verse_id uuid NOT NULL,
+  language_entity_id uuid NOT NULL,
+  listened_at timestamp with time zone DEFAULT now(),
+  location USER-DEFINED,
+  connectivity USER-DEFINED DEFAULT 'unknown'::connectivity_type,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT verse_listens_pkey PRIMARY KEY (id),
+  CONSTRAINT verse_listens_anon_user_id_fkey FOREIGN KEY (anon_user_id) REFERENCES public.users_anon(id),
+  CONSTRAINT verse_listens_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.sessions(id),
+  CONSTRAINT verse_listens_language_entity_id_fkey FOREIGN KEY (language_entity_id) REFERENCES public.language_entities(id)
+);
