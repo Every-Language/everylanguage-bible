@@ -1,9 +1,16 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions as RNDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
 } from 'react-native-reanimated';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
@@ -17,6 +24,7 @@ import {
   NextVerseIcon,
   NextChapterIcon,
 } from '@/shared/components/ui/icons/AudioIcons';
+import { MediaPlayerAdvancedPanel } from './MediaPlayerAdvancedPanel';
 
 interface MiniPlayerProps {
   title?: string;
@@ -54,20 +62,61 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
+  // Expansion state management
+  const [isExpanded, setIsExpanded] = useState(false);
+  const screenHeight = RNDimensions.get('window').height;
+  const expandedHeight = screenHeight - insets.top - 20; // Almost full screen
+
   const animatedValue = useSharedValue(1);
+  const expansionValue = useSharedValue(0);
+
+  // Handle expand/contract functionality
+  const handleExpandContractPress = () => {
+    const newExpanded = !isExpanded;
+    setIsExpanded(newExpanded);
+
+    if (newExpanded) {
+      // Expand
+      expansionValue.value = withSpring(1, {
+        damping: 20,
+        stiffness: 300,
+      });
+    } else {
+      // Contract
+      expansionValue.value = withSpring(0, {
+        damping: 20,
+        stiffness: 300,
+      });
+    }
+  };
 
   // Container animation
   const animatedContainerStyle = useAnimatedStyle(() => {
     const value = animatedValue.value;
+    const expansion = expansionValue.value;
 
-    if (value <= 1) {
-      // Between collapsed and mini
+    if (value <= 1 && expansion === 0) {
+      // Between collapsed and mini (not expanded)
       return {
         opacity: Math.max(0.2, value),
         transform: [{ scale: 0.95 + value * 0.05 }],
       };
+    } else if (expansion > 0) {
+      // Expanded state
+      return {
+        opacity: 1,
+        position: 'absolute',
+        top: insets.top,
+        left: 0,
+        right: 0,
+        height: expandedHeight * expansion,
+        borderTopLeftRadius: (1 - expansion) * Dimensions.radius.xl,
+        borderTopRightRadius: (1 - expansion) * Dimensions.radius.xl,
+        borderBottomLeftRadius: expansion * Dimensions.radius.xl,
+        borderBottomRightRadius: expansion * Dimensions.radius.xl,
+      };
     } else {
-      // Between mini and full screen
+      // Between mini and full screen (original animation)
       const fullScreenProgress = value - 1;
       return {
         opacity: 1,
@@ -158,13 +207,22 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       width: Dimensions.component.primaryControlButton.width,
       height: Dimensions.component.primaryControlButton.height,
     },
-    dragHandle: {
+    expandContractBar: {
       width: 100,
       height: 5,
       backgroundColor: '#666666', // Darker gray color
       borderRadius: 2.5,
       alignSelf: 'center',
       marginBottom: Dimensions.spacing.sm,
+    },
+    expandContractTouchArea: {
+      paddingVertical: Dimensions.spacing.md,
+      paddingHorizontal: Dimensions.spacing.xl,
+      alignSelf: 'center',
+    },
+    advancedPanelContainer: {
+      flex: 1,
+      marginTop: Dimensions.spacing.md,
     },
   });
 
@@ -173,8 +231,17 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       style={[styles.container, animatedContainerStyle]}
       testID={testID}
       accessibilityLabel={t('audio.audioPlayerControls')}>
-      {/* Static Drag Handle Bar (no gesture functionality) */}
-      <View style={styles.dragHandle} />
+      {/* Expand/Contract Bar - Tappable */}
+      <TouchableOpacity
+        style={styles.expandContractTouchArea}
+        onPress={handleExpandContractPress}
+        testID='mini-player-expand-contract-bar'
+        accessibilityLabel={
+          isExpanded ? t('audio.contractPlayer') : t('audio.expandPlayer')
+        }
+        accessibilityRole='button'>
+        <View style={styles.expandContractBar} />
+      </TouchableOpacity>
 
       {/* Animated Content */}
       <Animated.View style={animatedContentStyle}>
@@ -263,6 +330,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             <NextChapterIcon size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>
+
+        {/* Advanced Panel - Only visible when expanded */}
+        {isExpanded && (
+          <View style={styles.advancedPanelContainer}>
+            <MediaPlayerAdvancedPanel testID='media-player-advanced-panel' />
+          </View>
+        )}
       </Animated.View>
     </Animated.View>
   );
