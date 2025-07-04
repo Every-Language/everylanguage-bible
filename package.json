@@ -42,6 +42,8 @@
     "@tamagui/config": "^1.129.11",
     "@tamagui/core": "^1.129.11",
     "@tanstack/react-query": "^5.80.10",
+    "better-sqlite3": "^12.2.0",
+    "drizzle-orm": "^0.44.2",
     "expo": "53.0.15",
     "expo-audio": "^0.4.7",
     "expo-constants": "~17.1.6",
@@ -79,6 +81,7 @@
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
     "babel-preset-expo": "~13.0.0",
+    "drizzle-kit": "^0.31.4",
     "eslint": "^9.29.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.5.0",
@@ -107,7 +110,8 @@
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/.expo/",
-      "/coverage/"
+      "/coverage/",
+      "/__mocks__/"
     ],
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",

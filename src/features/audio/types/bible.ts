@@ -2,7 +2,7 @@
  * Bible Content Types (Placeholder)
  *
  * These types are placeholders for Bible content that will be replaced
- * with actual types from @everylanguage/shared-types when the backend
+ * with actual types from @everylanguage/shared-types (or other type api??) when the backend
  * team finalizes the Bible content schema.
  *
  * TODO: Replace with actual @everylanguage/shared-types when available
@@ -148,4 +148,68 @@ export interface AudioTrack {
   /** Metadata */
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Verse Timestamp for precise audio navigation (TEMPORARY IMPLEMENTATION)
+ * Required for verse-level audio synchronization per PRD
+ *
+ * TODO: Replace with actual VerseTimestamp type from @everylanguage module
+ */
+export interface VerseTimestamp_temp {
+  /** Verse number within the chapter */
+  verse_number: number;
+  /** Start time in seconds from chapter beginning */
+  start_time: number;
+  /** End time in seconds from chapter beginning */
+  end_time: number;
+  /** Duration of the verse in seconds */
+  duration: number;
+  /** Text content for display during audio */
+  text?: string;
+  /** Language entity for the text (may differ from audio) */
+  text_language_entity_id?: string;
+}
+
+/**
+ * Chapter Audio with verse-level navigation support (TEMPORARY IMPLEMENTATION)
+ * Combines audio track with precise verse timing data per PRD requirements
+ *
+ * TODO: Replace with actual ChapterAudio type from @everylanguage module
+ */
+export interface ChapterAudio_temp {
+  /** The audio track for this chapter */
+  audio_track: AudioTrack;
+  /** Verse timestamps for navigation */
+  verse_timestamps: VerseTimestamp_temp[];
+  /** Chapter metadata */
+  chapter: BibleChapter;
+  /** Current verse being played/highlighted */
+  current_verse?: number;
+  /** Total number of verses in this chapter */
+  total_verses: number;
+}
+
+/**
+ * Verse Navigation Result (TEMPORARY IMPLEMENTATION)
+ * Returned by verse navigation methods
+ *
+ * TODO: Replace with actual VerseNavigationResult type from @everylanguage module
+ */
+export interface VerseNavigationResult_temp {
+  /** The verse number we navigated to */
+  verse_number: number;
+  /** Audio playback status after navigation */
+  audio_status: {
+    isLoaded: boolean;
+    isPlaying?: boolean;
+    positionMillis: number;
+    durationMillis?: number;
+  };
+  /** Verse text for display */
+  verse_text?: string;
+  /** Whether this is the first verse */
+  is_first_verse: boolean;
+  /** Whether this is the last verse */
+  is_last_verse: boolean;
 }

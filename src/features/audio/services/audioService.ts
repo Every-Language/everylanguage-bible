@@ -11,7 +11,12 @@
  */
 
 import { AudioModule, createAudioPlayer, type AudioPlayer } from 'expo-audio';
-import type { AudioTrack, PlaybackSpeed } from '../types';
+import type {
+  AudioTrack,
+  PlaybackSpeed,
+  ChapterAudio_temp,
+  VerseNavigationResult_temp,
+} from '../types';
 
 // Types for compatibility with our interface
 export interface AVPlaybackStatus {
@@ -296,6 +301,16 @@ class AudioService {
   }
 
   /**
+   * Set playback speed (alias for setPlaybackRate for hook compatibility)
+   */
+  async setPlaybackSpeed(
+    sound: AudioSound,
+    speed: PlaybackSpeed
+  ): Promise<AVPlaybackStatus> {
+    return this.setPlaybackRate(sound, speed);
+  }
+
+  /**
    * Get current playback status
    */
   async getStatus(sound: AudioSound): Promise<AVPlaybackStatus> {
@@ -336,12 +351,215 @@ class AudioService {
   }
 
   /**
+   * Skip forward in audio by specified seconds (default 10)
+   */
+  async skipForward(
+    sound: AudioSound,
+    seconds: number = 10
+  ): Promise<AVPlaybackStatus> {
+    try {
+      // Get current position
+      let currentStatus = await this.getStatus(sound);
+      let currentPosition = currentStatus.positionMillis || 0;
+
+      // Calculate new position
+      let newPosition = currentPosition + seconds * 1000;
+
+      // Clamp to duration if available
+      if (currentStatus.durationMillis) {
+        newPosition = Math.min(newPosition, currentStatus.durationMillis);
+      }
+
+      // Seek to new position
+      return await this.seekTo(sound, newPosition / 1000);
+    } catch (error) {
+      console.error('Failed to skip forward:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Skip backward in audio by specified seconds (default 10)
+   */
+  async skipBackward(
+    sound: AudioSound,
+    seconds: number = 10
+  ): Promise<AVPlaybackStatus> {
+    try {
+      // Get current position
+      let currentStatus = await this.getStatus(sound);
+      let currentPosition = currentStatus.positionMillis || 0;
+
+      // Calculate new position
+      let newPosition = currentPosition - seconds * 1000;
+
+      // Clamp to 0 minimum
+      newPosition = Math.max(newPosition, 0);
+
+      // Seek to new position
+      return await this.seekTo(sound, newPosition / 1000);
+    } catch (error) {
+      console.error('Failed to skip backward:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if audio service is initialized
    */
   isInitialized(): boolean {
     return this.initialized;
   }
+
+  /**
+   * Navigate to the next verse in the chapter
+   * Part of PRD requirement for verse-level navigation
+   */
+  async nextVerse(
+    sound: AudioSound,
+    chapterAudio: ChapterAudio_temp
+  ): Promise<VerseNavigationResult_temp> {
+    // Get current verse based on playback position
+    const currentVerse = await this.getCurrentVerse(sound, chapterAudio);
+    const nextVerseNumber = currentVerse.verse_number + 1;
+
+    // Check if there's a next verse
+    if (nextVerseNumber > chapterAudio.total_verses) {
+      // Already at last verse, stay there
+      return currentVerse;
+    }
+
+    // Navigate to next verse
+    return await this.goToVerse(sound, nextVerseNumber, chapterAudio);
+  }
+
+  /**
+   * Navigate to the previous verse in the chapter
+   * Part of PRD requirement for verse-level navigation
+   */
+  async previousVerse(
+    sound: AudioSound,
+    chapterAudio: ChapterAudio_temp
+  ): Promise<VerseNavigationResult_temp> {
+    // Get current verse based on playback position
+    const currentVerse = await this.getCurrentVerse(sound, chapterAudio);
+    const previousVerseNumber = currentVerse.verse_number - 1;
+
+    // Check if there's a previous verse
+    if (previousVerseNumber < 1) {
+      // Already at first verse, stay there
+      return currentVerse;
+    }
+
+    // Navigate to previous verse
+    return await this.goToVerse(sound, previousVerseNumber, chapterAudio);
+  }
+
+  /**
+   * Jump to a specific verse number
+   * Part of PRD requirement for verse-level navigation
+   */
+  async goToVerse(
+    sound: AudioSound,
+    verseNumber: number,
+    chapterAudio: ChapterAudio_temp
+  ): Promise<VerseNavigationResult_temp> {
+    // Validate verse number
+    if (verseNumber < 1 || verseNumber > chapterAudio.total_verses) {
+      throw new Error(
+        `Invalid verse number: ${verseNumber}. Chapter has ${chapterAudio.total_verses} verses.`
+      );
+    }
+
+    // Find the verse timestamp
+    const verseTimestamp = chapterAudio.verse_timestamps.find(
+      v => v.verse_number === verseNumber
+    );
+
+    if (!verseTimestamp) {
+      throw new Error(`Verse ${verseNumber} timestamp not found.`);
+    }
+
+    // Seek to verse start time
+    await this.seekTo(sound, verseTimestamp.start_time);
+
+    // Get audio status after seeking
+    const audioStatus = await this.getStatus(sound);
+
+    // Return navigation result with safe defaults
+    const result: VerseNavigationResult_temp = {
+      verse_number: verseNumber,
+      audio_status: {
+        isLoaded: audioStatus?.isLoaded || false,
+        positionMillis: audioStatus?.positionMillis || 0,
+      },
+      is_first_verse: verseNumber === 1,
+      is_last_verse: verseNumber === chapterAudio.total_verses,
+    };
+
+    // Add optional verse text if available
+    if (verseTimestamp.text) {
+      result.verse_text = verseTimestamp.text;
+    }
+
+    // Add optional properties if they exist
+    if (audioStatus?.isPlaying !== undefined) {
+      result.audio_status.isPlaying = audioStatus.isPlaying;
+    }
+    if (audioStatus?.durationMillis !== undefined) {
+      result.audio_status.durationMillis = audioStatus.durationMillis;
+    }
+
+    return result;
+  }
+
+  /**
+   * Get the current verse based on playback position
+   * Part of PRD requirement for verse-level navigation
+   */
+  async getCurrentVerse(
+    sound: AudioSound,
+    chapterAudio: ChapterAudio_temp
+  ): Promise<VerseNavigationResult_temp> {
+    // Get current playback position
+    const status = await this.getStatus(sound);
+    const currentTimeSeconds = (status.positionMillis || 0) / 1000;
+
+    // Find which verse we're currently in
+    const currentVerse = chapterAudio.verse_timestamps.find(
+      verse =>
+        currentTimeSeconds >= verse.start_time &&
+        currentTimeSeconds < verse.end_time
+    );
+
+    // If no verse found (e.g., at very end), default to last verse
+    const verseToReturn =
+      currentVerse ||
+      chapterAudio.verse_timestamps[chapterAudio.verse_timestamps.length - 1];
+
+    if (!verseToReturn) {
+      throw new Error('No verses found in chapter audio data');
+    }
+
+    return {
+      verse_number: verseToReturn.verse_number,
+      audio_status: {
+        isLoaded: status.isLoaded,
+        ...(status.isPlaying !== undefined && { isPlaying: status.isPlaying }),
+        positionMillis: status.positionMillis || 0,
+        ...(status.durationMillis !== undefined && {
+          durationMillis: status.durationMillis,
+        }),
+      },
+      ...(verseToReturn.text && { verse_text: verseToReturn.text }),
+      is_first_verse: verseToReturn.verse_number === 1,
+      is_last_verse: verseToReturn.verse_number === chapterAudio.total_verses,
+    };
+  }
 }
+
+// Export the class for testing
+export { AudioService };
 
 // Export singleton instance
 export const audioService = new AudioService();

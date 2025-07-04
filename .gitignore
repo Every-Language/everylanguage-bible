@@ -58,3 +58,15 @@ logs/
 
 # npm registry configuration (contains tokens)
 .npmrc
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+full_dump.sql
+schema.sql
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+supabase/logs/

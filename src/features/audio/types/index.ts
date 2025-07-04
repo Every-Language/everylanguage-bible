@@ -256,4 +256,12 @@ export type AudioPlayerEvent =
 export type AudioPlayerEventListener = (event: AudioPlayerEvent) => void;
 
 // Re-export commonly used types for convenience
-export type { BibleChapter, BibleVerse, BibleBook, AudioTrack } from './bible';
+export type {
+  BibleChapter,
+  BibleVerse,
+  BibleBook,
+  AudioTrack,
+  VerseTimestamp_temp,
+  ChapterAudio_temp,
+  VerseNavigationResult_temp,
+} from './bible';

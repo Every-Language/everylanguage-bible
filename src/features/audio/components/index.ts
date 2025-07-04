@@ -1,24 +1,52 @@
 /**
- * Audio Feature Components Export
+ * Audio Components Exports
  *
- * This file exports all UI components for the audio feature.
- *
- * 🎨 UI DEVELOPER: All components in this module are placeholders!
- * Replace them with your beautiful designs while keeping the same interfaces.
+ * This module exports all audio-related UI components for the EveryLanguage Bible app.
+ * Components are fully functional and integrate with our audio services and database.
  *
  * @since 1.0.0
  */
 
-// Main audio player component
+// Core audio components
+import { AudioPlayer } from './AudioPlayer';
+import { VerseNavigator } from './VerseNavigator';
+
 export { AudioPlayer } from './AudioPlayer';
 export type { AudioPlayerProps } from './AudioPlayer';
 
-// Verse navigation component
 export { VerseNavigator } from './VerseNavigator';
 export type { VerseNavigatorProps } from './VerseNavigator';
 
-// Additional components that will be created later
-// export { AudioPlayerControls } from './AudioPlayerControls';
-// export { PlaybackSpeedSelector } from './PlaybackSpeedSelector';
-// export { VolumeControl } from './VolumeControl';
-// export { ProgressBar } from './ProgressBar';
+// Component categories for easy imports
+export const AudioComponents = {
+  AudioPlayer,
+  VerseNavigator,
+} as const;
+
+/**
+ * @example Basic usage:
+ * ```tsx
+ * import { AudioPlayer, VerseNavigator } from '@/features/audio/components';
+ *
+ * function BiblePage() {
+ *   const [currentVerse, setCurrentVerse] = useState(1);
+ *
+ *   return (
+ *     <View>
+ *       <AudioPlayer
+ *         bookId="gen"
+ *         chapterNumber={1}
+ *         autoPlay={false}
+ *         onVerseSelect={setCurrentVerse}
+ *       />
+ *
+ *       <VerseNavigator
+ *         verses={chapterData.verse_timestamps}
+ *         currentVerse={currentVerse}
+ *         onVerseSelect={setCurrentVerse}
+ *       />
+ *     </View>
+ *   );
+ * }
+ * ```
+ */
