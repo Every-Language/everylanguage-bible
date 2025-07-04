@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions as RNDimensions,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -24,6 +25,8 @@ import {
   NextVerseIcon,
   NextChapterIcon,
 } from '@/shared/components/ui/icons/AudioIcons';
+import { getBookImageSource } from '@/shared/services';
+import { loadBibleBooks } from '@/shared/utils';
 
 interface MiniPlayerProps {
   title?: string;
@@ -41,11 +44,195 @@ interface MiniPlayerProps {
   onExpand?: () => void;
   onClose?: () => void; // Close/hide the player
   testID?: string;
+  // Expanded content props
+  onTextPress?: () => void;
+  onQueuePress?: () => void;
 }
+
+// Expanded media content component
+interface ExpandedMediaContentProps {
+  title?: string | undefined;
+  subtitle?: string | undefined;
+  imagePath?: string | undefined;
+  onTextPress?: (() => void) | undefined;
+  onQueuePress?: (() => void) | undefined;
+}
+
+const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
+  title,
+  subtitle,
+  imagePath,
+  onTextPress,
+  onQueuePress,
+}) => {
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+
+  // Convert book name to image path
+  const getImagePathFromBookName = (bookName: string): string | undefined => {
+    const books = loadBibleBooks();
+    const book = books.find(
+      b => b.name.toLowerCase() === bookName.toLowerCase()
+    );
+    return book?.imagePath;
+  };
+
+  // Render book image
+  const renderBookImage = () => {
+    let pathToUse = imagePath;
+
+    // If no imagePath provided, try to get it from the book name (title)
+    if (!pathToUse && title) {
+      pathToUse = getImagePathFromBookName(title);
+    }
+
+    console.log('Debug - title:', title);
+    console.log('Debug - imagePath:', imagePath);
+    console.log('Debug - pathToUse:', pathToUse);
+
+    if (pathToUse) {
+      const imageSource = getBookImageSource(pathToUse);
+      console.log('Debug - imageSource:', imageSource);
+      if (imageSource) {
+        return (
+          <Image
+            source={imageSource}
+            style={{
+              width: 100,
+              height: 100,
+              borderRadius: Dimensions.radius.md,
+              tintColor: colors.text,
+            }}
+            resizeMode='contain'
+          />
+        );
+      }
+    }
+
+    // Fallback to book emoji
+    return (
+      <View
+        style={{
+          width: 100,
+          height: 100,
+          borderRadius: Dimensions.radius.md,
+          backgroundColor: colors.secondary + '30',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+        <Text style={{ fontSize: 48, color: colors.text }}>📖</Text>
+      </View>
+    );
+  };
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        margin: 0,
+        padding: Dimensions.spacing.md,
+        borderWidth: 2,
+        borderColor: colors.primary,
+        borderStyle: 'dashed',
+        borderRadius: Dimensions.radius.md,
+        backgroundColor: colors.background,
+      }}
+      testID='expanded-media-content'>
+      {/* Book Info Row */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: Dimensions.spacing.md,
+        }}>
+        {/* Book Icon */}
+        {renderBookImage()}
+
+        {/* Book Name and Chapter */}
+        <View style={{ marginLeft: Dimensions.spacing.sm, flex: 1 }}>
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: Fonts.weight.bold,
+              color: colors.text,
+            }}
+            numberOfLines={1}>
+            {title || t('audio.unknownBook', 'Unknown Book')}
+          </Text>
+          <Text
+            style={{
+              fontSize: 24,
+              fontWeight: Fonts.weight.bold,
+              color: colors.text,
+              marginTop: 2,
+            }}>
+            {subtitle || t('audio.unknownChapter', 'Unknown Chapter')}
+          </Text>
+        </View>
+      </View>
+
+      {/* Text and Queue Buttons Row */}
+      <View
+        style={{
+          flexDirection: 'row',
+          gap: Dimensions.spacing.md,
+        }}>
+        {/* Text Button */}
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            height: 28,
+            backgroundColor: colors.primary + '20',
+            borderRadius: Dimensions.radius.md,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: colors.primary,
+          }}
+          onPress={onTextPress}
+          testID='expanded-text-button'>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              fontWeight: Fonts.weight.medium,
+              color: colors.primary,
+            }}>
+            {t('audio.text', 'Text')}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Queue Button */}
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            height: 28,
+            backgroundColor: colors.primary + '20',
+            borderRadius: Dimensions.radius.md,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: colors.primary,
+          }}
+          onPress={onQueuePress}
+          testID='expanded-queue-button'>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              fontWeight: Fonts.weight.medium,
+              color: colors.primary,
+            }}>
+            {t('audio.queue', 'Queue')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
 
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   title,
   subtitle,
+  imagePath,
   isPlaying = false,
   currentTime = 0,
   totalTime = 0,
@@ -56,6 +243,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   onNextVerse,
   onSeek,
   testID,
+  onTextPress,
+  onQueuePress,
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -220,7 +409,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       {/* Middle Area - Only visible when expanded */}
       {isExpanded && (
         <View style={styles.middleArea}>
-          {/* This area can be used for additional content like album art, lyrics, etc. */}
+          <ExpandedMediaContent
+            title={title}
+            subtitle={subtitle}
+            imagePath={imagePath}
+            onTextPress={onTextPress}
+            onQueuePress={onQueuePress}
+          />
         </View>
       )}
 
