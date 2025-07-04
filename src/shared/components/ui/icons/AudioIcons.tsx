@@ -137,6 +137,90 @@ export const ChevronDownIcon: React.FC<IconProps> = ({
   />
 );
 
+export const PlusIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => (
+  <View
+    style={{
+      width: size,
+      height: size,
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}>
+    {/* Horizontal line */}
+    <View
+      style={[
+        styles.plusLine,
+        {
+          width: size * 0.6,
+          height: size * 0.08,
+          backgroundColor: color,
+        },
+      ]}
+    />
+    {/* Vertical line */}
+    <View
+      style={[
+        styles.plusLine,
+        {
+          position: 'absolute',
+          width: size * 0.08,
+          height: size * 0.6,
+          backgroundColor: color,
+        },
+      ]}
+    />
+  </View>
+);
+
+export const MoreIcon: React.FC<IconProps> = ({
+  size = 20,
+  color = '#000',
+}) => {
+  const dotSize = size * 0.15;
+  const spacing = size * 0.2;
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <View
+        style={{
+          width: dotSize,
+          height: dotSize,
+          borderRadius: dotSize / 2,
+          backgroundColor: color,
+          marginHorizontal: spacing / 2,
+        }}
+      />
+      <View
+        style={{
+          width: dotSize,
+          height: dotSize,
+          borderRadius: dotSize / 2,
+          backgroundColor: color,
+          marginHorizontal: spacing / 2,
+        }}
+      />
+      <View
+        style={{
+          width: dotSize,
+          height: dotSize,
+          borderRadius: dotSize / 2,
+          backgroundColor: color,
+          marginHorizontal: spacing / 2,
+        }}
+      />
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   playIcon: {
     // Container for the triangle
@@ -165,5 +249,8 @@ const styles = StyleSheet.create({
   chevronDown: {
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
+  },
+  plusLine: {
+    borderRadius: 1,
   },
 });

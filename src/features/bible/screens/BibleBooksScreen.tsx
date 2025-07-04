@@ -2,39 +2,52 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   Text,
   ActivityIndicator,
   ScrollView,
   TouchableOpacity,
+  Dimensions as RNDimensions,
 } from 'react-native';
-import { BookCard, ChapterGrid } from '@/shared/components/ui';
-import { ChapterViewScreen } from './ChapterViewScreen';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BookCard, ChapterGrid, OptionsPanel } from '@/shared/components/ui';
+import { MoreIcon } from '@/shared/components/ui/icons/AudioIcons';
+import { ChapterView, VerseView } from '../components';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
-import { useAudioStore, useTheme } from '@/shared/store';
-import { useTranslation } from '@/shared/hooks';
+import {
+  useAudioStore,
+  useTheme,
+  useChapterViewStore,
+  useVerseViewStore,
+} from '@/shared/store';
 
 interface BibleBooksScreenProps {
   onChapterSelect: (book: Book, chapter: number) => void;
+  onVerseSelect: (book: Book, chapter: number, verse: number) => void;
 }
 
 const BOOKS_PER_ROW = Dimensions.layout.booksPerRow;
 
 export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
+  onVerseSelect,
 }) => {
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, toggleTheme } = useTheme();
   const { currentBook, currentChapter } = useAudioStore();
-  const { t } = useTranslation();
+  const { openChapterView, closeChapterView, isOpen, selectedBook } =
+    useChapterViewStore();
+  const { openVerseView } = useVerseViewStore();
+  const insets = useSafeAreaInsets();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
-  const [currentScreen, setCurrentScreen] = useState<'books' | 'chapter'>(
-    'books'
-  );
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [showOptionsPanel, setShowOptionsPanel] = useState(false);
+  const [optionsButtonPosition, setOptionsButtonPosition] = useState({
+    top: 0,
+    right: 0,
+  });
   const lastExpandedBookRef = useRef<string | null>(null);
+  const optionsButtonRef = useRef<View>(null);
 
   useEffect(() => {
     const loadBooks = async () => {
@@ -58,10 +71,12 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     if (expandedBookId === book.id) {
       lastExpandedBookRef.current = book.id;
       setExpandedBookId(null);
+    } else if (isOpen && selectedBook?.id === book.id) {
+      // If chapter view is open for this book, close it
+      closeChapterView();
     } else {
-      // Otherwise, navigate to chapter view
-      setSelectedBook(book);
-      setCurrentScreen('chapter');
+      // Otherwise, open chapter view overlay
+      openChapterView(book);
     }
   };
 
@@ -86,9 +101,33 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     }
   };
 
-  const handleBackToBooks = () => {
-    setCurrentScreen('books');
-    setSelectedBook(null);
+  const handleChapterViewChapterSelect = (book: Book, chapter: number) => {
+    // Play the chapter when play button is pressed
+    onChapterSelect(book, chapter);
+  };
+
+  const handleChapterViewVerseViewOpen = (book: Book, chapter: number) => {
+    // Open verse view when chapter card is pressed
+    openVerseView(book, chapter);
+  };
+
+  const handleOptionsPress = () => {
+    if (optionsButtonRef.current) {
+      optionsButtonRef.current.measure(
+        (_x, _y, width, height, pageX, pageY) => {
+          const screenWidth = RNDimensions.get('window').width;
+          setOptionsButtonPosition({
+            top: pageY + height,
+            right: screenWidth - pageX - width,
+          });
+          setShowOptionsPanel(true);
+        }
+      );
+    }
+  };
+
+  const handleCloseOptions = () => {
+    setShowOptionsPanel(false);
   };
 
   // Determine which chapter should be highlighted for a given book
@@ -116,23 +155,26 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       backgroundColor: colors.background,
     },
     header: {
-      padding: Dimensions.spacing.xl,
+      paddingTop: insets.top + Dimensions.spacing.md,
+      paddingHorizontal: Dimensions.spacing.xl,
       paddingBottom: Dimensions.spacing.md,
     },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
+      justifyContent: 'center', // Center the content
       marginBottom: Dimensions.spacing.xs,
+      position: 'relative', // For absolute positioning of options button
     },
     title: {
       fontSize: Fonts.size['3xl'],
       fontWeight: Fonts.weight.bold,
       color: colors.text,
-      flex: 1,
       textAlign: 'center',
     },
-    themeToggle: {
+    optionsButton: {
+      position: 'absolute',
+      right: 0,
       backgroundColor: colors.primary,
       paddingHorizontal: Dimensions.spacing.md,
       paddingVertical: Dimensions.spacing.sm,
@@ -141,10 +183,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       minHeight: 44,
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    themeToggleText: {
-      fontSize: Fonts.size.sm,
-      color: colors.background,
     },
     scrollView: {
       flex: 1,
@@ -217,11 +255,11 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
             <View key={book.id} style={styles.bookContainer}>
               <View style={styles.bookTouchable}>
                 <BookCard
-                  title={book.name}
-                  imagePath={book.imagePath}
+                  bookName={book.name}
+                  bookId={book.id}
+                  bookImage={book.imagePath}
                   onPress={() => handleBookPress(book)}
                   onLongPress={() => handleBookLongPress(book)}
-                  testID={`book-card-${book.id}`}
                   isSelected={expandedBookId === book.id}
                 />
               </View>
@@ -248,11 +286,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     );
   };
 
-  // Show chapter view screen
-  if (currentScreen === 'chapter' && selectedBook) {
-    return <ChapterViewScreen book={selectedBook} onBack={handleBackToBooks} />;
-  }
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -270,19 +303,18 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   const newTestamentRows = createBookRows(newTestamentBooks);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Bible</Text>
           <TouchableOpacity
-            style={styles.themeToggle}
-            onPress={toggleTheme}
-            accessibilityLabel={
-              isDark ? t('theme.switchToLight') : t('theme.switchToDark')
-            }
+            ref={optionsButtonRef}
+            style={styles.optionsButton}
+            onPress={handleOptionsPress}
+            accessibilityLabel='Options menu'
             accessibilityRole='button'
-            testID='theme-toggle-button'>
-            <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
+            testID='options-button'>
+            <MoreIcon size={18} color={colors.background} />
           </TouchableOpacity>
         </View>
       </View>
@@ -311,6 +343,26 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Chapter View Overlay */}
+      <ChapterView
+        onChapterSelect={handleChapterViewChapterSelect}
+        onVerseViewOpen={handleChapterViewVerseViewOpen}
+      />
+
+      {/* Verse View Overlay - positioned in front of ChapterView but behind media player */}
+      <VerseView
+        onVerseSelect={onVerseSelect}
+        onChapterSelect={onChapterSelect}
+      />
+
+      {/* Options Panel */}
+      <OptionsPanel
+        isVisible={showOptionsPanel}
+        onClose={handleCloseOptions}
+        onThemeToggle={toggleTheme}
+        position={optionsButtonPosition}
+      />
+    </View>
   );
 };

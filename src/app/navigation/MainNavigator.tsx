@@ -44,6 +44,24 @@ export const MainNavigator: React.FC = () => {
     console.log('Selected chapter:', `${book.name} ${chapter}`);
   };
 
+  const handleVerseSelect = (book: Book, chapter: number, verse: number) => {
+    // Set the current audio to the chapter
+    setCurrentAudio(book, chapter);
+
+    // Calculate verse position (assuming ~20 seconds per verse)
+    const versePosition = (verse - 1) * 20; // Start from verse 1 = 0 seconds
+
+    // Seek to the verse position
+    audioStore.seek(versePosition);
+
+    // Start playback
+    audioStore.play();
+
+    console.log(
+      `Playing ${book.name} ${chapter}:${verse} at position ${versePosition}s`
+    );
+  };
+
   const handlePlayPause = () => {
     togglePlayPause();
   };
@@ -71,7 +89,10 @@ export const MainNavigator: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <BibleBooksScreen onChapterSelect={handleChapterSelect} />
+      <BibleBooksScreen
+        onChapterSelect={handleChapterSelect}
+        onVerseSelect={handleVerseSelect}
+      />
 
       {/* Mini Player Overlay */}
       {currentBook && currentChapter && (

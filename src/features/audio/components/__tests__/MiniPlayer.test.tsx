@@ -26,8 +26,6 @@ jest.mock('@/shared/hooks', () => ({
         'audio.nextChapter': 'Next chapter',
         'audio.previousVerse': 'Previous verse',
         'audio.nextVerse': 'Next verse',
-        'audio.expandPlayer': 'Expand player',
-        'audio.closePlayer': 'Close player',
       };
       return translations[key] || key;
     },
@@ -52,7 +50,6 @@ jest.mock('@/shared/components/ui/icons/AudioIcons', () => ({
   NextChapterIcon: () => null,
   PreviousVerseIcon: () => null,
   NextVerseIcon: () => null,
-  ChevronDownIcon: () => null,
 }));
 
 // Mock the ProgressBar component
@@ -62,8 +59,8 @@ jest.mock('@/shared/components/ui/ProgressBar', () => ({
 
 describe('MiniPlayer', () => {
   const defaultProps = {
-    title: 'Genesis 1',
-    subtitle: 'In the beginning...',
+    title: 'Genesis',
+    subtitle: 'Chapter 32',
     isPlaying: false,
     currentTime: 0,
     totalTime: 0,
@@ -73,7 +70,6 @@ describe('MiniPlayer', () => {
     onPreviousVerse: jest.fn(),
     onNextVerse: jest.fn(),
     onSeek: jest.fn(),
-    onExpand: jest.fn(),
     onClose: jest.fn(),
   };
 
@@ -86,9 +82,22 @@ describe('MiniPlayer', () => {
       <MiniPlayer {...defaultProps} />
     );
 
-    expect(getByText('Genesis 1')).toBeTruthy();
-    expect(getByText('In the beginning...')).toBeTruthy();
+    expect(getByText('Genesis Chapter 32')).toBeTruthy();
     expect(getByLabelText('Audio player controls')).toBeTruthy();
+  });
+
+  it('renders combined title and subtitle text', () => {
+    const { getByText } = render(
+      <MiniPlayer title='Exodus' subtitle='Chapter 15' />
+    );
+
+    expect(getByText('Exodus Chapter 15')).toBeTruthy();
+  });
+
+  it('renders only title when subtitle is not provided', () => {
+    const { getByText } = render(<MiniPlayer title='Leviticus' />);
+
+    expect(getByText('Leviticus')).toBeTruthy();
   });
 
   it('renders play accessibility label when not playing', () => {
@@ -157,25 +166,9 @@ describe('MiniPlayer', () => {
     expect(mockOnNextVerse).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onExpand when expand button is pressed', () => {
-    const mockOnExpand = jest.fn();
-    const { getByLabelText } = render(
-      <MiniPlayer {...defaultProps} onExpand={mockOnExpand} />
-    );
-
-    fireEvent.press(getByLabelText('Expand player'));
-    expect(mockOnExpand).toHaveBeenCalledTimes(1);
-  });
-
-  it('renders fallback icon when no image is provided', () => {
-    const { getByText } = render(<MiniPlayer {...defaultProps} />);
-
-    expect(getByText('📖')).toBeTruthy();
-  });
-
   it('displays default title when no title is provided', () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { title, ...propsWithoutTitle } = defaultProps;
+    const { title, subtitle, ...propsWithoutTitle } = defaultProps;
     const { getByText } = render(<MiniPlayer {...propsWithoutTitle} />);
 
     expect(getByText('No audio selected')).toBeTruthy();
@@ -190,24 +183,5 @@ describe('MiniPlayer', () => {
     expect(getByLabelText('Next chapter')).toBeTruthy();
     expect(getByLabelText('Previous verse')).toBeTruthy();
     expect(getByLabelText('Next verse')).toBeTruthy();
-    expect(getByLabelText('Expand player')).toBeTruthy();
-  });
-
-  it('calls onClose when chapter subtitle is tapped', () => {
-    const mockOnClose = jest.fn();
-    const { getByTestId } = render(
-      <MiniPlayer {...defaultProps} onClose={mockOnClose} />
-    );
-
-    fireEvent.press(getByTestId('mini-player-close-subtitle'));
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not render close button when no subtitle provided', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { subtitle, ...propsWithoutSubtitle } = defaultProps;
-    const { queryByTestId } = render(<MiniPlayer {...propsWithoutSubtitle} />);
-
-    expect(queryByTestId('mini-player-close-subtitle')).toBeNull();
   });
 });
