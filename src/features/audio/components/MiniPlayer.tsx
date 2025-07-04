@@ -1,17 +1,6 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions as RNDimensions,
-} from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
 import { useTranslation } from '@/shared/hooks';
@@ -24,7 +13,6 @@ import {
   NextVerseIcon,
   NextChapterIcon,
 } from '@/shared/components/ui/icons/AudioIcons';
-import { MediaPlayerAdvancedPanel } from './MediaPlayerAdvancedPanel';
 
 interface MiniPlayerProps {
   title?: string;
@@ -62,91 +50,6 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
-  // Expansion state management
-  const [isExpanded, setIsExpanded] = useState(false);
-  const screenHeight = RNDimensions.get('window').height;
-  const expandedHeight = screenHeight - insets.top - 20; // Almost full screen
-
-  const animatedValue = useSharedValue(1);
-  const expansionValue = useSharedValue(0);
-
-  // Handle expand/contract functionality
-  const handleExpandContractPress = () => {
-    const newExpanded = !isExpanded;
-    setIsExpanded(newExpanded);
-
-    if (newExpanded) {
-      // Expand
-      expansionValue.value = withSpring(1, {
-        damping: 20,
-        stiffness: 300,
-      });
-    } else {
-      // Contract
-      expansionValue.value = withSpring(0, {
-        damping: 20,
-        stiffness: 300,
-      });
-    }
-  };
-
-  // Container animation
-  const animatedContainerStyle = useAnimatedStyle(() => {
-    const value = animatedValue.value;
-    const expansion = expansionValue.value;
-
-    if (value <= 1 && expansion === 0) {
-      // Between collapsed and mini (not expanded)
-      return {
-        opacity: Math.max(0.2, value),
-        transform: [{ scale: 0.95 + value * 0.05 }],
-      };
-    } else if (expansion > 0) {
-      // Expanded state
-      return {
-        opacity: 1,
-        position: 'absolute',
-        top: insets.top,
-        left: 0,
-        right: 0,
-        height: expandedHeight * expansion,
-        borderTopLeftRadius: (1 - expansion) * Dimensions.radius.xl,
-        borderTopRightRadius: (1 - expansion) * Dimensions.radius.xl,
-        borderBottomLeftRadius: expansion * Dimensions.radius.xl,
-        borderBottomRightRadius: expansion * Dimensions.radius.xl,
-      };
-    } else {
-      // Between mini and full screen (original animation)
-      const fullScreenProgress = value - 1;
-      return {
-        opacity: 1,
-        top: fullScreenProgress * insets.top,
-        left: 0,
-        right: 0,
-        bottom: (1 - fullScreenProgress) * 0,
-        borderTopLeftRadius: (1 - fullScreenProgress) * Dimensions.radius.xl,
-        borderTopRightRadius: (1 - fullScreenProgress) * Dimensions.radius.xl,
-      };
-    }
-  });
-
-  // Content animation
-  const animatedContentStyle = useAnimatedStyle(() => {
-    const value = animatedValue.value;
-
-    if (value <= 1) {
-      return {
-        opacity: value,
-        transform: [{ scaleY: Math.max(0.1, value) }],
-      };
-    } else {
-      return {
-        opacity: 1,
-        transform: [{ scaleY: 1 }],
-      };
-    }
-  });
-
   // Combine title and subtitle into a single display text
   const displayText = () => {
     if (title && subtitle) {
@@ -174,8 +77,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       borderTopLeftRadius: Dimensions.radius.xl,
       borderTopRightRadius: Dimensions.radius.xl,
       ...Dimensions.shadow.lg,
-      // Support full screen expansion
-      zIndex: 1000, // Ensure it appears on top when full screen
+      zIndex: 1000,
+      opacity: 1, // Always 100% opaque
     },
     topRow: {
       flexDirection: 'row',
@@ -210,41 +113,23 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     expandContractBar: {
       width: 100,
       height: 5,
-      backgroundColor: '#666666', // Darker gray color
+      backgroundColor: '#666666',
       borderRadius: 2.5,
       alignSelf: 'center',
       marginBottom: Dimensions.spacing.sm,
     },
-    expandContractTouchArea: {
-      paddingVertical: Dimensions.spacing.md,
-      paddingHorizontal: Dimensions.spacing.xl,
-      alignSelf: 'center',
-    },
-    advancedPanelContainer: {
-      flex: 1,
-      marginTop: Dimensions.spacing.md,
-    },
   });
 
   return (
-    <Animated.View
-      style={[styles.container, animatedContainerStyle]}
+    <View
+      style={styles.container}
       testID={testID}
       accessibilityLabel={t('audio.audioPlayerControls')}>
-      {/* Expand/Contract Bar - Tappable */}
-      <TouchableOpacity
-        style={styles.expandContractTouchArea}
-        onPress={handleExpandContractPress}
-        testID='mini-player-expand-contract-bar'
-        accessibilityLabel={
-          isExpanded ? t('audio.contractPlayer') : t('audio.expandPlayer')
-        }
-        accessibilityRole='button'>
-        <View style={styles.expandContractBar} />
-      </TouchableOpacity>
+      {/* Decorative Bar - No functionality */}
+      <View style={styles.expandContractBar} />
 
-      {/* Animated Content */}
-      <Animated.View style={animatedContentStyle}>
+      {/* Content */}
+      <View>
         {/* Top Row: Text Only */}
         <View style={styles.topRow}>
           <View style={styles.textContainer}>
@@ -330,14 +215,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             <NextChapterIcon size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>
-
-        {/* Advanced Panel - Only visible when expanded */}
-        {isExpanded && (
-          <View style={styles.advancedPanelContainer}>
-            <MediaPlayerAdvancedPanel testID='media-player-advanced-panel' />
-          </View>
-        )}
-      </Animated.View>
-    </Animated.View>
+      </View>
+    </View>
   );
 };
