@@ -147,6 +147,19 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
 
         <View style={styles.separator} />
 
+        {/* Search */}
+        <TouchableOpacity
+          style={styles.optionButton}
+          onPress={onClose}
+          accessibilityLabel='Search'
+          accessibilityRole='button'
+          testID='options-search'>
+          <Text style={styles.optionIcon}>🔍</Text>
+          <Text style={styles.optionText}>Search</Text>
+        </TouchableOpacity>
+
+        <View style={styles.separator} />
+
         {/* Profile */}
         <TouchableOpacity
           style={styles.optionButton}
