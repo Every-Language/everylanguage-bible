@@ -29,119 +29,30 @@ import {
   NextChapterIcon,
 } from '@/shared/components/ui/icons/AudioIcons';
 import { getBookImageSource } from '@/shared/services';
-import { loadBibleBooks } from '@/shared/utils';
-
-// Verse data structure
-interface Verse {
-  verseNumber: number;
-  text: string;
-  startTime: number; // in seconds
-  endTime: number; // in seconds
-}
+import { useAudioStore } from '@/shared/store/audioStore';
+import { VerseDisplayData } from '@/types/audio';
 
 interface MiniPlayerProps {
-  title?: string;
-  subtitle?: string;
-  imagePath?: string;
-  isPlaying?: boolean;
-  currentTime?: number; // in seconds
-  totalTime?: number; // in seconds
-  currentVerse?: number; // Current verse number
-  onPlayPause?: () => void;
-  onPreviousChapter?: () => void;
-  onNextChapter?: () => void;
-  onPreviousVerse?: () => void;
-  onNextVerse?: () => void;
-  onSeek?: (time: number) => void;
-  onVersePress?: (verseNumber: number) => void; // Jump to specific verse
+  testID?: string;
   onExpand?: () => void;
   onClose?: () => void; // Close/hide the player
-  testID?: string;
-  // Expanded content props
-  onTextPress?: () => void;
-  onQueuePress?: () => void;
-  playbackSpeed?: number; // Current playback speed (e.g., 1.0, 1.5, 2.0)
-  onSpeedChange?: (speed: number) => void;
+  // All other data now comes from the audio store
 }
 
 // Content mode types
 type ContentMode = 'text' | 'queue';
 
-// Mock verse data generator
-const generateMockVerses = (
-  bookName: string,
-  chapterNumber: number
-): Verse[] => {
-  const verseTexts = [
-    'In the beginning God created the heaven and the earth.',
-    'And the earth was without form, and void; and darkness was upon the face of the deep.',
-    'And the Spirit of God moved upon the face of the waters.',
-    'And God said, Let there be light: and there was light.',
-    'And God saw the light, that it was good: and God divided the light from the darkness.',
-    'And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day.',
-    'And God said, Let there be a firmament in the midst of the waters, and let it divide the waters from the waters.',
-    'And God made the firmament, and divided the waters which were under the firmament from the waters which were above the firmament: and it was so.',
-    'And God called the firmament Heaven. And the evening and the morning were the second day.',
-    'And God said, Let the waters under the heaven be gathered together unto one place, and let the dry land appear: and it was so.',
-    'And God called the dry land Earth; and the gathering together of the waters called he Seas: and God saw that it was good.',
-    'And God said, Let the earth bring forth grass, the herb yielding seed, and the fruit tree yielding fruit after his kind, whose seed is in itself, upon the earth: and it was so.',
-    'And the earth brought forth grass, and herb yielding seed after his kind, and the tree yielding fruit, whose seed was in itself, after his kind: and God saw that it was good.',
-    'And the evening and the morning were the third day.',
-    'And God said, Let there be lights in the firmament of the heaven to divide the day from the night; and let them be for signs, and for seasons, and for days, and years.',
-    'And let them be for lights in the firmament of the heaven to give light upon the earth: and it was so.',
-    'And God made two great lights; the greater light to rule the day, and the lesser light to rule the night: he made the stars also.',
-    'And God set them in the firmament of the heaven to give light upon the earth.',
-    'And to rule over the day and over the night, and to divide the light from the darkness: and God saw that it was good.',
-    'And the evening and the morning were the fourth day.',
-    'And God said, Let the waters bring forth abundantly the moving creature that hath life, and fowl that may fly above the earth in the open firmament of heaven.',
-    'And God created great whales, and every living creature that moveth, which the waters brought forth abundantly, after their kind, and every winged fowl after his kind: and God saw that it was good.',
-    'And God blessed them, saying, Be fruitful, and multiply, and fill the waters in the seas, and let fowl multiply in the earth.',
-    'And the evening and the morning were the fifth day.',
-    'And God said, Let the earth bring forth the living creature after his kind, cattle, and creeping thing, and beast of the earth after his kind: and it was so.',
-    'And God made the beast of the earth after his kind, and cattle after their kind, and every thing that creepeth upon the earth after his kind: and God saw that it was good.',
-    'And God said, Let us make man in our image, after our likeness: and let them have dominion over the fish of the sea, and over the fowl of the air, and over the cattle, and over all the earth, and over every creeping thing that creepeth upon the earth.',
-    'So God created man in his own image, in the image of God created he him; male and female created he them.',
-    'And God blessed them, and God said unto them, Be fruitful, and multiply, and replenish the earth, and subdue it: and have dominion over the fish of the sea, and over the fowl of the air, and over every living thing that moveth upon the earth.',
-    'And God said, Behold, I have given you every herb bearing seed, which is upon the face of all the earth, and every tree, in the which is the fruit of a tree yielding seed; to you it shall be for meat.',
-    'And to every beast of the earth, and to every fowl of the air, and to every thing that creepeth upon the earth, wherein there is life, I have given every green herb for meat: and it was so.',
-    'And God saw every thing that he had made, and, behold, it was very good. And the evening and the morning were the sixth day.',
-  ];
-
-  // Generate verses based on chapter (vary count by chapter)
-  const baseVerseCount = 20 + (chapterNumber % 12); // 20-31 verses per chapter
-  const actualVerseCount = Math.min(baseVerseCount, verseTexts.length);
-
-  return Array.from({ length: actualVerseCount }, (_, i) => {
-    const verseNumber = i + 1;
-    const avgSecondsPerVerse = 25; // Average verse length
-    const startTime = i * avgSecondsPerVerse;
-    const endTime = startTime + avgSecondsPerVerse;
-    const textIndex = (i + chapterNumber * 7) % verseTexts.length; // Vary by chapter
-
-    return {
-      verseNumber,
-      text: verseTexts[textIndex] || 'Default verse text', // Ensure text is never undefined
-      startTime,
-      endTime,
-    };
-  });
-};
-
-// Text mode component
+// Text mode component - now uses data from audio store
 interface TextModeViewProps {
-  title?: string | undefined;
-  subtitle?: string | undefined;
-  currentVerse?: number | undefined;
-  currentTime?: number | undefined; // Add current time for calculating current verse
+  verseDisplayData: VerseDisplayData[];
+  currentTime: number;
   onVersePress?: ((verseNumber: number) => void) | undefined;
-  onSeek?: ((time: number) => void) | undefined; // Add seek callback
+  onSeek?: ((time: number) => void) | undefined;
 }
 
 const TextModeView: React.FC<TextModeViewProps> = ({
-  title,
-  subtitle,
-  currentVerse: _currentVerse, // Keep as fallback
-  currentTime = 0,
+  verseDisplayData,
+  currentTime: _currentTime,
   onVersePress,
   onSeek,
 }) => {
@@ -151,50 +62,11 @@ const TextModeView: React.FC<TextModeViewProps> = ({
   const versePositions = React.useRef<Map<number, number>>(new Map());
   const [shouldAutoScroll, setShouldAutoScroll] = React.useState(true);
 
-  // Generate verses based on current book and chapter
-  const verses = React.useMemo(() => {
-    if (!title || !subtitle) return [];
-
-    const bookName = title;
-    const chapterNumber = parseInt(subtitle.replace('Chapter ', ''), 10) || 1;
-
-    return generateMockVerses(bookName, chapterNumber);
-  }, [title, subtitle]);
-
-  // Calculate current verse based on audio position
+  // Find current verse from display data
   const currentVerse = React.useMemo(() => {
-    if (verses.length === 0) return _currentVerse || 1;
-
-    // Find the verse that contains the current time
-    const activeVerse = verses.find(
-      verse => currentTime >= verse.startTime && currentTime < verse.endTime
-    );
-
-    if (activeVerse) {
-      return activeVerse.verseNumber;
-    }
-
-    // If no exact match, find the closest verse
-    const firstVerse = verses[0];
-    if (firstVerse && currentTime <= firstVerse.startTime) {
-      return firstVerse.verseNumber;
-    }
-
-    const lastVerse = verses[verses.length - 1];
-    if (lastVerse && currentTime >= lastVerse.endTime) {
-      return lastVerse.verseNumber;
-    }
-
-    // Find the verse just before the current time
-    for (let i = verses.length - 1; i >= 0; i--) {
-      const verse = verses[i];
-      if (verse && currentTime >= verse.startTime) {
-        return verse.verseNumber;
-      }
-    }
-
-    return _currentVerse || 1;
-  }, [verses, currentTime, _currentVerse]);
+    const activeVerse = verseDisplayData.find(verse => verse.isCurrentVerse);
+    return activeVerse?.verseNumber || 1;
+  }, [verseDisplayData]);
 
   // Handle verse layout to track positions
   const handleVerseLayout = (verseNumber: number, y: number) => {
@@ -230,7 +102,7 @@ const TextModeView: React.FC<TextModeViewProps> = ({
     }, 3000);
   };
 
-  if (verses.length === 0) {
+  if (verseDisplayData.length === 0) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text
@@ -258,7 +130,7 @@ const TextModeView: React.FC<TextModeViewProps> = ({
     console.log(`Verse ${verseNumber} tapped`);
 
     // Find the verse and seek to its start time
-    const verse = verses.find(v => v.verseNumber === verseNumber);
+    const verse = verseDisplayData.find(v => v.verseNumber === verseNumber);
     if (verse && onSeek) {
       console.log(
         `Seeking to verse ${verseNumber} at time ${verse.startTime}s`
@@ -281,21 +153,21 @@ const TextModeView: React.FC<TextModeViewProps> = ({
         onScrollBeginDrag={handleScrollBegin}
         onScrollEndDrag={handleScrollEnd}
         onMomentumScrollEnd={handleScrollEnd}>
-        {verses.map(verse => {
-          const isCurrentVerse = currentVerse === verse.verseNumber;
-
+        {verseDisplayData.map(verse => {
           return (
             <TouchableOpacity
               key={verse.verseNumber}
               style={{
                 marginBottom: Dimensions.spacing.md,
                 padding: Dimensions.spacing.sm,
-                backgroundColor: isCurrentVerse
+                backgroundColor: verse.isCurrentVerse
                   ? colors.primary + '20'
                   : 'transparent',
                 borderRadius: Dimensions.radius.md,
-                borderWidth: isCurrentVerse ? 2 : 0,
-                borderColor: isCurrentVerse ? colors.primary : 'transparent',
+                borderWidth: verse.isCurrentVerse ? 2 : 0,
+                borderColor: verse.isCurrentVerse
+                  ? colors.primary
+                  : 'transparent',
               }}
               onPress={() => handleVersePress(verse.verseNumber)}
               activeOpacity={0.7}
@@ -308,7 +180,9 @@ const TextModeView: React.FC<TextModeViewProps> = ({
                   style={{
                     fontSize: Fonts.size.sm,
                     fontWeight: Fonts.weight.bold,
-                    color: isCurrentVerse ? colors.primary : colors.text + '80',
+                    color: verse.isCurrentVerse
+                      ? colors.primary
+                      : colors.text + '80',
                   }}>
                   Verse {verse.verseNumber}
                 </Text>
@@ -317,8 +191,10 @@ const TextModeView: React.FC<TextModeViewProps> = ({
                 style={{
                   fontSize: Fonts.size.base,
                   lineHeight: 24,
-                  color: isCurrentVerse ? colors.text : colors.text + '90',
-                  fontWeight: isCurrentVerse
+                  color: verse.isCurrentVerse
+                    ? colors.text
+                    : colors.text + '90',
+                  fontWeight: verse.isCurrentVerse
                     ? Fonts.weight.medium
                     : Fonts.weight.normal,
                 }}>
@@ -374,22 +250,22 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
 // Content switcher with animation
 interface ContentSwitcherProps {
   mode: ContentMode;
-  title?: string | undefined;
-  subtitle?: string | undefined;
-  currentVerse?: number | undefined;
-  currentTime?: number | undefined;
+  verseDisplayData: VerseDisplayData[];
+  currentTime: number;
   onVersePress?: ((verseNumber: number) => void) | undefined;
   onSeek?: ((time: number) => void) | undefined;
+  title?: string;
+  subtitle?: string;
 }
 
 const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
   mode,
-  title,
-  subtitle,
-  currentVerse,
+  verseDisplayData,
   currentTime,
   onVersePress,
   onSeek,
+  title,
+  subtitle,
 }) => {
   const slideAnimation = useSharedValue(0);
 
@@ -417,9 +293,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
         ]}>
         <View style={{ width: '50%', height: '100%' }}>
           <TextModeView
-            title={title}
-            subtitle={subtitle}
-            currentVerse={currentVerse}
+            verseDisplayData={verseDisplayData}
             currentTime={currentTime}
             onVersePress={onVersePress}
             onSeek={onSeek}
@@ -435,24 +309,14 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
 
 // Expanded media content component
 interface ExpandedMediaContentProps {
-  title?: string | undefined;
-  subtitle?: string | undefined;
-  imagePath?: string | undefined;
-  currentVerse?: number | undefined;
-  currentTime?: number | undefined;
-  onTextPress?: (() => void) | undefined;
-  onQueuePress?: (() => void) | undefined;
-  onVersionPress?: (() => void) | undefined;
-  onVersePress?: ((verseNumber: number) => void) | undefined;
-  onSeek?: ((time: number) => void) | undefined;
+  onTextPress?: () => void;
+  onQueuePress?: () => void;
+  onVersionPress?: () => void;
+  onVersePress?: (verseNumber: number) => void;
+  onSeek?: (time: number) => void;
 }
 
 const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
-  title,
-  subtitle,
-  imagePath,
-  currentVerse,
-  currentTime,
   onTextPress,
   onQueuePress,
   onVersionPress,
@@ -462,34 +326,39 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
   const { colors } = useTheme();
   const { t } = useTranslation();
 
+  // Get data from audio store
+  const {
+    currentRecording,
+    currentChapter,
+    currentTime,
+    currentVerseDisplayData,
+  } = useAudioStore();
+
   // Mode state
   const [currentMode, setCurrentMode] = useState<ContentMode>('text');
 
+  // Get chapter info
+  const title =
+    currentChapter?.bookName ||
+    currentRecording?.title ||
+    t('audio.unknownBook', 'Unknown Book');
+  const subtitle = currentChapter
+    ? `Chapter ${currentChapter.chapterNumber}`
+    : t('audio.unknownChapter', 'Unknown Chapter');
+
   // Convert book name to image path
   const getImagePathFromBookName = (bookName: string): string | undefined => {
-    const books = loadBibleBooks();
-    const book = books.find(
-      b => b.name.toLowerCase() === bookName.toLowerCase()
-    );
-    return book?.imagePath;
+    // This could be enhanced to use a mapping service
+    return `${bookName.toLowerCase().replace(/\s+/g, '_')}.png`;
   };
 
   // Render book image
   const renderBookImage = () => {
-    let pathToUse = imagePath;
+    const bookName = currentChapter?.bookName || title;
+    const imagePath = getImagePathFromBookName(bookName);
 
-    // If no imagePath provided, try to get it from the book name (title)
-    if (!pathToUse && title) {
-      pathToUse = getImagePathFromBookName(title);
-    }
-
-    console.log('Debug - title:', title);
-    console.log('Debug - imagePath:', imagePath);
-    console.log('Debug - pathToUse:', pathToUse);
-
-    if (pathToUse) {
-      const imageSource = getBookImageSource(pathToUse);
-      console.log('Debug - imageSource:', imageSource);
+    if (imagePath) {
+      const imageSource = getBookImageSource(imagePath);
       if (imageSource) {
         return (
           <Image
@@ -550,7 +419,7 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
               color: colors.text,
             }}
             numberOfLines={1}>
-            {title || t('audio.unknownBook', 'Unknown Book')}
+            {title}
           </Text>
           <Text
             style={{
@@ -559,7 +428,7 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
               color: colors.text,
               marginTop: 2,
             }}>
-            {subtitle || t('audio.unknownChapter', 'Unknown Chapter')}
+            {subtitle}
           </Text>
 
           {/* Version Text */}
@@ -647,12 +516,12 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
       <View style={{ flex: 1, marginTop: Dimensions.spacing.md }}>
         <ContentSwitcher
           mode={currentMode}
-          title={title}
-          subtitle={subtitle}
-          currentVerse={currentVerse}
+          verseDisplayData={currentVerseDisplayData}
           currentTime={currentTime}
           onVersePress={onVersePress}
           onSeek={onSeek}
+          title={title}
+          subtitle={subtitle}
         />
       </View>
     </View>
@@ -660,29 +529,30 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
 };
 
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({
-  title,
-  subtitle,
-  imagePath,
-  isPlaying = false,
-  currentTime = 0,
-  totalTime = 0,
-  currentVerse,
-  onPlayPause,
-  onPreviousChapter,
-  onNextChapter,
-  onPreviousVerse,
-  onNextVerse,
-  onSeek,
-  onVersePress,
   testID,
-  onTextPress,
-  onQueuePress,
-  playbackSpeed = 1.0,
-  onSpeedChange,
+  onExpand: _onExpand,
+  onClose: _onClose,
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+
+  // Get all data from audio store
+  const {
+    currentRecording,
+    currentChapter,
+    currentTime,
+    totalTime,
+    isPlaying,
+    playbackSpeed,
+    // Actions
+    seek,
+    previousVerse,
+    nextVerse,
+    playPrevious,
+    playNext,
+    togglePlayPause,
+  } = useAudioStore();
 
   // Expansion state management
   const [isExpanded, setIsExpanded] = useState(false);
@@ -693,14 +563,6 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
   // Speed menu state
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-
-  // Internal speed state
-  const [currentSpeed, setCurrentSpeed] = useState(playbackSpeed);
-
-  // Update internal speed when prop changes
-  React.useEffect(() => {
-    setCurrentSpeed(playbackSpeed);
-  }, [playbackSpeed]);
 
   const expansionValue = useSharedValue(0);
 
@@ -724,8 +586,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     }
   };
 
-  // Combine title and subtitle into a single display text
+  // Get display text from audio store data
   const displayText = () => {
+    const title = currentChapter?.bookName || currentRecording?.title;
+    const subtitle = currentChapter
+      ? `Chapter ${currentChapter.chapterNumber}`
+      : '';
+
     if (title && subtitle) {
       return `${title} ${subtitle}`;
     }
@@ -760,9 +627,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             color: colors.text,
             textAlign: 'right',
           }}>
-          {currentSpeed}x
+          {playbackSpeed}x
         </Text>
       </TouchableOpacity>
+    );
+  };
+
+  // Handle verse press - navigation handled by audio store
+  const handleVersePress = (verseNumber: number) => {
+    console.log(
+      `Verse ${verseNumber} tapped - seeking handled by TextModeView`
     );
   };
 
@@ -892,16 +766,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       {isExpanded && (
         <View style={styles.middleArea}>
           <ExpandedMediaContent
-            title={title}
-            subtitle={subtitle}
-            imagePath={imagePath}
-            currentVerse={currentVerse}
-            currentTime={currentTime}
-            onTextPress={onTextPress}
-            onQueuePress={onQueuePress}
+            onTextPress={() => {}}
+            onQueuePress={() => {}}
             onVersionPress={() => setShowVersionPopup(true)}
-            onVersePress={onVersePress}
-            onSeek={onSeek}
+            onVersePress={handleVersePress}
+            onSeek={seek}
           />
         </View>
       )}
@@ -927,8 +796,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
         <ProgressBar
           currentTime={currentTime}
           totalTime={totalTime}
-          onSeek={onSeek}
-          seekable={!!onSeek && totalTime > 0}
+          onSeek={seek}
+          seekable={totalTime > 0}
           testID='mini-player-progress'
         />
 
@@ -936,7 +805,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
         <View style={styles.controlsRow}>
           {/* Previous Chapter - « */}
           <TouchableOpacity
-            onPress={onPreviousChapter}
+            onPress={playPrevious}
             style={[
               styles.circularButton,
               { backgroundColor: colors.primary + '20' },
@@ -948,7 +817,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
           {/* Previous Verse - ‹ */}
           <TouchableOpacity
-            onPress={onPreviousVerse}
+            onPress={previousVerse}
             style={[
               styles.circularButton,
               { backgroundColor: colors.primary + '20' },
@@ -960,7 +829,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
           {/* Play/Pause - Center button */}
           <TouchableOpacity
-            onPress={onPlayPause}
+            onPress={togglePlayPause}
             style={[
               styles.circularButton,
               styles.primaryButton,
@@ -977,7 +846,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
           {/* Next Verse - › */}
           <TouchableOpacity
-            onPress={onNextVerse}
+            onPress={nextVerse}
             style={[
               styles.circularButton,
               { backgroundColor: colors.primary + '20' },
@@ -989,7 +858,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
           {/* Next Chapter - » */}
           <TouchableOpacity
-            onPress={onNextChapter}
+            onPress={playNext}
             style={[
               styles.circularButton,
               { backgroundColor: colors.primary + '20' },
@@ -1109,23 +978,23 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 style={{
                   padding: Dimensions.spacing.md,
                   backgroundColor:
-                    currentSpeed === speed
+                    playbackSpeed === speed
                       ? colors.primary + '20'
                       : 'transparent',
                 }}
                 onPress={() => {
-                  setCurrentSpeed(speed);
-                  onSpeedChange?.(speed);
+                  // TODO: Implement speed change in audio store
+                  console.log(`Setting speed to ${speed}x`);
                   setShowSpeedMenu(false);
                 }}>
                 <Text
                   style={{
                     fontSize: Fonts.size.base,
                     color:
-                      currentSpeed === speed ? colors.primary : colors.text,
+                      playbackSpeed === speed ? colors.primary : colors.text,
                     textAlign: 'center',
                     fontWeight:
-                      currentSpeed === speed
+                      playbackSpeed === speed
                         ? Fonts.weight.bold
                         : Fonts.weight.normal,
                   }}>
