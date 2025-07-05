@@ -2,7 +2,6 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import OnBoardingScreen from '../screens/OnBoardingScreen';
 import { NavigationContainer } from '@react-navigation/native';
-import { TamaguiProvider } from '@/app/providers';
 
 // Mock the theme hook
 jest.mock('@/shared/store', () => ({
@@ -35,11 +34,7 @@ jest.mock(
 );
 
 const renderWithProviders = (component: React.ReactElement) => {
-  return render(
-    <TamaguiProvider>
-      <NavigationContainer>{component}</NavigationContainer>
-    </TamaguiProvider>
-  );
+  return render(<NavigationContainer>{component}</NavigationContainer>);
 };
 
 describe('OnBoardingScreen', () => {

@@ -85,6 +85,7 @@ const OnBoardingScreen = () => {
               title={item.title}
               subTitle={item.subTitle}
               image={item.image}
+              component={item.component}
             />
           )}
         />

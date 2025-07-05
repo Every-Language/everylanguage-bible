@@ -2,15 +2,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import React from 'react';
 import { Dimensions, useTheme } from '@/shared';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Slides from '../screens/slides';
-
-type RootStackParamList = {
-  Home: undefined;
-  Onboarding: undefined;
-};
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+import { NavigationProp } from '@/types/onboarding';
 
 const BottomBar = (props: {
   scrollForward: () => void;

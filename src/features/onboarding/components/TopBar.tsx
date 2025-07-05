@@ -11,15 +11,8 @@ import React from 'react';
 import { Dimensions, useTheme } from '@/shared';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Paginator from './Paginator';
-
-type RootStackParamList = {
-  Home: undefined;
-  Onboarding: undefined;
-};
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+import { NavigationProp } from '@/types/onboarding';
 
 const TopBar = (props: {
   scrollX: Animated.Value;

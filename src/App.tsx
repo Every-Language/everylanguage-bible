@@ -8,6 +8,7 @@ import { TamaguiProvider } from '@/app/providers';
 import { useTheme } from '@/shared/store';
 import '@/shared/services/i18n';
 import OnBoardingScreen from '@/features/onboarding/screens/OnBoardingScreen';
+import { RootStackParamList } from './types/onboarding';
 
 const AppContent: React.FC = () => {
   const { isDark } = useTheme();
@@ -18,11 +19,6 @@ const AppContent: React.FC = () => {
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </>
   );
-};
-
-type RootStackParamList = {
-  Home: undefined; // Home screen takes no parameters
-  Onboarding: undefined; // Onboarding screen takes no parameters
 };
 
 export default function App() {

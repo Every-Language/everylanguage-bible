@@ -3,27 +3,24 @@ import { Slide } from '@/types/onboarding';
 const Slides: Slide[] = [
   {
     id: 1,
-    title: 'Welcome',
-    subTitle: 'Welcome to Translation',
-    image: '',
-  },
-  {
-    id: 2,
     title: 'Language detection',
     subTitle: 'We think you speak [Language]. Is this correct?',
     image: '',
+    component: 'LanguageDetection',
   },
   {
-    id: 3,
+    id: 2,
     title: 'Listen to word of God',
     subTitle: "Tap to hear God's Word in your language",
     image: '',
+    component: 'AudioSample',
   },
   {
-    id: 4,
+    id: 3,
     title: 'Another slide',
     subTitle: "Tap to hear God's Word in your language",
     image: '',
+    component: 'BasicSetup',
   },
 ];
 
