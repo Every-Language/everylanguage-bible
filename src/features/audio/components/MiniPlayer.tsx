@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Dimensions as RNDimensions,
   Image,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -185,6 +186,7 @@ interface ExpandedMediaContentProps {
   imagePath?: string | undefined;
   onTextPress?: (() => void) | undefined;
   onQueuePress?: (() => void) | undefined;
+  onVersionPress?: (() => void) | undefined;
 }
 
 const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
@@ -193,6 +195,7 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
   imagePath,
   onTextPress,
   onQueuePress,
+  onVersionPress,
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -296,6 +299,20 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
             }}>
             {subtitle || t('audio.unknownChapter', 'Unknown Chapter')}
           </Text>
+
+          {/* Version Text */}
+          <TouchableOpacity
+            onPress={onVersionPress}
+            style={{ marginTop: Dimensions.spacing.xs }}>
+            <Text
+              style={{
+                fontSize: Fonts.size.sm,
+                color: colors.text + '60', // Fainter text
+                textAlign: 'left',
+              }}>
+              {t('audio.versionText', 'Midwest English - CLB')}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -397,6 +414,9 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const screenHeight = RNDimensions.get('window').height;
 
+  // Version popup state
+  const [showVersionPopup, setShowVersionPopup] = useState(false);
+
   const expansionValue = useSharedValue(0);
 
   // Handle expand/contract functionality
@@ -426,6 +446,23 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     }
     return title || t('audio.noAudioSelected');
   };
+
+  // Version text component
+  const VersionText: React.FC<{ style?: any }> = ({ style }) => (
+    <TouchableOpacity onPress={() => setShowVersionPopup(true)}>
+      <Text
+        style={[
+          {
+            fontSize: Fonts.size.sm,
+            color: colors.text + '60', // Fainter text
+            textAlign: 'right',
+          },
+          style,
+        ]}>
+        {t('audio.versionText', 'Midwest English - CLB')}
+      </Text>
+    </TouchableOpacity>
+  );
 
   // Calculate the height of the bottom controls section
   const bottomControlsHeight = 190; // Increased height for all controls: expand bar + title + progress + buttons + padding
@@ -558,19 +595,23 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             imagePath={imagePath}
             onTextPress={onTextPress}
             onQueuePress={onQueuePress}
+            onVersionPress={() => setShowVersionPopup(true)}
           />
         </View>
       )}
 
       {/* Bottom Controls - Fixed at bottom of container */}
       <View style={styles.bottomControlsContainer}>
-        {/* Top Row: Text Only */}
+        {/* Top Row: Text and Version */}
         <View style={styles.topRow}>
           <View style={styles.textContainer}>
             <Text style={styles.title} numberOfLines={1}>
               {displayText()}
             </Text>
           </View>
+          {!isExpanded && (
+            <VersionText style={{ marginLeft: Dimensions.spacing.sm }} />
+          )}
         </View>
 
         {/* Progress Bar */}
@@ -650,6 +691,72 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Version Change Popup */}
+      <Modal
+        visible={showVersionPopup}
+        transparent={true}
+        animationType='fade'
+        onRequestClose={() => setShowVersionPopup(false)}>
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+          activeOpacity={1}
+          onPress={() => setShowVersionPopup(false)}>
+          <View
+            style={{
+              backgroundColor: colors.background,
+              padding: Dimensions.spacing.xl,
+              borderRadius: Dimensions.radius.lg,
+              margin: Dimensions.spacing.xl,
+              maxWidth: '80%',
+            }}>
+            <Text
+              style={{
+                fontSize: Fonts.size.lg,
+                fontWeight: Fonts.weight.bold,
+                color: colors.text,
+                textAlign: 'center',
+                marginBottom: Dimensions.spacing.md,
+              }}>
+              {t('audio.versionChange', 'Version Change')}
+            </Text>
+            <Text
+              style={{
+                fontSize: Fonts.size.base,
+                color: colors.text,
+                textAlign: 'center',
+                marginBottom: Dimensions.spacing.lg,
+              }}>
+              {t(
+                'audio.versionChangePending',
+                'Version change feature pending'
+              )}
+            </Text>
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.primary,
+                padding: Dimensions.spacing.md,
+                borderRadius: Dimensions.radius.md,
+                alignItems: 'center',
+              }}
+              onPress={() => setShowVersionPopup(false)}>
+              <Text
+                style={{
+                  color: colors.background,
+                  fontSize: Fonts.size.base,
+                  fontWeight: Fonts.weight.medium,
+                }}>
+                {t('common.ok', 'OK')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </Animated.View>
   );
 };
