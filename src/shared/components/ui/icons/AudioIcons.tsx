@@ -1,33 +1,59 @@
 import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
 interface IconProps {
   size?: number;
   color?: string;
+  style?: ViewStyle | TextStyle;
 }
+
+// Constants
+const TRANSPARENT = 'transparent';
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skipIcon: {
+    marginTop: -3,
+  },
+  chevronIcon: {
+    marginTop: -2,
+  },
+  playTriangle: {
+    borderTopColor: TRANSPARENT,
+    borderBottomColor: TRANSPARENT,
+    borderRightColor: TRANSPARENT,
+  },
+  pauseBar: {
+    borderLeftColor: TRANSPARENT,
+    borderRightColor: TRANSPARENT,
+  },
+  playTriangleBase: {
+    width: 0,
+    height: 0,
+  },
+  pauseContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+});
 
 export const PlayIcon: React.FC<IconProps> = ({
   size = 24,
   color = '#000',
 }) => (
-  <View
-    style={[
-      styles.playIcon,
-      {
-        width: size,
-        height: size,
-        justifyContent: 'center',
-        alignItems: 'center',
-      },
-    ]}>
+  <View style={[styles.iconContainer, { width: size, height: size }]}>
     <View
       style={[
-        styles.triangle,
+        styles.playTriangle,
+        styles.playTriangleBase,
         {
+          borderLeftWidth: size * 0.7,
+          borderTopWidth: size * 0.4,
+          borderBottomWidth: size * 0.4,
           borderLeftColor: color,
-          borderLeftWidth: size * 0.4,
-          borderTopWidth: size * 0.23,
-          borderBottomWidth: size * 0.23,
         },
       ]}
     />
@@ -38,132 +64,112 @@ export const PauseIcon: React.FC<IconProps> = ({
   size = 24,
   color = '#000',
 }) => (
-  <View style={[styles.pauseIcon, { width: size * 0.6, height: size }]}>
-    <View
-      style={[
-        styles.pauseBar,
-        {
-          width: size * 0.15,
-          height: size * 0.5,
-          backgroundColor: color,
-        },
-      ]}
-    />
-    <View
-      style={[
-        styles.pauseBar,
-        {
-          width: size * 0.15,
-          height: size * 0.5,
-          backgroundColor: color,
-        },
-      ]}
-    />
+  <View style={[styles.iconContainer, { width: size, height: size }]}>
+    <View style={styles.pauseContainer}>
+      <View
+        style={[
+          styles.pauseBar,
+          {
+            width: size * 0.25,
+            height: size * 0.7,
+            borderTopWidth: size * 0.7,
+            borderTopColor: color,
+            marginRight: size * 0.1,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.pauseBar,
+          {
+            width: size * 0.25,
+            height: size * 0.7,
+            borderTopWidth: size * 0.7,
+            borderTopColor: color,
+          },
+        ]}
+      />
+    </View>
   </View>
 );
 
-// Previous Chapter Button - «
+export const SkipForwardIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => <Text style={[styles.skipIcon, { fontSize: size, color }]}>⏭</Text>;
+
+export const SkipBackwardIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => <Text style={[styles.skipIcon, { fontSize: size, color }]}>⏮</Text>;
+
+export const FastForwardIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => <Text style={[styles.skipIcon, { fontSize: size, color }]}>⏩</Text>;
+
+export const RewindIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => <Text style={[styles.skipIcon, { fontSize: size, color }]}>⏪</Text>;
+
+export const VolumeUpIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => <Text style={{ fontSize: size, color }}>🔊</Text>;
+
+export const VolumeDownIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => <Text style={{ fontSize: size, color }}>🔉</Text>;
+
+export const VolumeMuteIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => <Text style={{ fontSize: size, color }}>🔇</Text>;
+
+export const ChevronUpIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+  style,
+}) => (
+  <Text style={[styles.chevronIcon, { fontSize: size, color }, style]}>^</Text>
+);
+
+export const CloseIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => <Text style={[styles.chevronIcon, { fontSize: size, color }]}>×</Text>;
+
+// Backward compatibility aliases for existing components
 export const PreviousChapterIcon: React.FC<IconProps> = ({
   size = 24,
   color = '#000',
-}) => (
-  <Text
-    style={[
-      styles.textIcon,
-      { fontSize: size * 1.3, color: color || '#000', marginTop: -3 },
-    ]}>
-    «
-  </Text>
-);
+}) => <Text style={[styles.skipIcon, { fontSize: size, color }]}>⏮</Text>;
 
-// Previous Verse Button - ‹
+export const NextChapterIcon: React.FC<IconProps> = ({
+  size = 24,
+  color = '#000',
+}) => <Text style={[styles.skipIcon, { fontSize: size, color }]}>⏭</Text>;
+
 export const PreviousVerseIcon: React.FC<IconProps> = ({
   size = 24,
   color = '#000',
 }) => (
-  <Text
-    style={[
-      styles.textIcon,
-      { fontSize: size * 1.3, color: color || '#000', marginTop: -3 },
-    ]}>
-    ‹
-  </Text>
+  <Text style={[styles.chevronIcon, { fontSize: size * 1.3, color }]}>‹</Text>
 );
 
-// Next Verse Button - ›
 export const NextVerseIcon: React.FC<IconProps> = ({
   size = 24,
   color = '#000',
 }) => (
-  <Text
-    style={[
-      styles.textIcon,
-      { fontSize: size * 1.3, color: color || '#000', marginTop: -3 },
-    ]}>
-    ›
-  </Text>
-);
-
-// Next Chapter Button - »
-export const NextChapterIcon: React.FC<IconProps> = ({
-  size = 24,
-  color = '#000',
-}) => (
-  <Text
-    style={[
-      styles.textIcon,
-      { fontSize: size * 1.3, color: color || '#000', marginTop: -3 },
-    ]}>
-    »
-  </Text>
+  <Text style={[styles.chevronIcon, { fontSize: size * 1.3, color }]}>›</Text>
 );
 
 export const ChevronDownIcon: React.FC<IconProps> = ({
   size = 24,
   color = '#000',
+  style,
 }) => (
-  <View
-    style={[
-      styles.chevronDown,
-      {
-        borderTopColor: color,
-        borderTopWidth: size * 0.15,
-        borderLeftWidth: size * 0.2,
-        borderRightWidth: size * 0.2,
-        width: size * 0.4,
-        height: size * 0.2,
-      },
-    ]}
-  />
+  <Text style={[styles.chevronIcon, { fontSize: size, color }, style]}>⌄</Text>
 );
-
-const styles = StyleSheet.create({
-  playIcon: {
-    // Container for the triangle
-  },
-  triangle: {
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderRightColor: 'transparent',
-  },
-  pauseIcon: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 2, // Small padding to bring bars closer
-  },
-  pauseBar: {
-    borderRadius: 1,
-  },
-  textIcon: {
-    fontWeight: '900',
-    textAlign: 'center',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    color: '#000',
-  },
-  chevronDown: {
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-  },
-});

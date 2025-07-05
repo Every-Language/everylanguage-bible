@@ -14,8 +14,8 @@ jest.mock('react-native-safe-area-context', () => ({
 
 // Mock the AudioStore
 const mockAudioStore = {
-  currentBook: null as any,
-  currentChapter: null as any,
+  currentBook: null as unknown,
+  currentChapter: null as unknown,
   isPlaying: false,
   currentPosition: 0,
   totalDuration: 0,
@@ -47,12 +47,12 @@ jest.mock('@/shared/store', () => ({
 // Mock the translation hook
 jest.mock('@/shared/hooks', () => ({
   useTranslation: () => ({
-    t: (key: string, params?: any) => {
+    t: (key: string, params?: Record<string, unknown>) => {
       const translations: Record<string, string> = {
         'theme.switchToLight': 'Switch to light mode',
         'theme.switchToDark': 'Switch to dark mode',
-        'bible.openBook': `Open ${params?.title || 'book'}`,
-        'bible.chapter': `Chapter ${params?.number || ''}`,
+        'bible.openBook': `Open ${params?.['title'] || 'book'}`,
+        'bible.chapter': `Chapter ${params?.['number'] || ''}`,
         'navigation.back': 'Back',
         'audio.audioPlayerControls': 'Audio player controls',
         'audio.previousChapter': 'Previous chapter',

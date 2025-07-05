@@ -16,8 +16,8 @@ const mockUseTheme = {
 
 // Mock the audio store
 const mockUseAudioStore = {
-  currentBook: null as any,
-  currentChapter: null as any,
+  currentBook: null as unknown,
+  currentChapter: null as unknown,
   isPlaying: false,
   setCurrentAudio: jest.fn(),
   play: jest.fn(),
@@ -30,7 +30,7 @@ jest.mock('@/shared/store', () => ({
 
 // Mock the translation hook
 const mockUseTranslation = {
-  t: (key: string, params?: any) => {
+  t: (key: string, params?: Record<string, unknown>) => {
     const translations: Record<string, string> = {
       'theme.switchToLight': 'Switch to light mode',
       'theme.switchToDark': 'Switch to dark mode',

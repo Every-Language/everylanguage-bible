@@ -105,7 +105,13 @@ export const ChapterGrid: React.FC<ChapterGridProps> = ({
         onAnimationComplete?.();
       });
     }
-  }, [isVisible, animatedHeight, animatedOpacity, maxHeight]);
+  }, [
+    isVisible,
+    animatedHeight,
+    animatedOpacity,
+    maxHeight,
+    onAnimationComplete,
+  ]);
 
   if (!shouldRender && !isVisible) {
     return null;

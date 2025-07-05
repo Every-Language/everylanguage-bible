@@ -75,7 +75,7 @@ import jude from '../../../../assets/images/books/65_jude.png';
 import revelation from '../../../../assets/images/books/66_revelation.png';
 
 // Create a mapping object for image lookup
-const imageMap: Record<string, any> = {
+const imageMap: Record<string, number> = {
   '01_genesis.png': genesis,
   '02_exodus.png': exodus,
   '03_leviticus.png': leviticus,
