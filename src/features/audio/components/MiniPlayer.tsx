@@ -332,6 +332,8 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
     currentChapter,
     currentTime,
     currentVerseDisplayData,
+    bibleBooks,
+    initializeBibleBooks,
   } = useAudioStore();
 
   // Mode state
@@ -346,16 +348,28 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
     ? `Chapter ${currentChapter.chapterNumber}`
     : t('audio.unknownChapter', 'Unknown Chapter');
 
-  // Convert book name to image path
-  const getImagePathFromBookName = (bookName: string): string | undefined => {
-    // This could be enhanced to use a mapping service
-    return `${bookName.toLowerCase().replace(/\s+/g, '_')}.png`;
+  // Ensure Bible books are initialized
+  React.useEffect(() => {
+    if (bibleBooks.length === 0) {
+      initializeBibleBooks();
+    }
+  }, [bibleBooks.length, initializeBibleBooks]);
+
+  // Get book data with proper image path
+  const getBookWithImagePath = (
+    bookName: string
+  ): { imagePath?: string } | null => {
+    if (!bookName || bibleBooks.length === 0) return null;
+
+    const book = bibleBooks.find(b => b.name === bookName);
+    return book || null;
   };
 
   // Render book image
   const renderBookImage = () => {
     const bookName = currentChapter?.bookName || title;
-    const imagePath = getImagePathFromBookName(bookName);
+    const bookData = getBookWithImagePath(bookName);
+    const imagePath = bookData?.imagePath;
 
     if (imagePath) {
       const imageSource = getBookImageSource(imagePath);

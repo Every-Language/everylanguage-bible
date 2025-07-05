@@ -16,11 +16,19 @@ const getRecordingId = (book: Book, chapter: number): string => {
 export const MainNavigator: React.FC = () => {
   const { colors } = useTheme();
   const audioStore = useAudioStore();
-  const { currentRecording, currentChapter, setCurrentAudio } = audioStore;
+  const {
+    currentRecording,
+    currentChapter,
+    setCurrentAudio,
+    initializeBibleBooks,
+  } = audioStore;
 
   // Set up John 1 as default when app starts
   useEffect(() => {
     const initializeDefaultAudio = async () => {
+      // Initialize Bible books data first
+      initializeBibleBooks();
+
       // Only set default if no proper chapter is loaded (ignore mock recording)
       if (!currentChapter) {
         try {
@@ -47,7 +55,7 @@ export const MainNavigator: React.FC = () => {
     };
 
     initializeDefaultAudio();
-  }, [currentRecording, currentChapter, setCurrentAudio]);
+  }, [currentRecording, currentChapter, setCurrentAudio, initializeBibleBooks]);
 
   const styles = StyleSheet.create({
     container: {
