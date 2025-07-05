@@ -12,6 +12,7 @@ import { Dimensions, useTheme } from '@/shared';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import Paginator from './Paginator';
+import { NavigationProp } from '@/types/onboarding';
 
 const TopBar = (props: {
   scrollX: Animated.Value;
@@ -19,7 +20,7 @@ const TopBar = (props: {
   scrollBackWards: () => void;
 }) => {
   const { colors } = useTheme();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
 
   const { scrollX, currentIndex, scrollBackWards } = props;
 

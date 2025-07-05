@@ -3,6 +3,7 @@ import React from 'react';
 import { Dimensions, useTheme } from '@/shared';
 import { useNavigation } from '@react-navigation/native';
 import Slides from '../screens/slides';
+import { NavigationProp } from '@/types/onboarding';
 
 const BottomBar = (props: {
   scrollForward: () => void;
@@ -12,7 +13,7 @@ const BottomBar = (props: {
 
   const { scrollForward, currentIndex } = props;
 
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
 
   const styles = StyleSheet.create({
     container: {

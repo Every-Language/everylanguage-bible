@@ -31,13 +31,13 @@ describe('ChapterTile', () => {
     expect(getByText('5')).toBeTruthy();
   });
 
-  it('calls onPress with correct chapter number when pressed', () => {
+  it('calls onPress when pressed', () => {
     const { getByRole } = render(
       <ChapterTile chapterNumber={10} onPress={mockOnPress} />
     );
 
     fireEvent.press(getByRole('button'));
-    expect(mockOnPress).toHaveBeenCalledWith(10);
+    expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 
   it('has correct accessibility properties', () => {

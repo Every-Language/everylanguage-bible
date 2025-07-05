@@ -80,12 +80,7 @@ const OnBoardingScreen = () => {
             }
           )}
           renderItem={({ item }) => (
-            <OnBoardingItem
-              id={item.id}
-              title={item.title}
-              subTitle={item.subTitle}
-              image={item.image}
-            />
+            <OnBoardingItem id={item.id} component={item.component} />
           )}
         />
         <BottomBar currentIndex={currentIndex} scrollForward={scrollForward} />

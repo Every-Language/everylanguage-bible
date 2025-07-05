@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, StyleSheet, Text, TouchableWithoutFeedback } from 'react-native';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
 
@@ -18,7 +18,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   seekable = false,
   testID,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const [trackWidth, setTrackWidth] = useState(0);
+  const progressBarRef = useRef<View>(null);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -29,71 +31,108 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const progress = totalTime > 0 ? Math.min(currentTime / totalTime, 1) : 0;
 
   const handlePress = (event: any) => {
-    if (!seekable || !onSeek || totalTime === 0) return;
+    if (!seekable || !onSeek || totalTime === 0 || trackWidth === 0) return;
 
     const { locationX } = event.nativeEvent;
-    const { width } = event.currentTarget.measure
-      ? { width: 300 } // fallback width
-      : { width: 300 };
-
-    // Calculate the time based on touch position
-    const newTime = (locationX / width) * totalTime;
+    const newProgress = Math.max(0, Math.min(locationX / trackWidth, 1));
+    const newTime = newProgress * totalTime;
     onSeek(Math.max(0, Math.min(newTime, totalTime)));
   };
+
+  const handleLayout = (event: any) => {
+    const { width } = event.nativeEvent.layout;
+    setTrackWidth(width);
+  };
+
+  // Calculate remaining time
+  const remainingTime = totalTime - currentTime;
 
   const styles = StyleSheet.create({
     container: {
       width: '100%',
       paddingVertical: Dimensions.spacing.sm,
     },
-    progressContainer: {
+    seekBarContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: Dimensions.spacing.xs,
+      height: 40, // Larger touch area
+      justifyContent: 'center',
     },
     timeText: {
       fontSize: Fonts.size.xs,
       color: colors.secondary,
-      minWidth: 35,
-      textAlign: 'center',
+      fontFamily: 'monospace', // Consistent width for time display
+      minWidth: 45, // Ensure consistent spacing
     },
-    progressBarContainer: {
+    trackWrapper: {
       flex: 1,
-      height: 4,
-      backgroundColor: colors.secondary + '30',
-      borderRadius: 2,
       marginHorizontal: Dimensions.spacing.sm,
-      overflow: 'hidden',
+      justifyContent: 'center',
     },
-    progressBar: {
+    trackContainer: {
+      height: 6,
+      backgroundColor: isDark ? '#404040' : '#D0D0D0', // Light gray for unplayed
+      borderRadius: 3,
+      overflow: 'visible', // Allow bead to overflow
+    },
+    progressTrack: {
       height: '100%',
-      backgroundColor: colors.primary,
-      borderRadius: 2,
+      backgroundColor: isDark ? '#FFFFFF' : '#333333', // Dark for elapsed
+      borderRadius: 3,
     },
-    seekableBar: {
-      paddingVertical: Dimensions.spacing.xs, // Increase touch area
+    bead: {
+      position: 'absolute',
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: isDark ? '#FFFFFF' : '#333333', // Same color as progress
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3,
+      elevation: 4,
+      top: -5, // Center vertically on the track
     },
   });
 
-  const ProgressBarComponent = seekable ? TouchableOpacity : View;
+  const beadLeftPosition = trackWidth > 0 ? progress * trackWidth - 8 : 0; // -8 to center the bead
 
   return (
     <View style={styles.container} testID={testID}>
-      <View style={styles.progressContainer}>
+      {/* Seek Bar with Time Labels on Same Level */}
+      <View style={styles.seekBarContainer}>
+        {/* Elapsed Time */}
         <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
 
-        <ProgressBarComponent
-          style={[styles.progressBarContainer, seekable && styles.seekableBar]}
-          onPress={seekable ? handlePress : undefined}
-          activeOpacity={seekable ? 0.7 : 1}>
-          <View style={styles.progressBarContainer}>
+        {/* Track Wrapper */}
+        <TouchableWithoutFeedback onPress={seekable ? handlePress : undefined}>
+          <View style={styles.trackWrapper}>
             <View
-              style={[styles.progressBar, { width: `${progress * 100}%` }]}
-            />
-          </View>
-        </ProgressBarComponent>
+              ref={progressBarRef}
+              style={styles.trackContainer}
+              onLayout={handleLayout}>
+              {/* Progress Track */}
+              <View
+                style={[styles.progressTrack, { width: `${progress * 100}%` }]}
+              />
 
-        <Text style={styles.timeText}>{formatTime(totalTime)}</Text>
+              {/* Bead (Thumb) */}
+              {seekable && trackWidth > 0 && (
+                <View
+                  style={[
+                    styles.bead,
+                    {
+                      left: beadLeftPosition,
+                    },
+                  ]}
+                />
+              )}
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+
+        {/* Remaining Time */}
+        <Text style={styles.timeText}>-{formatTime(remainingTime)}</Text>
       </View>
     </View>
   );
