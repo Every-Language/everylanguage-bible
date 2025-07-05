@@ -49,6 +49,8 @@ interface MiniPlayerProps {
   // Expanded content props
   onTextPress?: () => void;
   onQueuePress?: () => void;
+  playbackSpeed?: number; // Current playback speed (e.g., 1.0, 1.5, 2.0)
+  onSpeedChange?: (speed: number) => void;
 }
 
 // Content mode types
@@ -405,6 +407,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   testID,
   onTextPress,
   onQueuePress,
+  playbackSpeed = 1.0,
+  onSpeedChange,
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -416,6 +420,17 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
   // Version popup state
   const [showVersionPopup, setShowVersionPopup] = useState(false);
+
+  // Speed menu state
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+
+  // Internal speed state
+  const [currentSpeed, setCurrentSpeed] = useState(playbackSpeed);
+
+  // Update internal speed when prop changes
+  React.useEffect(() => {
+    setCurrentSpeed(playbackSpeed);
+  }, [playbackSpeed]);
 
   const expansionValue = useSharedValue(0);
 
@@ -463,6 +478,23 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       </Text>
     </TouchableOpacity>
   );
+
+  // Speed control component
+  const SpeedControl: React.FC<{ style?: any }> = ({ style }) => {
+    return (
+      <TouchableOpacity onPress={() => setShowSpeedMenu(true)} style={style}>
+        <Text
+          style={{
+            fontSize: Fonts.size.lg,
+            fontWeight: Fonts.weight.bold,
+            color: colors.text,
+            textAlign: 'right',
+          }}>
+          {currentSpeed}x
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   // Calculate the height of the bottom controls section
   const bottomControlsHeight = 190; // Increased height for all controls: expand bar + title + progress + buttons + padding
@@ -602,7 +634,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
       {/* Bottom Controls - Fixed at bottom of container */}
       <View style={styles.bottomControlsContainer}>
-        {/* Top Row: Text and Version */}
+        {/* Top Row: Text and Version/Speed */}
         <View style={styles.topRow}>
           <View style={styles.textContainer}>
             <Text style={styles.title} numberOfLines={1}>
@@ -611,6 +643,9 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
           </View>
           {!isExpanded && (
             <VersionText style={{ marginLeft: Dimensions.spacing.sm }} />
+          )}
+          {isExpanded && (
+            <SpeedControl style={{ marginLeft: Dimensions.spacing.xs }} />
           )}
         </View>
 
@@ -754,6 +789,76 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 {t('common.ok', 'OK')}
               </Text>
             </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Speed Change Menu */}
+      <Modal
+        visible={showSpeedMenu}
+        transparent={true}
+        animationType='fade'
+        onRequestClose={() => setShowSpeedMenu(false)}>
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+          activeOpacity={1}
+          onPress={() => setShowSpeedMenu(false)}>
+          <View
+            style={{
+              backgroundColor: colors.background,
+              borderRadius: Dimensions.radius.lg,
+              margin: Dimensions.spacing.xl,
+              maxWidth: '60%',
+              minWidth: '40%',
+            }}>
+            <Text
+              style={{
+                fontSize: Fonts.size.lg,
+                fontWeight: Fonts.weight.bold,
+                color: colors.text,
+                textAlign: 'center',
+                padding: Dimensions.spacing.lg,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.text + '20',
+              }}>
+              {t('audio.playbackSpeed', 'Playback Speed')}
+            </Text>
+
+            {[0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map(speed => (
+              <TouchableOpacity
+                key={speed}
+                style={{
+                  padding: Dimensions.spacing.md,
+                  backgroundColor:
+                    currentSpeed === speed
+                      ? colors.primary + '20'
+                      : 'transparent',
+                }}
+                onPress={() => {
+                  setCurrentSpeed(speed);
+                  onSpeedChange?.(speed);
+                  setShowSpeedMenu(false);
+                }}>
+                <Text
+                  style={{
+                    fontSize: Fonts.size.base,
+                    color:
+                      currentSpeed === speed ? colors.primary : colors.text,
+                    textAlign: 'center',
+                    fontWeight:
+                      currentSpeed === speed
+                        ? Fonts.weight.bold
+                        : Fonts.weight.normal,
+                  }}>
+                  {speed}x
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </TouchableOpacity>
       </Modal>
