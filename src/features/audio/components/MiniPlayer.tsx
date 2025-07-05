@@ -12,6 +12,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
@@ -49,6 +50,134 @@ interface MiniPlayerProps {
   onQueuePress?: () => void;
 }
 
+// Content mode types
+type ContentMode = 'text' | 'queue';
+
+// Text mode component
+interface TextModeViewProps {
+  title?: string | undefined;
+  subtitle?: string | undefined;
+}
+
+const TextModeView: React.FC<TextModeViewProps> = ({
+  title: _title,
+  subtitle: _subtitle,
+}) => {
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text
+        style={{
+          fontSize: Fonts.size.lg,
+          color: colors.text,
+          textAlign: 'center',
+          marginBottom: Dimensions.spacing.md,
+        }}>
+        {t('audio.textMode', 'Text Mode')}
+      </Text>
+      <Text
+        style={{
+          fontSize: Fonts.size.base,
+          color: colors.text + '80',
+          textAlign: 'center',
+        }}>
+        {t(
+          'audio.textModeDescription',
+          'Verse text and navigation will appear here'
+        )}
+      </Text>
+    </View>
+  );
+};
+
+// Queue mode component
+interface QueueModeViewProps {
+  title?: string | undefined;
+  subtitle?: string | undefined;
+}
+
+const QueueModeView: React.FC<QueueModeViewProps> = ({
+  title: _title,
+  subtitle: _subtitle,
+}) => {
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text
+        style={{
+          fontSize: Fonts.size.lg,
+          color: colors.text,
+          textAlign: 'center',
+          marginBottom: Dimensions.spacing.md,
+        }}>
+        {t('audio.queueMode', 'Queue Mode')}
+      </Text>
+      <Text
+        style={{
+          fontSize: Fonts.size.base,
+          color: colors.text + '80',
+          textAlign: 'center',
+        }}>
+        {t(
+          'audio.queueModeDescription',
+          'Audio queue and playlist will appear here'
+        )}
+      </Text>
+    </View>
+  );
+};
+
+// Content switcher with animation
+interface ContentSwitcherProps {
+  mode: ContentMode;
+  title?: string | undefined;
+  subtitle?: string | undefined;
+}
+
+const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
+  mode,
+  title,
+  subtitle,
+}) => {
+  const slideAnimation = useSharedValue(0);
+
+  // Update animation when mode changes
+  React.useEffect(() => {
+    slideAnimation.value = withTiming(mode === 'text' ? 0 : 1, {
+      duration: 300,
+    });
+  }, [mode, slideAnimation]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: `${slideAnimation.value * -50}%` }],
+  }));
+
+  return (
+    <View style={{ flex: 1, overflow: 'hidden' }}>
+      <Animated.View
+        style={[
+          {
+            flexDirection: 'row',
+            width: '200%',
+            height: '100%',
+          },
+          animatedStyle,
+        ]}>
+        <View style={{ width: '50%', height: '100%' }}>
+          <TextModeView title={title} subtitle={subtitle} />
+        </View>
+        <View style={{ width: '50%', height: '100%' }}>
+          <QueueModeView title={title} subtitle={subtitle} />
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
+
 // Expanded media content component
 interface ExpandedMediaContentProps {
   title?: string | undefined;
@@ -67,6 +196,9 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
+
+  // Mode state
+  const [currentMode, setCurrentMode] = useState<ContentMode>('text');
 
   // Convert book name to image path
   const getImagePathFromBookName = (bookName: string): string | undefined => {
@@ -131,10 +263,6 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
         flex: 1,
         margin: 0,
         padding: Dimensions.spacing.md,
-        borderWidth: 2,
-        borderColor: colors.primary,
-        borderStyle: 'dashed',
-        borderRadius: Dimensions.radius.md,
         backgroundColor: colors.background,
       }}
       testID='expanded-media-content'>
@@ -182,20 +310,25 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
           style={{
             flex: 1,
             height: 28,
-            backgroundColor: colors.primary + '20',
+            backgroundColor:
+              currentMode === 'text' ? colors.primary : colors.primary + '20',
             borderRadius: Dimensions.radius.md,
             justifyContent: 'center',
             alignItems: 'center',
             borderWidth: 1,
             borderColor: colors.primary,
           }}
-          onPress={onTextPress}
+          onPress={() => {
+            setCurrentMode('text');
+            onTextPress?.();
+          }}
           testID='expanded-text-button'>
           <Text
             style={{
               fontSize: Fonts.size.base,
               fontWeight: Fonts.weight.medium,
-              color: colors.primary,
+              color:
+                currentMode === 'text' ? colors.background : colors.primary,
             }}>
             {t('audio.text', 'Text')}
           </Text>
@@ -206,24 +339,34 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
           style={{
             flex: 1,
             height: 28,
-            backgroundColor: colors.primary + '20',
+            backgroundColor:
+              currentMode === 'queue' ? colors.primary : colors.primary + '20',
             borderRadius: Dimensions.radius.md,
             justifyContent: 'center',
             alignItems: 'center',
             borderWidth: 1,
             borderColor: colors.primary,
           }}
-          onPress={onQueuePress}
+          onPress={() => {
+            setCurrentMode('queue');
+            onQueuePress?.();
+          }}
           testID='expanded-queue-button'>
           <Text
             style={{
               fontSize: Fonts.size.base,
               fontWeight: Fonts.weight.medium,
-              color: colors.primary,
+              color:
+                currentMode === 'queue' ? colors.background : colors.primary,
             }}>
             {t('audio.queue', 'Queue')}
           </Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Content Area */}
+      <View style={{ flex: 1, marginTop: Dimensions.spacing.md }}>
+        <ContentSwitcher mode={currentMode} title={title} subtitle={subtitle} />
       </View>
     </View>
   );
