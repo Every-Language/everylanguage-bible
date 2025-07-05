@@ -1,24 +1,68 @@
 import { create } from 'zustand';
-import { type Book, loadBibleBooks } from '@/shared/utils';
+import { AudioRecording, VerseDisplayData } from '@/types/audio';
+import { audioService, ChapterUIHelper } from '@/shared/services/AudioService';
+import { loadBibleBooks, type Book } from '@/shared/utils';
+
+// Helper function to convert Book and chapter to recording ID (matching MainNavigator)
+const getRecordingId = (book: Book, chapter: number): string => {
+  const bookId = book.name.toLowerCase().replace(/\s+/g, '-');
+  return `${bookId}-${chapter}`;
+};
+
+// Helper function to parse recording ID back to book and chapter info
+function parseRecordingId(
+  recordingId: string
+): { bookName: string; chapter: number } | null {
+  const parts = recordingId.split('-');
+  if (parts.length < 2) return null;
+
+  const chapterStr = parts[parts.length - 1];
+  if (!chapterStr) return null;
+  const chapter = parseInt(chapterStr, 10);
+  if (isNaN(chapter)) return null;
+
+  const bookName = parts
+    .slice(0, -1)
+    .join('-')
+    .split('-')
+    .map(word =>
+      word && word.length > 0
+        ? word.charAt(0).toUpperCase() + word.slice(1)
+        : ''
+    )
+    .join(' ');
+
+  return { bookName, chapter };
+}
 
 interface AudioState {
-  // Current playback state
-  currentBook: Book | null;
-  currentChapter: number | null;
+  // Core audio player state (similar to AudioPlayerState but with nullable fields for initial state)
+  currentRecording?: AudioRecording;
+  currentChapter?: any; // Will be AudioChapter when loaded
+  currentSegment?: any; // Will be AudioSegment when active
+  currentTime: number;
+  totalTime: number;
   isPlaying: boolean;
-  currentPosition: number; // in seconds
-  totalDuration: number; // in seconds
+  playbackSpeed: number;
+  isLoading: boolean;
+  error?: string | undefined;
+
+  // Additional UI state
+  currentUIHelper: ChapterUIHelper | null;
+  currentVerseDisplayData: VerseDisplayData[];
 
   // Playlist state
-  playlist: Array<{ book: Book; chapter: number }>;
+  playlist: AudioRecording[];
   currentPlaylistIndex: number;
 
+  // Bible navigation state
+  bibleBooks: Book[];
+
   // Loading states
-  isLoading: boolean;
   isBuffering: boolean;
 
   // Actions
-  setCurrentAudio: (book: Book, chapter: number) => void;
+  setCurrentAudio: (recordingId: string) => Promise<void>;
   setPlaybackState: (isPlaying: boolean) => void;
   setProgress: (position: number, duration?: number) => void;
   setLoading: (isLoading: boolean) => void;
@@ -29,11 +73,11 @@ interface AudioState {
   nextVerse: () => Promise<void>;
 
   // Playlist actions
-  addToPlaylist: (book: Book, chapter: number) => void;
+  addToPlaylist: (recording: AudioRecording) => void;
   removeFromPlaylist: (index: number) => void;
   clearPlaylist: () => void;
-  playNext: () => Promise<boolean>; // returns promise of true if there's a next item
-  playPrevious: () => Promise<boolean>; // returns promise of true if there's a previous item
+  playNext: () => Promise<boolean>;
+  playPrevious: () => Promise<boolean>;
 
   // Control actions
   play: () => void;
@@ -41,57 +85,174 @@ interface AudioState {
   togglePlayPause: () => void;
   stop: () => void;
   seek: (position: number) => void;
-  close: () => void; // Clear current audio and hide player
+  close: () => void;
+
+  // New actions for database integration
+  loadRecordings: () => Promise<AudioRecording[]>;
+  searchRecordings: (query: string) => Promise<AudioRecording[]>;
+  refreshCurrentChapter: () => Promise<void>;
+
+  // Bible navigation helpers
+  initializeBibleBooks: () => void;
+  findNextChapter: (currentRecordingId: string) => string | null;
+  findPreviousChapter: (currentRecordingId: string) => string | null;
 }
 
-// Helper function to get books list
-const getBooksAsync = async (): Promise<Book[]> => {
-  try {
-    return await loadBibleBooks();
-  } catch (error) {
-    console.error('Failed to load books:', error);
-    return [];
-  }
-};
+// Initial state will be set by MainNavigator when it loads John 1
 
 export const useAudioStore = create<AudioState>((set, get) => ({
-  // Initial state - start with John chapter 1
-  currentBook: {
-    id: '43', // John is the 43rd book (New Testament)
-    name: 'John',
-    testament: 'new',
-    chapters: 21,
-    order: 43,
-    imagePath: '43_john.png',
-  },
-  currentChapter: 1,
+  // Core audio player state
+  // currentRecording will be set by MainNavigator on startup
+  currentChapter: null,
+  currentSegment: null,
+  currentTime: 0,
+  totalTime: 0,
   isPlaying: false,
-  currentPosition: 0,
-  totalDuration: 912, // Mock 15:12 duration for John chapter 1
+  playbackSpeed: 1.0,
+  isLoading: false,
+  error: undefined,
+
+  // UI state
+  currentUIHelper: null,
+  currentVerseDisplayData: [],
+
+  // Playlist state
   playlist: [],
   currentPlaylistIndex: -1,
-  isLoading: false,
   isBuffering: false,
 
-  // Basic setters
-  setCurrentAudio: (book: Book, chapter: number) => {
-    set({
-      currentBook: book,
-      currentChapter: chapter,
-      currentPosition: 0,
-      totalDuration: 912, // Mock 15:12 duration for demo
-    });
+  // Bible navigation state
+  bibleBooks: [],
+
+  // Initialize Bible books data
+  initializeBibleBooks: () => {
+    const books = loadBibleBooks();
+    set({ bibleBooks: books });
   },
 
+  // Find next chapter in Bible sequence
+  findNextChapter: (currentRecordingId: string) => {
+    const { bibleBooks } = get();
+    if (bibleBooks.length === 0) {
+      get().initializeBibleBooks();
+    }
+
+    const parsed = parseRecordingId(currentRecordingId);
+    if (!parsed) return null;
+
+    const { bookName, chapter } = parsed;
+
+    // Find current book
+    const currentBook = bibleBooks.find(book => book.name === bookName);
+    if (!currentBook) return null;
+
+    // Check if there's a next chapter in current book
+    if (chapter < currentBook.chapters) {
+      return getRecordingId(currentBook, chapter + 1);
+    }
+
+    // Find next book
+    const nextBook = bibleBooks.find(
+      book => book.order === currentBook.order + 1
+    );
+    if (nextBook) {
+      return getRecordingId(nextBook, 1);
+    }
+
+    return null; // At end of Bible
+  },
+
+  // Find previous chapter in Bible sequence
+  findPreviousChapter: (currentRecordingId: string) => {
+    const { bibleBooks } = get();
+    if (bibleBooks.length === 0) {
+      get().initializeBibleBooks();
+    }
+
+    const parsed = parseRecordingId(currentRecordingId);
+    if (!parsed) return null;
+
+    const { bookName, chapter } = parsed;
+
+    // Find current book
+    const currentBook = bibleBooks.find(book => book.name === bookName);
+    if (!currentBook) return null;
+
+    // Check if there's a previous chapter in current book
+    if (chapter > 1) {
+      return getRecordingId(currentBook, chapter - 1);
+    }
+
+    // Find previous book
+    const previousBook = bibleBooks.find(
+      book => book.order === currentBook.order - 1
+    );
+    if (previousBook) {
+      return getRecordingId(previousBook, previousBook.chapters);
+    }
+
+    return null; // At beginning of Bible
+  },
+
+  // Set current audio by recording ID
+  setCurrentAudio: async (recordingId: string) => {
+    try {
+      set({ isLoading: true, error: undefined });
+
+      const chapter = await audioService.getAudioChapter(recordingId);
+      if (!chapter) {
+        set({ error: 'Failed to load audio chapter', isLoading: false });
+        return;
+      }
+
+      const uiHelper = new ChapterUIHelper(chapter);
+      const verseDisplayData = uiHelper.getVerseDisplayData(0);
+
+      set({
+        currentRecording: chapter.audioRecording,
+        currentChapter: chapter,
+        currentUIHelper: uiHelper,
+        currentVerseDisplayData: verseDisplayData,
+        currentTime: 0,
+        totalTime: chapter.totalDuration,
+        isLoading: false,
+      });
+
+      console.log(
+        `Loaded audio chapter: ${chapter.bookName} ${chapter.chapterNumber}`
+      );
+    } catch (error) {
+      console.error('Error setting current audio:', error);
+      set({
+        error: 'Failed to load audio chapter',
+        isLoading: false,
+      });
+    }
+  },
+
+  // Basic setters
   setPlaybackState: (isPlaying: boolean) => {
     set({ isPlaying });
   },
 
   setProgress: (position: number, duration?: number) => {
-    set({
-      currentPosition: position,
-      ...(duration !== undefined && { totalDuration: duration }),
-    });
+    const { currentUIHelper } = get();
+
+    const updates: Partial<AudioState> = {
+      currentTime: position,
+      ...(duration !== undefined && { totalTime: duration }),
+    };
+
+    // Update current segment and verse display data
+    if (currentUIHelper) {
+      const currentSegment = currentUIHelper.getCurrentSegment(position);
+      const verseDisplayData = currentUIHelper.getVerseDisplayData(position);
+
+      updates.currentSegment = currentSegment;
+      updates.currentVerseDisplayData = verseDisplayData;
+    }
+
+    set(updates);
   },
 
   setLoading: (isLoading: boolean) => {
@@ -103,15 +264,13 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   },
 
   // Playlist management
-  addToPlaylist: (book: Book, chapter: number) => {
+  addToPlaylist: (recording: AudioRecording) => {
     const { playlist } = get();
-    const exists = playlist.some(
-      item => item.book.id === book.id && item.chapter === chapter
-    );
+    const exists = playlist.some(item => item.id === recording.id);
 
     if (!exists) {
       set({
-        playlist: [...playlist, { book, chapter }],
+        playlist: [...playlist, recording],
       });
     }
   },
@@ -139,143 +298,106 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   },
 
   playNext: async () => {
-    const { playlist, currentPlaylistIndex, currentBook, currentChapter } =
-      get();
+    const { playlist, currentPlaylistIndex, currentRecording } = get();
 
     // If we have a playlist, use playlist navigation
     if (playlist.length > 0 && currentPlaylistIndex >= 0) {
       const nextIndex = currentPlaylistIndex + 1;
       if (nextIndex < playlist.length) {
-        const nextItem = playlist[nextIndex];
-        if (nextItem) {
-          set({
-            currentPlaylistIndex: nextIndex,
-            currentBook: nextItem.book,
-            currentChapter: nextItem.chapter,
-            currentPosition: 0,
-            totalDuration: 912, // Mock duration
-          });
+        const nextRecording = playlist[nextIndex];
+        if (nextRecording) {
+          await get().setCurrentAudio(nextRecording.id);
+          set({ currentPlaylistIndex: nextIndex });
           return true;
         }
       }
       return false;
     }
 
-    // If no playlist, do chapter-based navigation with cross-book support
-    if (!currentBook || !currentChapter) return false;
-
-    // Try next chapter in current book
-    const nextChapter = currentChapter + 1;
-    if (nextChapter <= currentBook.chapters) {
-      set({
-        currentBook,
-        currentChapter: nextChapter,
-        currentPosition: 0,
-        totalDuration: 912, // Mock duration
-      });
-      console.log(`Playing next chapter: ${currentBook.name} ${nextChapter}`);
-      return true;
-    }
-
-    // Try first chapter of next book
-    try {
-      const books = await getBooksAsync();
-      const currentBookIndex = books.findIndex(
-        book => book.id === currentBook.id
-      );
-
-      if (currentBookIndex !== -1 && currentBookIndex < books.length - 1) {
-        const nextBook = books[currentBookIndex + 1];
-        if (nextBook) {
-          set({
-            currentBook: nextBook,
-            currentChapter: 1,
-            currentPosition: 0,
-            totalDuration: 912, // Mock duration
-          });
-          console.log(`Playing next book: ${nextBook.name} 1`);
-          return true;
-        }
+    // Bible chapter navigation
+    if (currentRecording) {
+      const nextChapterRecordingId = get().findNextChapter(currentRecording.id);
+      if (nextChapterRecordingId) {
+        await get().setCurrentAudio(nextChapterRecordingId);
+        console.log(`Next chapter: loaded ${nextChapterRecordingId}`);
+        return true;
+      } else {
+        console.log('Next chapter: already at end of Bible');
+        return false;
       }
-
-      console.log(`End of Bible - no more books after ${currentBook.name}`);
-      return false;
-    } catch (error) {
-      console.error('Error navigating to next book:', error);
-      return false;
     }
+
+    console.log('Next chapter: no current recording');
+    return false;
   },
 
   playPrevious: async () => {
-    const { playlist, currentPlaylistIndex, currentBook, currentChapter } =
-      get();
+    const {
+      playlist,
+      currentPlaylistIndex,
+      currentRecording,
+      currentUIHelper,
+      currentTime,
+    } = get();
 
     // If we have a playlist, use playlist navigation
     if (playlist.length > 0 && currentPlaylistIndex >= 0) {
       const prevIndex = currentPlaylistIndex - 1;
       if (prevIndex >= 0) {
-        const prevItem = playlist[prevIndex];
-        if (prevItem) {
-          set({
-            currentPlaylistIndex: prevIndex,
-            currentBook: prevItem.book,
-            currentChapter: prevItem.chapter,
-            currentPosition: 0,
-            totalDuration: 912, // Mock duration
-          });
+        const prevRecording = playlist[prevIndex];
+        if (prevRecording) {
+          await get().setCurrentAudio(prevRecording.id);
+          set({ currentPlaylistIndex: prevIndex });
           return true;
         }
       }
       return false;
     }
 
-    // If no playlist, do chapter-based navigation with cross-book support
-    if (!currentBook || !currentChapter) return false;
+    // Bible chapter navigation with "restart chapter" logic
+    if (currentRecording && currentUIHelper) {
+      const currentSegment = currentUIHelper.getCurrentSegment(currentTime);
 
-    // Try previous chapter in current book
-    const prevChapter = currentChapter - 1;
-    if (prevChapter >= 1) {
-      set({
-        currentBook,
-        currentChapter: prevChapter,
-        currentPosition: 0,
-        totalDuration: 912, // Mock duration
-      });
-      console.log(
-        `Playing previous chapter: ${currentBook.name} ${prevChapter}`
-      );
-      return true;
-    }
+      // Check if we're at verse 1 (first segment) or very close to the beginning
+      const firstSegment = currentUIHelper.getSegmentByVerseNumber(1);
+      const isAtFirstVerse =
+        currentSegment?.segmentNumber === 1 || currentTime < 5; // 5 second threshold
 
-    // Try last chapter of previous book
-    try {
-      const books = await getBooksAsync();
-      const currentBookIndex = books.findIndex(
-        book => book.id === currentBook.id
-      );
+      if (!isAtFirstVerse && firstSegment) {
+        // Not at verse 1, so go to verse 1 of current chapter
+        get().seek(firstSegment.startTime);
+        console.log('Previous chapter: seeking to verse 1 of current chapter');
+        return true;
+      } else {
+        // At verse 1, so go to previous chapter and seek to verse 1
+        const previousChapterRecordingId = get().findPreviousChapter(
+          currentRecording.id
+        );
+        if (previousChapterRecordingId) {
+          await get().setCurrentAudio(previousChapterRecordingId);
 
-      if (currentBookIndex > 0) {
-        const prevBook = books[currentBookIndex - 1];
-        if (prevBook) {
-          set({
-            currentBook: prevBook,
-            currentChapter: prevBook.chapters, // Last chapter of previous book
-            currentPosition: 0,
-            totalDuration: 912, // Mock duration
-          });
-          console.log(
-            `Playing previous book: ${prevBook.name} ${prevBook.chapters}`
-          );
+          // After loading previous chapter, seek to verse 1
+          const { currentUIHelper: newUIHelper } = get();
+          if (newUIHelper) {
+            const firstSegmentOfPrevChapter =
+              newUIHelper.getSegmentByVerseNumber(1);
+            if (firstSegmentOfPrevChapter) {
+              get().seek(firstSegmentOfPrevChapter.startTime);
+              console.log(
+                `Previous chapter: loaded ${previousChapterRecordingId} and seeking to verse 1`
+              );
+            }
+          }
           return true;
+        } else {
+          console.log('Previous chapter: already at beginning of Bible');
+          return false;
         }
       }
-
-      console.log(`Beginning of Bible - no books before ${currentBook.name}`);
-      return false;
-    } catch (error) {
-      console.error('Error navigating to previous book:', error);
-      return false;
     }
+
+    console.log('Previous chapter: no current recording or UI helper');
+    return false;
   },
 
   // Control actions
@@ -284,9 +406,9 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
     // Mock progress simulation for demo
     const simulateProgress = () => {
-      const { isPlaying, currentPosition, totalDuration } = get();
-      if (isPlaying && currentPosition < totalDuration) {
-        set({ currentPosition: currentPosition + 1 });
+      const { isPlaying, currentTime, totalTime } = get();
+      if (isPlaying && currentTime < totalTime) {
+        get().setProgress(currentTime + 1);
         setTimeout(simulateProgress, 1000);
       }
     };
@@ -312,84 +434,158 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   stop: () => {
     set({
       isPlaying: false,
-      currentPosition: 0,
+      currentTime: 0,
     });
     // TODO: Integrate with actual audio player service
   },
 
   seek: (position: number) => {
-    set({ currentPosition: position });
+    get().setProgress(position);
     // TODO: Integrate with actual audio player service
   },
 
-  // Verse navigation functions with cross-chapter support
+  // Verse navigation functions
   previousVerse: async () => {
-    const { currentPosition, currentBook, currentChapter } = get();
+    const {
+      currentTime,
+      currentUIHelper,
+      currentSegment: storedCurrentSegment,
+    } = get();
 
-    // If not at the very beginning of the chapter, seek back
-    if (currentPosition > 5) {
-      // 5 second threshold
-      const seekAmount = 15; // 15 seconds back for verse navigation
-      const newPosition = Math.max(0, currentPosition - seekAmount);
-      get().seek(newPosition);
+    if (!currentUIHelper) {
+      console.log('No UI helper available for verse navigation');
+      return;
+    }
+
+    // Use stored current segment if available, otherwise calculate it
+    const currentSegment =
+      storedCurrentSegment || currentUIHelper.getCurrentSegment(currentTime);
+
+    if (!currentSegment) {
+      console.log('No current segment for verse navigation');
+      return;
+    }
+
+    // If not at the very beginning of the segment, seek to beginning
+    if (currentTime > currentSegment.startTime + 2) {
+      // 2 second threshold
+      get().seek(currentSegment.startTime);
       console.log(
-        `Previous verse: seeking to ${newPosition}s (was ${currentPosition}s)`
+        `Previous verse: seeking to beginning of current segment at ${currentSegment.startTime}s`
       );
       return;
     }
 
-    // If at the beginning, go to previous chapter
-    if (currentBook && currentChapter) {
+    // Otherwise, go to previous segment
+    const prevSegment = currentUIHelper.getSegmentByVerseNumber(
+      currentSegment.segmentNumber - 1
+    );
+    if (prevSegment) {
+      get().seek(prevSegment.startTime);
+      console.log(
+        `Previous verse: seeking to segment ${prevSegment.segmentNumber} at ${prevSegment.startTime}s`
+      );
+    } else {
+      // At beginning of chapter, try to go to previous chapter and seek to last verse
       const success = await get().playPrevious();
       if (success) {
-        // Set position to near end of the previous chapter (simulating last verse)
-        const nearEndPosition = 900; // Near end of mock 15-minute chapter
-        set({ currentPosition: nearEndPosition });
-        console.log(
-          `Previous verse: moved to end of previous chapter at ${nearEndPosition}s`
-        );
+        // After loading previous chapter, seek to the last verse
+        const { currentUIHelper: newUIHelper, currentChapter } = get();
+        if (newUIHelper && currentChapter) {
+          const lastSegment = newUIHelper.getSegmentByVerseNumber(
+            currentChapter.totalSegments
+          );
+          if (lastSegment) {
+            get().seek(lastSegment.startTime);
+            console.log(
+              `Previous verse: loaded previous chapter and seeking to last verse ${currentChapter.totalSegments} at ${lastSegment.startTime}s`
+            );
+          }
+        }
       } else {
-        console.log('Previous verse: already at beginning of Bible');
+        console.log('Previous verse: already at beginning');
       }
     }
   },
 
   nextVerse: async () => {
-    const { currentPosition, totalDuration, currentBook, currentChapter } =
-      get();
+    const {
+      currentTime,
+      currentUIHelper,
+      currentSegment: storedCurrentSegment,
+    } = get();
 
-    // If not near the end of the chapter, seek forward
-    if (currentPosition < totalDuration - 15) {
-      // 15 second threshold from end
-      const seekAmount = 15; // 15 seconds forward for verse navigation
-      const newPosition = Math.min(totalDuration, currentPosition + seekAmount);
-      get().seek(newPosition);
-      console.log(
-        `Next verse: seeking to ${newPosition}s (was ${currentPosition}s)`
-      );
+    if (!currentUIHelper) {
+      console.log('No UI helper available for verse navigation');
       return;
     }
 
-    // If near the end, go to next chapter
-    if (currentBook && currentChapter) {
+    // Use stored current segment if available, otherwise calculate it
+    const currentSegment =
+      storedCurrentSegment || currentUIHelper.getCurrentSegment(currentTime);
+
+    if (!currentSegment) {
+      console.log('No current segment for verse navigation');
+      return;
+    }
+
+    // Go to next segment
+    const nextSegment = currentUIHelper.getSegmentByVerseNumber(
+      currentSegment.segmentNumber + 1
+    );
+    if (nextSegment) {
+      get().seek(nextSegment.startTime);
+      console.log(
+        `Next verse: seeking to segment ${nextSegment.segmentNumber} at ${nextSegment.startTime}s`
+      );
+    } else {
+      // At end of chapter, try to go to next chapter
       const success = await get().playNext();
-      if (success) {
-        // Set position to beginning of next chapter
-        set({ currentPosition: 0 });
-        console.log('Next verse: moved to beginning of next chapter');
-      } else {
-        console.log('Next verse: already at end of Bible');
+      if (!success) {
+        console.log('Next verse: already at end');
       }
     }
   },
 
   close: () => {
     set({
-      currentBook: null,
       currentChapter: null,
+      currentSegment: null,
+      currentUIHelper: null,
+      currentVerseDisplayData: [],
       isPlaying: false,
-      currentPosition: 0,
-      totalDuration: 0,
+      currentTime: 0,
+      totalTime: 0,
     });
+  },
+
+  // New database integration methods
+  loadRecordings: async () => {
+    try {
+      const recordings = await audioService.getAudioRecordings();
+      console.log(`Loaded ${recordings.length} audio recordings`);
+      return recordings;
+    } catch (error) {
+      console.error('Error loading recordings:', error);
+      return [];
+    }
+  },
+
+  searchRecordings: async (query: string) => {
+    try {
+      const recordings = await audioService.searchAudioRecordings(query);
+      console.log(`Found ${recordings.length} recordings for query: ${query}`);
+      return recordings;
+    } catch (error) {
+      console.error('Error searching recordings:', error);
+      return [];
+    }
+  },
+
+  refreshCurrentChapter: async () => {
+    const { currentRecording } = get();
+    if (currentRecording) {
+      await get().setCurrentAudio(currentRecording.id);
+    }
   },
 }));
