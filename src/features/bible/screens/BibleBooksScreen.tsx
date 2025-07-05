@@ -43,8 +43,8 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         await new Promise(resolve => setTimeout(resolve, 500));
         const bibleBooks = loadBibleBooks();
         setBooks(bibleBooks);
-      } catch (error) {
-        console.error('Error loading books:', error);
+      } catch {
+        // Error loading books - continue with default state
       } finally {
         setLoading(false);
       }

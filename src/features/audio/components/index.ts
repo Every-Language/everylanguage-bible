@@ -12,6 +12,11 @@ import { AudioPlayer } from './AudioPlayer';
 import { VerseNavigator } from './VerseNavigator';
 import { MiniPlayer } from './MiniPlayer';
 
+// New sliding panel audio player system
+import { AudioPlayerWidget } from './AudioPlayerWidget';
+import { MiniPlayerView } from './MiniPlayerView';
+import { FullPlayerView } from './FullPlayerView';
+
 export { AudioPlayer } from './AudioPlayer';
 export type { AudioPlayerProps } from './AudioPlayer';
 
@@ -20,39 +25,41 @@ export type { VerseNavigatorProps } from './VerseNavigator';
 
 export { MiniPlayer } from './MiniPlayer';
 
+// New sliding panel system exports
+export { AudioPlayerWidget } from './AudioPlayerWidget';
+export type { PanelState } from './AudioPlayerWidget';
+
+export { MiniPlayerView } from './MiniPlayerView';
+export { FullPlayerView } from './FullPlayerView';
+
 // Component categories for easy imports
 export const AudioComponents = {
+  // TDD Audio System
   AudioPlayer,
   VerseNavigator,
+
+  // Legacy Mini Player
   MiniPlayer,
-} as const;
+
+  // New Sliding Panel System
+  AudioPlayerWidget,
+  MiniPlayerView,
+  FullPlayerView,
+};
 
 /**
- * @example Basic usage:
- * ```tsx
- * import { AudioPlayer, VerseNavigator, MiniPlayer } from '@/features/audio/components';
+ * Usage Examples:
  *
- * function BiblePage() {
- *   const [currentVerse, setCurrentVerse] = useState(1);
+ * // Legacy approach (current)
+ * import { MiniPlayer } from '@/features/audio/components';
  *
- *   return (
- *     <View>
- *       <AudioPlayer
- *         bookId="gen"
- *         chapterNumber={1}
- *         autoPlay={false}
- *         onVerseSelect={setCurrentVerse}
- *       />
+ * // TDD Audio System (our comprehensive implementation)
+ * import { AudioPlayer, VerseNavigator } from '@/features/audio/components';
  *
- *       <VerseNavigator
- *         verses={chapterData.verse_timestamps}
- *         currentVerse={currentVerse}
- *         onVerseSelect={setCurrentVerse}
- *       />
+ * // New Sliding Panel System (Flutter-inspired)
+ * import { AudioPlayerWidget } from '@/features/audio/components';
  *
- *       <MiniPlayer />
- *     </View>
- *   );
- * }
- * ```
+ * // Bulk import
+ * import { AudioComponents } from '@/features/audio/components';
+ * const { AudioPlayerWidget, MiniPlayerView } = AudioComponents;
  */

@@ -9,7 +9,7 @@ export const useTranslation = () => {
   return {
     t: isInitialized
       ? t
-      : (key: string, params?: any) => {
+      : (key: string, params?: Record<string, string | number>) => {
           // Return the key as fallback if translation fails
           if (params && typeof params === 'object') {
             let result = key;

@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  GestureResponderEvent,
+} from 'react-native';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
 
@@ -28,13 +34,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   const progress = totalTime > 0 ? Math.min(currentTime / totalTime, 1) : 0;
 
-  const handlePress = (event: any) => {
+  const handlePress = (event: GestureResponderEvent) => {
     if (!seekable || !onSeek || totalTime === 0) return;
 
     const { locationX } = event.nativeEvent;
-    const { width } = event.currentTarget.measure
-      ? { width: 300 } // fallback width
-      : { width: 300 };
+    // Use a reasonable default width for progress bar calculation
+    const width = 300; // Default progress bar width
 
     // Calculate the time based on touch position
     const newTime = (locationX / width) * totalTime;

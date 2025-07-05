@@ -8,9 +8,18 @@
  */
 
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ViewStyle,
+} from 'react-native';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
+import { useTheme } from '@/shared/hooks';
 import type { PlaybackSpeed } from '../types';
+import { Colors } from '@/shared/constants/colors';
 
 /**
  * Props interface for AudioPlayer component
@@ -23,7 +32,7 @@ export interface AudioPlayerProps {
   /** Auto-play when chapter loads */
   autoPlay?: boolean;
   /** Custom styling */
-  style?: any;
+  style?: ViewStyle;
   /** Called when user selects a verse */
   onVerseSelect?: (verseNumber: number) => void;
   /** Called when chapter changes */
@@ -41,6 +50,28 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   onVerseSelect,
   onChapterChange: _onChapterChange,
 }) => {
+  const { colors, isDark } = useTheme();
+
+  // Dynamic color variables based on theme
+  const containerBg = colors.background;
+  const shadowColor = colors.text;
+  const errorBgColor = isDark
+    ? Colors.background.overlay
+    : Colors.background.secondary;
+  const errorBorderColor = Colors.feedback.error;
+  const errorTextColor = isDark ? Colors.feedback.error : Colors.feedback.error;
+  const whiteColor = colors.background;
+  const grayLight = isDark ? Colors.border.light : Colors.border.light;
+  const grayMedium = isDark
+    ? Colors.background.overlay
+    : Colors.background.secondary;
+  const blueLight = isDark ? Colors.primaryLight : Colors.primaryLight;
+  const bluePrimary = Colors.primary;
+  const successColor = Colors.feedback.success;
+  const warningColor = Colors.feedback.warning;
+  const textPrimary = colors.text;
+  const textSecondary = colors.secondary;
+
   // Use our real audio player hook
   const {
     // State
@@ -75,23 +106,23 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   // Load chapter when props change
   useEffect(() => {
-    const loadChapterData = async () => {
+    const initializeAndLoad = async () => {
       try {
         await loadChapter(bookId, chapterNumber);
-      } catch (err) {
-        console.error('Failed to load chapter:', err);
+        if (autoPlay) {
+          setTimeout(() => {
+            play().catch(() => {
+              // Error already handled by play function
+            });
+          }, 500);
+        }
+      } catch {
+        // Error handling is done by loadChapter
       }
     };
 
-    loadChapterData();
-  }, [bookId, chapterNumber, loadChapter]);
-
-  // Auto-play when loaded
-  useEffect(() => {
-    if (autoPlay && isLoaded && !isPlaying) {
-      play().catch(console.error);
-    }
-  }, [autoPlay, isLoaded, isPlaying, play]);
+    initializeAndLoad();
+  }, [bookId, chapterNumber, autoPlay, loadChapter, play]);
 
   // Notify parent of verse changes
   useEffect(() => {
@@ -104,24 +135,24 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const handleNextVerse = async () => {
     try {
       await nextVerse();
-    } catch (err) {
-      console.error('Failed to go to next verse:', err);
+    } catch {
+      // Error handling is done by nextVerse
     }
   };
 
   const handlePreviousVerse = async () => {
     try {
       await previousVerse();
-    } catch (err) {
-      console.error('Failed to go to previous verse:', err);
+    } catch {
+      // Error handling is done by previousVerse
     }
   };
 
   const handleGoToVerse = async (verseNumber: number) => {
     try {
       await goToVerse(verseNumber);
-    } catch (err) {
-      console.error('Failed to go to verse:', err);
+    } catch {
+      // Error handling is done by goToVerse
     }
   };
 
@@ -129,24 +160,24 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const handlePlay = async () => {
     try {
       await play();
-    } catch (err) {
-      console.error('Failed to play:', err);
+    } catch {
+      // Error handling is done by play
     }
   };
 
   const handlePause = async () => {
     try {
       await pause();
-    } catch (err) {
-      console.error('Failed to pause:', err);
+    } catch {
+      // Error handling is done by pause
     }
   };
 
   const handleStop = async () => {
     try {
       await stop();
-    } catch (err) {
-      console.error('Failed to stop:', err);
+    } catch {
+      // Error handling is done by stop
     }
   };
 
@@ -154,8 +185,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const handleSpeedChange = async (speed: PlaybackSpeed) => {
     try {
       await setPlaybackSpeed(speed);
-    } catch (err) {
-      console.error('Failed to change speed:', err);
+    } catch {
+      // Error handling is done by setPlaybackSpeed
     }
   };
 
@@ -163,8 +194,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const handleVolumeChange = async (newVolume: number) => {
     try {
       await setVolume(newVolume);
-    } catch (err) {
-      console.error('Failed to change volume:', err);
+    } catch {
+      // Error handling is done by setVolume
     }
   };
 
@@ -188,6 +219,230 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   // Available volume levels
   const volumeLevels = [0, 0.25, 0.5, 0.75, 1.0];
+
+  // Dynamic styles using theme colors
+  const styles = StyleSheet.create({
+    container: {
+      backgroundColor: containerBg,
+      padding: 16,
+      borderRadius: 12,
+      margin: 16,
+      elevation: 3,
+      shadowColor: shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    errorContainer: {
+      backgroundColor: errorBgColor,
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 16,
+      borderLeftWidth: 4,
+      borderLeftColor: errorBorderColor,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    errorText: {
+      color: errorTextColor,
+      fontSize: 14,
+      flex: 1,
+    },
+    errorButton: {
+      backgroundColor: errorBorderColor,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 4,
+    },
+    errorButtonText: {
+      color: whiteColor,
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    chapterTitle: {
+      fontSize: 22,
+      fontWeight: 'bold',
+      color: textPrimary,
+    },
+    chapterSubtitle: {
+      fontSize: 14,
+      color: textSecondary,
+      marginTop: 4,
+    },
+    loadingContainer: {
+      padding: 20,
+      alignItems: 'center',
+    },
+    loadingText: {
+      fontSize: 16,
+      color: textSecondary,
+    },
+    controls: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    controlButton: {
+      backgroundColor: grayLight,
+      borderRadius: 25,
+      width: 50,
+      height: 50,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginHorizontal: 8,
+    },
+    controlButtonDisabled: {
+      backgroundColor: grayMedium,
+      opacity: 0.5,
+    },
+    playButton: {
+      backgroundColor: successColor,
+      width: 60,
+      height: 60,
+    },
+    controlText: {
+      fontSize: 20,
+    },
+    skipControls: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginBottom: 16,
+    },
+    skipButton: {
+      backgroundColor: blueLight,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      marginHorizontal: 8,
+    },
+    skipText: {
+      fontSize: 12,
+      color: bluePrimary,
+      fontWeight: '500',
+    },
+    progressContainer: {
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    timeText: {
+      fontSize: 14,
+      color: textSecondary,
+      marginBottom: 8,
+    },
+    progressBar: {
+      width: '100%',
+      height: 4,
+      backgroundColor: grayLight,
+      borderRadius: 2,
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: successColor,
+      borderRadius: 2,
+    },
+    currentVerse: {
+      backgroundColor: blueLight,
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 16,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    currentVerseText: {
+      fontSize: 16,
+      color: bluePrimary,
+      fontWeight: '500',
+    },
+    verseButton: {
+      backgroundColor: bluePrimary,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 4,
+    },
+    verseButtonText: {
+      color: whiteColor,
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
+    speedContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 12,
+      flexWrap: 'wrap',
+    },
+    speedLabel: {
+      fontSize: 14,
+      color: textSecondary,
+      marginRight: 8,
+    },
+    speedButton: {
+      backgroundColor: grayLight,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      marginHorizontal: 2,
+      marginVertical: 2,
+    },
+    speedButtonActive: {
+      backgroundColor: successColor,
+    },
+    speedText: {
+      fontSize: 12,
+      color: textPrimary,
+    },
+    speedTextActive: {
+      color: whiteColor,
+    },
+    volumeContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+      flexWrap: 'wrap',
+    },
+    volumeLabel: {
+      fontSize: 14,
+      color: textSecondary,
+      marginRight: 8,
+    },
+    volumeButton: {
+      backgroundColor: grayLight,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      marginHorizontal: 2,
+      marginVertical: 2,
+    },
+    volumeButtonActive: {
+      backgroundColor: warningColor,
+    },
+    volumeText: {
+      fontSize: 12,
+      color: textPrimary,
+    },
+    volumeTextActive: {
+      color: whiteColor,
+    },
+    statusContainer: {
+      backgroundColor: grayMedium,
+      padding: 8,
+      borderRadius: 8,
+      marginTop: 16,
+    },
+    statusText: {
+      fontSize: 12,
+      color: textSecondary,
+      marginBottom: 4,
+    },
+  });
 
   return (
     <View style={[styles.container, style]}>
@@ -406,228 +661,3 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     </View>
   );
 };
-
-/**
- * Styles for AudioPlayer component
- */
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    margin: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  errorContainer: {
-    backgroundColor: '#ffebee',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#f44336',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  errorText: {
-    color: '#c62828',
-    fontSize: 14,
-    flex: 1,
-  },
-  errorButton: {
-    backgroundColor: '#f44336',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  errorButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  chapterTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  chapterSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  controlButton: {
-    backgroundColor: '#e0e0e0',
-    borderRadius: 25,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 8,
-  },
-  controlButtonDisabled: {
-    backgroundColor: '#f5f5f5',
-    opacity: 0.5,
-  },
-  playButton: {
-    backgroundColor: '#4CAF50',
-    width: 60,
-    height: 60,
-  },
-  controlText: {
-    fontSize: 20,
-  },
-  skipControls: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  skipButton: {
-    backgroundColor: '#e3f2fd',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginHorizontal: 8,
-  },
-  skipText: {
-    fontSize: 12,
-    color: '#1976d2',
-    fontWeight: '500',
-  },
-  progressContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  timeText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  progressBar: {
-    width: '100%',
-    height: 4,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 2,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#4CAF50',
-    borderRadius: 2,
-  },
-  currentVerse: {
-    backgroundColor: '#e3f2fd',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  currentVerseText: {
-    fontSize: 16,
-    color: '#1976d2',
-    fontWeight: '500',
-  },
-  verseButton: {
-    backgroundColor: '#1976d2',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  verseButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  speedContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    flexWrap: 'wrap',
-  },
-  speedLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginRight: 8,
-  },
-  speedButton: {
-    backgroundColor: '#e0e0e0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginHorizontal: 2,
-    marginVertical: 2,
-  },
-  speedButtonActive: {
-    backgroundColor: '#4CAF50',
-  },
-  speedText: {
-    fontSize: 12,
-    color: '#333',
-  },
-  speedTextActive: {
-    color: '#fff',
-  },
-  volumeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    flexWrap: 'wrap',
-  },
-  volumeLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginRight: 8,
-  },
-  volumeButton: {
-    backgroundColor: '#e0e0e0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginHorizontal: 2,
-    marginVertical: 2,
-  },
-  volumeButtonActive: {
-    backgroundColor: '#ff9800',
-  },
-  volumeText: {
-    fontSize: 12,
-    color: '#333',
-  },
-  volumeTextActive: {
-    color: '#fff',
-  },
-  statusContainer: {
-    backgroundColor: '#f5f5f5',
-    padding: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
-  },
-});

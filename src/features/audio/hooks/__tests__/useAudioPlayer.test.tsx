@@ -11,7 +11,7 @@ jest.mock('../../adapters/databaseAdapter');
 describe('useAudioPlayer', () => {
   let mockAudioService: jest.Mocked<AudioService>;
   let mockDatabaseAdapter: jest.Mocked<DatabaseAdapter>;
-  let mockSound: any;
+  let mockSound: unknown;
 
   const mockAudioTrack: AudioTrack = {
     id: 'test-track-1',
@@ -126,14 +126,14 @@ describe('useAudioPlayer', () => {
         is_first_verse: true,
         is_last_verse: false,
       }),
-    } as any;
+    } as unknown as jest.Mocked<AudioService>;
 
     mockDatabaseAdapter = {
-      bibleRepository: {} as any,
+      bibleRepository: {} as unknown,
       getChapterAudio: jest.fn().mockResolvedValue(mockChapterAudio),
       convertVersesToTimestamps: jest.fn(),
       convertChapterToAudioFormat: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<DatabaseAdapter>;
 
     (AudioService as jest.MockedClass<typeof AudioService>).mockImplementation(
       () => mockAudioService

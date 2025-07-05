@@ -119,7 +119,7 @@ describe('AudioPlayer', () => {
     setVolume: jest.fn().mockResolvedValue(undefined),
     setPlaybackSpeed: jest.fn().mockResolvedValue(undefined),
     clearError: jest.fn(),
-  } as any;
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();

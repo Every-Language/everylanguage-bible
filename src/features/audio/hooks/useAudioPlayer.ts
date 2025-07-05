@@ -99,7 +99,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   // Service references
   const audioServiceRef = useRef<AudioService | null>(null);
   const databaseAdapterRef = useRef<DatabaseAdapter | null>(null);
-  const currentSoundRef = useRef<any>(null);
+  const currentSoundRef = useRef<unknown>(null);
 
   // Initialize services
   useEffect(() => {

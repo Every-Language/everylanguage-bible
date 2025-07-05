@@ -77,6 +77,7 @@ import {
   ChapterAudio_temp,
   VerseTimestamp_temp,
   BibleChapter,
+  PlaybackSpeed,
 } from '../../types';
 import { audioService, type AudioSound } from '../audioService';
 
@@ -167,7 +168,9 @@ const mockChapterAudio: ChapterAudio_temp = {
 };
 
 // Helper function to create a properly mocked AudioSound
-const createMockSound = (overrides: Partial<any> = {}) => {
+const createMockSound = (
+  overrides: Partial<Record<string, jest.Mock | unknown>> = {}
+) => {
   return {
     playAsync: jest.fn().mockResolvedValue(undefined),
     pauseAsync: jest.fn().mockResolvedValue(undefined),
@@ -218,10 +221,10 @@ describe('audioService', () => {
         isMuted: false,
       }),
       unloadAsync: jest.fn().mockResolvedValue(undefined),
-    } as any);
+    } as unknown as AudioSound);
 
     // Reset audioService initialized state
-    (audioService as any).initialized = false;
+    (audioService as unknown as { initialized: boolean }).initialized = false;
   });
 
   /**
@@ -551,7 +554,10 @@ describe('audioService', () => {
         }),
       });
 
-      await audioService.setPlaybackRate(mockSound, 0.3 as any); // Below minimum
+      await audioService.setPlaybackRate(
+        mockSound,
+        0.3 as unknown as PlaybackSpeed
+      ); // Below minimum
 
       expect(mockSound.setRateAsync).toHaveBeenCalledWith(0.5, true); // Clamped to minimum
     });
@@ -564,7 +570,10 @@ describe('audioService', () => {
         }),
       });
 
-      await audioService.setPlaybackRate(mockSound, 3.0 as any); // Above maximum
+      await audioService.setPlaybackRate(
+        mockSound,
+        3.0 as unknown as PlaybackSpeed
+      ); // Above maximum
 
       expect(mockSound.setRateAsync).toHaveBeenCalledWith(2.0, true); // Clamped to maximum
     });

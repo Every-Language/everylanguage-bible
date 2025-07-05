@@ -1,4 +1,4 @@
-import { View, StyleSheet, FlatList, Animated } from 'react-native';
+import { View, StyleSheet, FlatList, Animated, ViewToken } from 'react-native';
 import React, { useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/shared/store';
@@ -21,9 +21,11 @@ const OnBoardingScreen = () => {
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const viewableItemsChanged = useRef(({ viewableItems }: any) => {
-    setCurrentIndex(viewableItems[0].index);
-  }).current;
+  const viewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      setCurrentIndex(viewableItems[0].index);
+    }
+  ).current;
 
   const viewConfig = useRef({
     viewAreaCoveragePercentThreshold: 50,

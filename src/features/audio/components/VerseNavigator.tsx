@@ -15,8 +15,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ViewStyle,
 } from 'react-native';
+import { useTheme } from '@/shared/hooks';
 import type { VerseTimestamp_temp } from '../types';
+import { Colors } from '@/shared/constants/colors';
 
 /**
  * Props interface for VerseNavigator component
@@ -33,7 +36,7 @@ export interface VerseNavigatorProps {
   /** Callback when user selects a verse */
   onVerseSelect: (verseNumber: number) => void;
   /** Custom styling */
-  style?: any;
+  style?: ViewStyle;
   /** Whether to auto-scroll to current verse */
   autoScroll?: boolean;
 }
@@ -50,6 +53,7 @@ export const VerseNavigator: React.FC<VerseNavigatorProps> = ({
   style,
   autoScroll = true,
 }) => {
+  const { colors, isDark } = useTheme();
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Auto-scroll to current verse
@@ -93,6 +97,212 @@ export const VerseNavigator: React.FC<VerseNavigatorProps> = ({
       (currentTimeSeconds - verse.start_time) / verse.duration;
     return Math.min(Math.max(verseProgress, 0), 1);
   };
+
+  // Dynamic color values
+  const surfaceColor = isDark
+    ? Colors.background.overlay
+    : Colors.background.secondary;
+  const borderColor = isDark ? Colors.border.light : Colors.border.medium;
+  const borderColorLight = isDark ? Colors.border.light : Colors.border.light;
+  const selectedBgColor = isDark ? Colors.primaryLight : Colors.primaryLight;
+  const activeBgColor = isDark
+    ? Colors.feedback.success
+    : Colors.feedback.success;
+  const textTertiary = isDark ? Colors.text.tertiary : Colors.text.tertiary;
+  const activeTextColor = isDark
+    ? Colors.feedback.success
+    : Colors.feedback.success;
+  const progressBorderColor = isDark
+    ? Colors.feedback.success
+    : Colors.feedback.success;
+  const progressBgColor = isDark
+    ? Colors.feedback.success
+    : Colors.feedback.success;
+  const separatorColor = isDark
+    ? Colors.border.light
+    : Colors.background.tertiary;
+  const successColor = Colors.feedback.success;
+
+  // Dynamic styles using theme colors
+  const styles = StyleSheet.create({
+    container: {
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      elevation: 2,
+      shadowColor: colors.text,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      maxHeight: 400,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 12,
+      backgroundColor: surfaceColor,
+      borderTopLeftRadius: 8,
+      borderTopRightRadius: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: borderColor,
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    playingIndicator: {
+      backgroundColor: successColor,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    playingText: {
+      fontSize: 12,
+      color: colors.background,
+      fontWeight: '500',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 8,
+    },
+    verseItem: {
+      backgroundColor: colors.background,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: borderColorLight,
+    },
+    verseItemSelected: {
+      backgroundColor: selectedBgColor,
+      borderLeftColor: colors.primary,
+    },
+    verseItemActive: {
+      backgroundColor: activeBgColor,
+      borderLeftColor: successColor,
+    },
+    verseHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    verseNumberContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    verseNumber: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.secondary,
+      minWidth: 30,
+    },
+    verseNumberSelected: {
+      color: colors.primary,
+    },
+    verseNumberActive: {
+      color: successColor,
+    },
+    activeIndicator: {
+      marginLeft: 4,
+      fontSize: 12,
+    },
+    timingInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    timestamp: {
+      fontSize: 12,
+      color: colors.secondary,
+      fontFamily: 'monospace',
+    },
+    duration: {
+      fontSize: 10,
+      color: textTertiary,
+      marginLeft: 4,
+    },
+    verseText: {
+      fontSize: 14,
+      color: colors.text,
+      lineHeight: 20,
+      marginBottom: 4,
+    },
+    verseTextSelected: {
+      color: colors.primary,
+    },
+    verseTextActive: {
+      color: activeTextColor,
+      fontWeight: '500',
+    },
+    progressContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 4,
+      paddingTop: 4,
+      borderTopWidth: 1,
+      borderTopColor: progressBorderColor,
+    },
+    progressBar: {
+      flex: 1,
+      height: 3,
+      backgroundColor: progressBgColor,
+      borderRadius: 1.5,
+      marginRight: 8,
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: successColor,
+      borderRadius: 1.5,
+    },
+    progressText: {
+      fontSize: 10,
+      color: successColor,
+      fontWeight: 'bold',
+      minWidth: 30,
+    },
+    separator: {
+      height: 1,
+      backgroundColor: separatorColor,
+      marginTop: 8,
+    },
+    emptyState: {
+      padding: 40,
+      alignItems: 'center',
+    },
+    emptyStateText: {
+      fontSize: 16,
+      color: colors.secondary,
+      marginBottom: 8,
+    },
+    emptyStateSubtext: {
+      fontSize: 14,
+      color: textTertiary,
+      textAlign: 'center',
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 8,
+      backgroundColor: surfaceColor,
+      borderTopWidth: 1,
+      borderTopColor: borderColor,
+      borderBottomLeftRadius: 8,
+      borderBottomRightRadius: 8,
+    },
+    footerText: {
+      fontSize: 12,
+      color: colors.secondary,
+    },
+    footerTime: {
+      fontSize: 12,
+      color: successColor,
+      fontFamily: 'monospace',
+      fontWeight: 'bold',
+    },
+  });
 
   return (
     <View style={[styles.container, style]}>
@@ -218,186 +428,3 @@ export const VerseNavigator: React.FC<VerseNavigatorProps> = ({
     </View>
   );
 };
-
-/**
- * Styles for VerseNavigator component
- */
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    maxHeight: 400,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#f8f9fa',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  playingIndicator: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  playingText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '500',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 8,
-  },
-  verseItem: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#e0e0e0',
-  },
-  verseItemSelected: {
-    backgroundColor: '#f3e5f5',
-    borderLeftColor: '#9c27b0',
-  },
-  verseItemActive: {
-    backgroundColor: '#e8f5e8',
-    borderLeftColor: '#4CAF50',
-  },
-  verseHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  verseNumberContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  verseNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#666',
-    minWidth: 30,
-  },
-  verseNumberSelected: {
-    color: '#9c27b0',
-  },
-  verseNumberActive: {
-    color: '#4CAF50',
-  },
-  activeIndicator: {
-    marginLeft: 4,
-    fontSize: 12,
-  },
-  timingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'monospace',
-  },
-  duration: {
-    fontSize: 10,
-    color: '#999',
-    marginLeft: 4,
-  },
-  verseText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  verseTextSelected: {
-    color: '#7b1fa2',
-  },
-  verseTextActive: {
-    color: '#2e7d32',
-    fontWeight: '500',
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: '#e8f5e8',
-  },
-  progressBar: {
-    flex: 1,
-    height: 3,
-    backgroundColor: '#c8e6c9',
-    borderRadius: 1.5,
-    marginRight: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#4CAF50',
-    borderRadius: 1.5,
-  },
-  progressText: {
-    fontSize: 10,
-    color: '#4CAF50',
-    fontWeight: 'bold',
-    minWidth: 30,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#f0f0f0',
-    marginTop: 8,
-  },
-  emptyState: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 8,
-    backgroundColor: '#f8f9fa',
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  footerTime: {
-    fontSize: 12,
-    color: '#4CAF50',
-    fontFamily: 'monospace',
-    fontWeight: 'bold',
-  },
-});

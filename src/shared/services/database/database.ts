@@ -40,9 +40,7 @@ class DatabaseService {
       await this.runMigrations();
 
       this.isInitialized = true;
-      console.log('✅ Database initialized successfully');
     } catch (error) {
-      console.error('❌ Database initialization failed:', error);
       throw new Error(`Database initialization failed: ${error}`);
     }
   }
@@ -55,19 +53,11 @@ class DatabaseService {
       throw new Error('Database not initialized');
     }
 
-    try {
-      // Note: In a real app, you would have actual migration files
-      // For now, we'll handle schema creation manually
-      console.log('🔄 Running database migrations...');
+    // Note: In a real app, you would have actual migration files
+    // For now, we'll handle schema creation manually
 
-      // Migrations will be handled by Drizzle Kit
-      // await migrate(this.db, { migrationsFolder: './src/shared/services/database/migrations' });
-
-      console.log('✅ Migrations completed successfully');
-    } catch (error) {
-      console.error('❌ Migration failed:', error);
-      throw error;
-    }
+    // Migrations will be handled by Drizzle Kit
+    // await migrate(this.db, { migrationsFolder: './src/shared/services/database/migrations' });
   }
 
   /**
@@ -96,7 +86,6 @@ class DatabaseService {
       // Connection is automatically managed
       this.db = null;
       this.isInitialized = false;
-      console.log('📪 Database connection closed');
     }
   }
 
