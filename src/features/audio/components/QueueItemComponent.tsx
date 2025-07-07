@@ -123,10 +123,27 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
       padding: Dimensions.spacing.xs,
       borderRadius: Dimensions.radius.sm,
       backgroundColor: colors.text + '10',
+      marginRight: Dimensions.spacing.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: 24,
+      height: 40,
     },
-    dragHandleText: {
-      fontSize: 16,
-      color: colors.text + '60',
+    sixDotPattern: {
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      height: 18,
+    },
+    dotRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      width: 12,
+      marginVertical: 1,
+    },
+    dot: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
     },
     removeButton: {
       padding: Dimensions.spacing.xs,
@@ -146,20 +163,57 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
       style={styles.container}
       onPress={onPress}
       activeOpacity={0.7}>
-      {/* Queue Type Indicator */}
-      <View
-        style={[
-          styles.queueTypeIndicator,
-          {
-            backgroundColor: isFromUserQueue
-              ? colors.primary + '20'
-              : colors.secondary + '20',
-            borderRadius: Dimensions.radius.sm,
-            width: 4,
-            height: '80%',
-          },
-        ]}
-      />
+      {/* Left Section - Drag Handle or Queue Type Indicator */}
+      {drag ? (
+        // Drag Handle (6-dot pattern) for draggable items
+        <TouchableOpacity
+          style={styles.dragHandle}
+          onLongPress={drag}
+          delayLongPress={100}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <View style={styles.sixDotPattern}>
+            <View style={styles.dotRow}>
+              <View
+                style={[styles.dot, { backgroundColor: colors.text + '60' }]}
+              />
+              <View
+                style={[styles.dot, { backgroundColor: colors.text + '60' }]}
+              />
+            </View>
+            <View style={styles.dotRow}>
+              <View
+                style={[styles.dot, { backgroundColor: colors.text + '60' }]}
+              />
+              <View
+                style={[styles.dot, { backgroundColor: colors.text + '60' }]}
+              />
+            </View>
+            <View style={styles.dotRow}>
+              <View
+                style={[styles.dot, { backgroundColor: colors.text + '60' }]}
+              />
+              <View
+                style={[styles.dot, { backgroundColor: colors.text + '60' }]}
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
+      ) : (
+        // Queue Type Indicator for non-draggable items
+        <View
+          style={[
+            styles.queueTypeIndicator,
+            {
+              backgroundColor: isFromUserQueue
+                ? colors.primary + '20'
+                : colors.secondary + '20',
+              borderRadius: Dimensions.radius.sm,
+              width: 4,
+              height: '80%',
+            },
+          ]}
+        />
+      )}
 
       {/* Main Content */}
       <View style={styles.contentContainer}>
@@ -178,23 +232,12 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
         </Text>
       </View>
 
-      {/* Right Section - Duration and Controls */}
+      {/* Right Section - Duration and Remove Button */}
       <View style={styles.rightSection}>
         {details.duration > 0 && (
           <Text style={styles.duration}>
             {formatDuration(details.duration)}
           </Text>
-        )}
-
-        {/* Drag Handle - only show for draggable items */}
-        {drag && (
-          <TouchableOpacity
-            style={styles.dragHandle}
-            onLongPress={drag}
-            delayLongPress={100}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.dragHandleText}>≡</Text>
-          </TouchableOpacity>
         )}
 
         {/* Remove Button (only for user queue items) */}
