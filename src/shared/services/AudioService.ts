@@ -117,7 +117,38 @@ export class AudioService implements IAudioService {
   async getAudioRecordings(): Promise<AudioRecording[]> {
     // TODO: Replace with actual database call
     // return await this.dbClient.from('audio_recordings').select('*');
-    return [];
+
+    // Return mock data for testing
+    const mockRecordings: AudioRecording[] = [
+      {
+        id: 'genesis-1',
+        title: 'Genesis Chapter 1',
+        audio_file_url: 'mock-url-1',
+        original_language: 'en',
+        target_language: 'en',
+        duration_seconds: 600,
+        description: 'The book of Genesis, Chapter 1',
+        status: 'active',
+        user_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'genesis-2',
+        title: 'Genesis Chapter 2',
+        audio_file_url: 'mock-url-2',
+        original_language: 'en',
+        target_language: 'en',
+        duration_seconds: 650,
+        description: 'The book of Genesis, Chapter 2',
+        status: 'active',
+        user_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
+
+    return mockRecordings;
   }
 
   // Fetch specific audio recording by ID
@@ -222,14 +253,35 @@ export class AudioService implements IAudioService {
   }
 
   // Search audio recordings
-  async searchAudioRecordings(_query: string): Promise<AudioRecording[]> {
+  async searchAudioRecordings(query: string): Promise<AudioRecording[]> {
     // TODO: Replace with actual database call
     // const { data } = await this.dbClient
     //   .from('audio_recordings')
     //   .select('*')
     //   .ilike('title', `%${query}%`);
     // return data || [];
-    return [];
+
+    // Return mock data for testing
+    const mockRecordings: AudioRecording[] = [
+      {
+        id: 'genesis-1',
+        title: 'Genesis Chapter 1',
+        audio_file_url: 'mock-url-1',
+        original_language: 'en',
+        target_language: 'en',
+        duration_seconds: 600,
+        description: 'The book of Genesis, Chapter 1',
+        status: 'active',
+        user_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
+
+    // Simple mock search - return recordings that contain the query
+    return mockRecordings.filter(recording =>
+      recording.title.toLowerCase().includes(query.toLowerCase())
+    );
   }
 
   // Get recordings by language

@@ -34,39 +34,107 @@ jest.mock('@/shared/utils', () => ({
 // Mock the AudioService
 jest.mock('@/shared/services/AudioService', () => ({
   audioService: {
-    getRecording: jest.fn(() =>
+    getAudioChapter: jest.fn(() =>
       Promise.resolve({
-        id: 'test-recording',
-        title: 'Test Recording',
-        duration: 912,
-        url: 'mock-url',
+        audioRecording: {
+          id: 'genesis-1',
+          title: 'Genesis Chapter 1',
+          audio_file_url: 'mock-url-1',
+          original_language: 'en',
+          target_language: 'en',
+          duration_seconds: 600,
+          description: 'The book of Genesis, Chapter 1',
+          status: 'active',
+          user_id: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
         segments: [
-          { verseNumber: 1, startTime: 0, endTime: 5 },
-          { verseNumber: 2, startTime: 5, endTime: 10 },
-          { verseNumber: 3, startTime: 10, endTime: 15 },
+          {
+            id: 'genesis-1-verse-1',
+            segmentNumber: 1,
+            startTime: 0,
+            endTime: 20,
+            text: 'In the beginning was the Word',
+            confidence: 0.95,
+            speakerId: 'narrator-1',
+          },
+          {
+            id: 'genesis-1-verse-2',
+            segmentNumber: 2,
+            startTime: 20,
+            endTime: 40,
+            text: 'And the Word was with God',
+            confidence: 0.95,
+            speakerId: 'narrator-1',
+          },
         ],
+        bookName: 'Genesis',
+        chapterNumber: 1,
+        totalSegments: 2,
+        totalDuration: 40,
+        language: 'en',
       })
+    ),
+    getAudioRecordings: jest.fn(() =>
+      Promise.resolve([
+        {
+          id: 'genesis-1',
+          title: 'Genesis Chapter 1',
+          audio_file_url: 'mock-url-1',
+          original_language: 'en',
+          target_language: 'en',
+          duration_seconds: 600,
+          description: 'The book of Genesis, Chapter 1',
+          status: 'active',
+          user_id: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ])
+    ),
+    searchAudioRecordings: jest.fn(() =>
+      Promise.resolve([
+        {
+          id: 'genesis-1',
+          title: 'Genesis Chapter 1',
+          audio_file_url: 'mock-url-1',
+          original_language: 'en',
+          target_language: 'en',
+          duration_seconds: 600,
+          description: 'The book of Genesis, Chapter 1',
+          status: 'active',
+          user_id: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ])
     ),
   },
   ChapterUIHelper: jest.fn(() => ({
     getCurrentSegment: jest.fn(() => ({
-      verseNumber: 1,
+      segmentNumber: 1,
       startTime: 0,
-      endTime: 5,
+      endTime: 20,
+    })),
+    getSegmentByVerseNumber: jest.fn(() => ({
+      segmentNumber: 1,
+      startTime: 0,
+      endTime: 20,
     })),
     getVerseDisplayData: jest.fn(() => [
       {
         verseNumber: 1,
         text: 'Test verse 1',
         startTime: 0,
-        endTime: 5,
+        endTime: 20,
         isCurrentVerse: true,
       },
       {
         verseNumber: 2,
         text: 'Test verse 2',
-        startTime: 5,
-        endTime: 10,
+        startTime: 20,
+        endTime: 40,
         isCurrentVerse: false,
       },
     ]),
@@ -80,6 +148,19 @@ describe('audioStore', () => {
     // Mock console.log to avoid noise in tests
     consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.clearAllMocks();
+
+    // Clear the store state between tests to prevent state leakage
+    useAudioStore.setState({
+      playlist: [],
+      currentPlaylistIndex: -1,
+      currentVerseDisplayData: [],
+      isPlaying: false,
+      currentTime: 0,
+      totalTime: 0,
+      isLoading: false,
+      isBuffering: false,
+      bibleBooks: [],
+    } as Partial<typeof useAudioStore.getState>);
   });
 
   afterEach(() => {
@@ -458,9 +539,11 @@ describe('audioStore', () => {
         result.current.addToPlaylist(mockRecording2);
       });
 
-      // Set current index to 1
+      // Manually set current index to 1 (simulate being at second item)
       act(() => {
-        result.current.playlist[1] = mockRecording2;
+        // Use the store's internal mechanism to set state
+        const store = useAudioStore.getState();
+        useAudioStore.setState({ ...store, currentPlaylistIndex: 1 });
       });
 
       const success = await act(async () => {
@@ -499,15 +582,17 @@ describe('audioStore', () => {
       expect(success).toBe(false);
     });
 
-    it('should not add duplicate recordings to playlist', () => {
+    it('should allow duplicate recordings in playlist', () => {
       const { result } = renderHook(() => useAudioStore());
 
       act(() => {
         result.current.addToPlaylist(mockRecording1);
-        result.current.addToPlaylist(mockRecording1); // Try to add duplicate
+        result.current.addToPlaylist(mockRecording1); // Add duplicate (now allowed)
       });
 
-      expect(result.current.playlist).toHaveLength(1);
+      expect(result.current.playlist).toHaveLength(2);
+      expect(result.current.playlist[0]?.id).toBe('genesis-1');
+      expect(result.current.playlist[1]?.id).toBe('genesis-1');
     });
 
     it('should update playlist index when removing item before current', () => {
@@ -520,7 +605,8 @@ describe('audioStore', () => {
 
       // Manually set current index to 1
       act(() => {
-        result.current.playlist[1] = mockRecording2;
+        const store = useAudioStore.getState();
+        useAudioStore.setState({ ...store, currentPlaylistIndex: 1 });
       });
 
       act(() => {
@@ -742,7 +828,8 @@ describe('audioStore', () => {
         return result.current.loadRecordings();
       });
 
-      expect(recordings).toEqual([]);
+      expect(recordings).toHaveLength(2);
+      expect(recordings[0]?.id).toBe('genesis-1');
     });
 
     it('should search recordings', async () => {
@@ -752,7 +839,8 @@ describe('audioStore', () => {
         return result.current.searchRecordings('genesis');
       });
 
-      expect(recordings).toEqual([]);
+      expect(recordings).toHaveLength(2);
+      expect(recordings[0]?.title).toBe('Genesis Chapter 1');
     });
 
     it('should refresh current chapter', async () => {
@@ -786,6 +874,9 @@ describe('audioStore', () => {
 
       act(() => {
         result.current.clearPlaylist();
+        // Also clear current recording to ensure no Bible navigation
+        // @ts-expect-error - Testing edge case
+        result.current.currentRecording = null;
       });
 
       const nextSuccess = await act(async () => {

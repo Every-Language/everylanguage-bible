@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { AudioRecording, VerseDisplayData } from '@/types/audio';
 import { audioService, ChapterUIHelper } from '@/shared/services/AudioService';
 import { loadBibleBooks, type Book } from '@/shared/utils';
+import { useQueueStore } from './queueStore';
 
 // Helper function to convert Book and chapter to recording ID (matching MainNavigator)
 const getRecordingId = (book: Book, chapter: number): string => {
@@ -96,6 +97,9 @@ interface AudioState {
   initializeBibleBooks: () => void;
   findNextChapter: (currentRecordingId: string) => string | null;
   findPreviousChapter: (currentRecordingId: string) => string | null;
+
+  // Queue integration
+  playFromQueueItem: (queueItem: any) => Promise<void>;
 }
 
 // Initial state will be set by MainNavigator when it loads John 1
@@ -250,6 +254,10 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
       updates.currentSegment = currentSegment;
       updates.currentVerseDisplayData = verseDisplayData;
+    } else {
+      // If no UI helper, clear segment data
+      updates.currentSegment = undefined;
+      updates.currentVerseDisplayData = [];
     }
 
     set(updates);
@@ -266,13 +274,10 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   // Playlist management
   addToPlaylist: (recording: AudioRecording) => {
     const { playlist } = get();
-    const exists = playlist.some(item => item.id === recording.id);
-
-    if (!exists) {
-      set({
-        playlist: [...playlist, recording],
-      });
-    }
+    // Allow duplicates - users can queue the same track multiple times
+    set({
+      playlist: [...playlist, recording],
+    });
   },
 
   removeFromPlaylist: (index: number) => {
@@ -300,8 +305,20 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   playNext: async () => {
     const { playlist, currentPlaylistIndex, currentRecording } = get();
 
-    // If we have a playlist, use playlist navigation
-    if (playlist.length > 0 && currentPlaylistIndex >= 0) {
+    // If we have a playlist, use playlist navigation (priority over queue)
+    if (playlist.length > 0) {
+      // If we haven't started playing from the playlist yet, start with first item
+      if (currentPlaylistIndex === -1) {
+        const firstRecording = playlist[0];
+        if (firstRecording) {
+          await get().setCurrentAudio(firstRecording.id);
+          set({ currentPlaylistIndex: 0 });
+          return true;
+        }
+        return false;
+      }
+
+      // Otherwise, navigate to next item in playlist
       const nextIndex = currentPlaylistIndex + 1;
       if (nextIndex < playlist.length) {
         const nextRecording = playlist[nextIndex];
@@ -312,6 +329,25 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         }
       }
       return false;
+    }
+
+    // Try to use the queue system
+    const queueStore = useQueueStore.getState();
+    const currentQueueItem = queueStore.getCurrentItem();
+
+    if (currentQueueItem) {
+      // We're currently playing from a queue
+      const success = await queueStore.playNext();
+      if (success) {
+        const nextItem = queueStore.getCurrentItem();
+        if (nextItem && nextItem.type === 'chapter') {
+          const chapter = nextItem.data as any;
+          const chapterId = `${chapter.book_name.toLowerCase().replace(/\s+/g, '-')}-${chapter.chapter_number}`;
+          await get().setCurrentAudio(chapterId);
+          return true;
+        }
+      }
+      return success;
     }
 
     // Bible chapter navigation
@@ -340,8 +376,14 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       currentTime,
     } = get();
 
-    // If we have a playlist, use playlist navigation
-    if (playlist.length > 0 && currentPlaylistIndex >= 0) {
+    // If we have a playlist, use playlist navigation (priority over queue)
+    if (playlist.length > 0) {
+      // If we haven't started playing from the playlist yet, return false (can't go previous)
+      if (currentPlaylistIndex === -1) {
+        return false;
+      }
+
+      // Otherwise, navigate to previous item in playlist
       const prevIndex = currentPlaylistIndex - 1;
       if (prevIndex >= 0) {
         const prevRecording = playlist[prevIndex];
@@ -352,6 +394,25 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         }
       }
       return false;
+    }
+
+    // Try to use the queue system
+    const queueStore = useQueueStore.getState();
+    const currentQueueItem = queueStore.getCurrentItem();
+
+    if (currentQueueItem) {
+      // We're currently playing from a queue
+      const success = await queueStore.playPrevious();
+      if (success) {
+        const prevItem = queueStore.getCurrentItem();
+        if (prevItem && prevItem.type === 'chapter') {
+          const chapter = prevItem.data as any;
+          const chapterId = `${chapter.book_name.toLowerCase().replace(/\s+/g, '-')}-${chapter.chapter_number}`;
+          await get().setCurrentAudio(chapterId);
+          return true;
+        }
+      }
+      return success;
     }
 
     // Bible chapter navigation with "restart chapter" logic
@@ -586,6 +647,25 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     const { currentRecording } = get();
     if (currentRecording) {
       await get().setCurrentAudio(currentRecording.id);
+    }
+  },
+
+  // Queue integration
+  playFromQueueItem: async (queueItem: any) => {
+    if (queueItem.type === 'chapter') {
+      const chapter = queueItem.data;
+      const chapterId = `${chapter.book_name.toLowerCase().replace(/\s+/g, '-')}-${chapter.chapter_number}`;
+      await get().setCurrentAudio(chapterId);
+    } else if (queueItem.type === 'passage') {
+      // For passages, we'd need to load the chapter and seek to the specific time
+      const passage = queueItem.data;
+      const chapterId = passage.chapter_id;
+      await get().setCurrentAudio(chapterId);
+      // TODO: Implement seeking to passage start time
+    } else if (queueItem.type === 'playlist') {
+      // For playlists, we'd need to load the first item in the playlist
+      // TODO: Implement playlist loading
+      console.log('Playlist playback not yet implemented');
     }
   },
 }));
