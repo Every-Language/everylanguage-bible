@@ -58,8 +58,13 @@ jest.mock('@/shared/utils', () => ({
 // Mock the AudioService
 jest.mock('@/shared/services/AudioService', () => ({
   audioService: {
-    getAudioChapter: jest.fn(() =>
-      Promise.resolve({
+    getAudioChapter: jest.fn((recordingId: string) => {
+      // Return null for invalid chapters to test error handling
+      if (recordingId === 'invalid-chapter') {
+        return Promise.resolve(null);
+      }
+
+      return Promise.resolve({
         audioRecording: {
           id: 'genesis-1',
           title: 'Genesis Chapter 1',
@@ -98,8 +103,8 @@ jest.mock('@/shared/services/AudioService', () => ({
         totalSegments: 2,
         totalDuration: 40,
         language: 'en',
-      })
-    ),
+      });
+    }),
     getAudioRecordings: jest.fn(() =>
       Promise.resolve([
         {
@@ -110,6 +115,19 @@ jest.mock('@/shared/services/AudioService', () => ({
           target_language: 'en',
           duration_seconds: 600,
           description: 'The book of Genesis, Chapter 1',
+          status: 'active',
+          user_id: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: 'genesis-2',
+          title: 'Genesis Chapter 2',
+          audio_file_url: 'mock-url-2',
+          original_language: 'en',
+          target_language: 'en',
+          duration_seconds: 650,
+          description: 'The book of Genesis, Chapter 2',
           status: 'active',
           user_id: null,
           created_at: new Date().toISOString(),
@@ -127,6 +145,19 @@ jest.mock('@/shared/services/AudioService', () => ({
           target_language: 'en',
           duration_seconds: 600,
           description: 'The book of Genesis, Chapter 1',
+          status: 'active',
+          user_id: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: 'genesis-2',
+          title: 'Genesis Chapter 2',
+          audio_file_url: 'mock-url-2',
+          original_language: 'en',
+          target_language: 'en',
+          duration_seconds: 650,
+          description: 'The book of Genesis, Chapter 2',
           status: 'active',
           user_id: null,
           created_at: new Date().toISOString(),
@@ -172,6 +203,16 @@ describe('audioStore', () => {
     const { result } = renderHook(() => useAudioStore());
     act(() => {
       result.current.close();
+      result.current.clearPlaylist();
+    });
+  });
+
+  afterEach(() => {
+    // Clean up after each test
+    const { result } = renderHook(() => useAudioStore());
+    act(() => {
+      result.current.close();
+      result.current.clearPlaylist();
     });
   });
 

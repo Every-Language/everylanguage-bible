@@ -9,6 +9,11 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
+import DraggableFlatList, {
+  ScaleDecorator,
+  ShadowDecorator,
+  OpacityDecorator,
+} from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
@@ -30,7 +35,9 @@ import {
 } from '@/shared/components/ui/icons/AudioIcons';
 import { getBookImageSource } from '@/shared/services';
 import { useAudioStore } from '@/shared/store/audioStore';
+import { useQueueStore } from '@/shared/store/queueStore';
 import { VerseDisplayData } from '@/types/audio';
+import { QueueItemComponent } from './QueueItemComponent';
 
 interface MiniPlayerProps {
   testID?: string;
@@ -221,28 +228,253 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
   const { colors } = useTheme();
   const { t } = useTranslation();
 
+  // Get queue data from store
+  const {
+    userQueue,
+    automaticQueue,
+    reorderUserQueue,
+    removeFromUserQueue,
+    addToUserQueueBack,
+    getCurrentItem,
+  } = useQueueStore();
+
+  // Get audio store for playback integration
+  const { playFromQueueItem } = useAudioStore();
+
+  // Initialize user queue if empty (happens on first load)
+  React.useEffect(() => {
+    if (userQueue.items.length === 0) {
+      useQueueStore.getState().initializeDefaultQueue();
+    }
+  }, [userQueue.items.length]);
+
+  // Handle item press (play item)
+  const handleItemPress = React.useCallback(
+    async (item: any) => {
+      try {
+        await playFromQueueItem(item);
+
+        // If playing from user queue and automatic queue is empty, populate it
+        if (automaticQueue.items.length === 0 && item.type === 'chapter') {
+          const chapter = item.data;
+          const chapterId = `${chapter.book_name.toLowerCase().replace(/\s+/g, '-')}-${chapter.chapter_number}`;
+          useQueueStore.getState().populateAutomaticQueue(chapterId);
+        }
+
+        console.log('Playing queue item:', item);
+      } catch (error) {
+        console.error('Error playing queue item:', error);
+      }
+    },
+    [playFromQueueItem, automaticQueue.items.length]
+  );
+
+  // Handle removing item from user queue
+  const handleRemoveFromUserQueue = React.useCallback(
+    (index: number) => {
+      removeFromUserQueue(index);
+    },
+    [removeFromUserQueue]
+  );
+
+  // Handle dragging item from auto queue to user queue
+  const handleMoveToUserQueue = React.useCallback(
+    (item: any) => {
+      addToUserQueueBack({
+        type: item.type,
+        data: item.data,
+      });
+    },
+    [addToUserQueueBack]
+  );
+
+  // Handle drag and drop reordering for user queue
+  const handleUserQueueDragEnd = React.useCallback(
+    ({ data: _data, from, to }: any) => {
+      reorderUserQueue(from, to);
+    },
+    [reorderUserQueue]
+  );
+
+  const currentItem = getCurrentItem();
+
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text
-        style={{
-          fontSize: Fonts.size.lg,
-          color: colors.text,
-          textAlign: 'center',
-          marginBottom: Dimensions.spacing.md,
-        }}>
-        {t('audio.queueMode', 'Queue Mode')}
-      </Text>
-      <Text
-        style={{
-          fontSize: Fonts.size.base,
-          color: colors.text + '80',
-          textAlign: 'center',
-        }}>
-        {t(
-          'audio.queueModeDescription',
-          'Audio queue and playlist will appear here'
-        )}
-      </Text>
+    <View style={{ flex: 1, padding: Dimensions.spacing.md }}>
+      {/* Header */}
+      <View style={{ marginBottom: Dimensions.spacing.md }}>
+        <Text
+          style={{
+            fontSize: Fonts.size.lg,
+            fontWeight: Fonts.weight.bold,
+            color: colors.text,
+            textAlign: 'center',
+          }}>
+          {t('audio.queue', 'Queue')}
+        </Text>
+      </View>
+
+      {/* Scrollable Content */}
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={{ paddingBottom: Dimensions.spacing.md }}
+        nestedScrollEnabled={true}>
+        {/* User Queue Section */}
+        <View style={{ marginBottom: Dimensions.spacing.lg }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: Dimensions.spacing.sm,
+              paddingHorizontal: Dimensions.spacing.sm,
+            }}>
+            <Text
+              style={{
+                fontSize: Fonts.size.base,
+                fontWeight: Fonts.weight.bold,
+                color: colors.text,
+              }}>
+              {t('audio.userQueue', 'Your Queue')}
+            </Text>
+          </View>
+
+          {/* User Queue Items */}
+          {userQueue.items.length > 0 ? (
+            <View style={{ minHeight: 100, flex: 1 }}>
+              <DraggableFlatList
+                data={userQueue.items}
+                onDragEnd={handleUserQueueDragEnd}
+                keyExtractor={item => item.id}
+                scrollEnabled={false}
+                activationDistance={10}
+                renderItem={({ item, drag, isActive, getIndex }) => (
+                  <ScaleDecorator>
+                    <ShadowDecorator>
+                      <OpacityDecorator>
+                        <QueueItemComponent
+                          item={item}
+                          isFromUserQueue={true}
+                          onPress={() => handleItemPress(item)}
+                          onRemove={() => {
+                            const index = getIndex();
+                            if (index !== undefined) {
+                              handleRemoveFromUserQueue(index);
+                            }
+                          }}
+                          drag={drag}
+                          isActive={isActive || currentItem?.id === item.id}
+                        />
+                      </OpacityDecorator>
+                    </ShadowDecorator>
+                  </ScaleDecorator>
+                )}
+              />
+            </View>
+          ) : (
+            <View
+              style={{
+                backgroundColor: colors.text + '05',
+                borderRadius: Dimensions.radius.md,
+                padding: Dimensions.spacing.md,
+                marginHorizontal: Dimensions.spacing.sm,
+                borderWidth: 1,
+                borderColor: colors.text + '10',
+                borderStyle: 'dashed',
+              }}>
+              <Text
+                style={{
+                  fontSize: Fonts.size.sm,
+                  color: colors.text + '60',
+                  textAlign: 'center',
+                  fontStyle: 'italic',
+                }}>
+                {t(
+                  'audio.dragItemsHere',
+                  'Drag items here to create your custom queue'
+                )}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Auto-Generated Queue Section */}
+        <View>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: Dimensions.spacing.sm,
+              paddingHorizontal: Dimensions.spacing.sm,
+            }}>
+            <Text
+              style={{
+                fontSize: Fonts.size.base,
+                fontWeight: Fonts.weight.bold,
+                color: colors.text,
+              }}>
+              {t('audio.autoQueue', 'Up Next')}
+            </Text>
+          </View>
+
+          {/* Auto Queue Items */}
+          {automaticQueue.items.length > 0 ? (
+            <View>
+              {automaticQueue.items.map((item, _index) => (
+                <View
+                  key={item.id}
+                  style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <QueueItemComponent
+                      item={item}
+                      isFromUserQueue={false}
+                      onPress={() => handleItemPress(item)}
+                      isActive={currentItem?.id === item.id}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={{
+                      padding: Dimensions.spacing.sm,
+                      marginLeft: Dimensions.spacing.xs,
+                      backgroundColor: colors.primary + '20',
+                      borderRadius: Dimensions.radius.sm,
+                    }}
+                    onPress={() => handleMoveToUserQueue(item)}
+                    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
+                    <Text
+                      style={{
+                        fontSize: Fonts.size.sm,
+                        color: colors.primary,
+                        fontWeight: Fonts.weight.bold,
+                      }}>
+                      +
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View
+              style={{
+                backgroundColor: colors.background,
+                borderRadius: Dimensions.radius.md,
+                marginHorizontal: Dimensions.spacing.sm,
+                padding: Dimensions.spacing.md,
+                borderWidth: 1,
+                borderColor: colors.text + '20',
+              }}>
+              <Text
+                style={{
+                  fontSize: Fonts.size.sm,
+                  color: colors.text + '60',
+                  textAlign: 'center',
+                  fontStyle: 'italic',
+                }}>
+                {t('audio.noAutoQueue', 'No upcoming items')}
+              </Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 };

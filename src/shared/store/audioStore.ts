@@ -58,6 +58,7 @@ interface AudioState {
 
   // Bible navigation state
   bibleBooks: Book[];
+  currentBook: Book | null;
 
   // Loading states
   isBuffering: boolean;
@@ -127,9 +128,9 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   // Bible navigation state
   bibleBooks: [],
+  currentBook: null,
 
   // Loading states
-  currentBook: null,
 
   // Initialize Bible books data
   initializeBibleBooks: () => {
@@ -315,18 +316,10 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
     // If we have a playlist, use playlist navigation (priority over queue)
     if (playlist.length > 0) {
-      // If we haven't started playing from the playlist yet, start with first item
+      // Only advance if already started
       if (currentPlaylistIndex === -1) {
-        const firstRecording = playlist[0];
-        if (firstRecording) {
-          await get().setCurrentAudio(firstRecording.id);
-          set({ currentPlaylistIndex: 0 });
-          return true;
-        }
         return false;
       }
-
-      // Otherwise, navigate to next item in playlist
       const nextIndex = currentPlaylistIndex + 1;
       if (nextIndex < playlist.length) {
         const nextRecording = playlist[nextIndex];
@@ -358,7 +351,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       return success;
     }
 
-    // Bible chapter navigation
+    // Bible chapter navigation - only if we have a current recording
     if (currentRecording) {
       const nextChapterRecordingId = get().findNextChapter(currentRecording.id);
       if (nextChapterRecordingId) {
@@ -386,12 +379,10 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
     // If we have a playlist, use playlist navigation (priority over queue)
     if (playlist.length > 0) {
-      // If we haven't started playing from the playlist yet, return false (can't go previous)
-      if (currentPlaylistIndex === -1) {
+      // Only go back if index > 0
+      if (currentPlaylistIndex <= 0) {
         return false;
       }
-
-      // Otherwise, navigate to previous item in playlist
       const prevIndex = currentPlaylistIndex - 1;
       if (prevIndex >= 0) {
         const prevRecording = playlist[prevIndex];
@@ -423,7 +414,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       return success;
     }
 
-    // Bible chapter navigation with "restart chapter" logic
+    // Bible chapter navigation with "restart chapter" logic - only if we have a current recording
     if (currentRecording && currentUIHelper) {
       const currentSegment = currentUIHelper.getCurrentSegment(currentTime);
 

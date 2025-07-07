@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MainNavigator } from '@/app/navigation/MainNavigator';
 import { TamaguiProvider } from '@/app/providers';
 import { useTheme } from '@/shared/store';
@@ -25,23 +26,25 @@ export default function App() {
   const Stack = createNativeStackNavigator<RootStackParamList>();
 
   return (
-    <TamaguiProvider>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <Stack.Navigator initialRouteName='Onboarding'>
-            <Stack.Screen
-              name='Home'
-              options={{ headerShown: false }}
-              component={AppContent}
-            />
-            <Stack.Screen
-              name='Onboarding'
-              options={{ headerShown: false }}
-              component={OnBoardingScreen}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </SafeAreaProvider>
-    </TamaguiProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <TamaguiProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <Stack.Navigator initialRouteName='Onboarding'>
+              <Stack.Screen
+                name='Home'
+                options={{ headerShown: false }}
+                component={AppContent}
+              />
+              <Stack.Screen
+                name='Onboarding'
+                options={{ headerShown: false }}
+                component={OnBoardingScreen}
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </TamaguiProvider>
+    </GestureHandlerRootView>
   );
 }

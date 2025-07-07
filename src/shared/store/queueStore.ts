@@ -126,6 +126,32 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
   isUserQueueActive: false,
   bibleBooks: [],
 
+  // Initialize default queue with John 1 and Luke 1 in user queue
+  initializeDefaultQueue: () => {
+    try {
+      // Create John 1 chapter
+      const johnChapter = createMockChapter('john-1');
+      const johnQueueItem = createQueueItem('chapter', johnChapter);
+
+      // Create Luke 1 chapter
+      const lukeChapter = createMockChapter('luke-1');
+      const lukeQueueItem = createQueueItem('chapter', lukeChapter);
+
+      set(state => ({
+        userQueue: {
+          ...state.userQueue,
+          items: [johnQueueItem, lukeQueueItem],
+          isActive: true,
+        },
+        isUserQueueActive: true,
+      }));
+
+      console.log('Default user queue initialized with John 1 and Luke 1');
+    } catch (error) {
+      console.error('Error initializing default queue:', error);
+    }
+  },
+
   // User queue management
   addToUserQueueFront: itemData => {
     const item = createQueueItem(

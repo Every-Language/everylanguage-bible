@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { BibleBooksScreen } from '@/features/bible/screens/BibleBooksScreen';
 import { MiniPlayer } from '@/features/audio/components/MiniPlayer';
 import { type Book } from '@/shared/utils';
-import { useAudioStore, useTheme } from '@/shared/store';
+import { useAudioStore, useTheme, useQueueStore } from '@/shared/store';
 
 // Helper function to convert Book and chapter to recording ID
 const getRecordingId = (book: Book, chapter: number): string => {
@@ -22,12 +22,16 @@ export const MainNavigator: React.FC = () => {
     setCurrentAudio,
     initializeBibleBooks,
   } = audioStore;
+  const { initializeDefaultQueue } = useQueueStore();
 
   // Set up John 1 as default when app starts
   useEffect(() => {
     const initializeDefaultAudio = async () => {
       // Initialize Bible books data first
       initializeBibleBooks();
+
+      // Initialize the queue with John 1 and Luke 1
+      initializeDefaultQueue();
 
       // Only set default if no proper chapter is loaded (ignore mock recording)
       if (!currentChapter) {
@@ -55,7 +59,13 @@ export const MainNavigator: React.FC = () => {
     };
 
     initializeDefaultAudio();
-  }, [currentRecording, currentChapter, setCurrentAudio, initializeBibleBooks]);
+  }, [
+    currentRecording,
+    currentChapter,
+    setCurrentAudio,
+    initializeBibleBooks,
+    initializeDefaultQueue,
+  ]);
 
   const styles = StyleSheet.create({
     container: {

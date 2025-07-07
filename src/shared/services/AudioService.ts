@@ -276,6 +276,19 @@ export class AudioService implements IAudioService {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
+      {
+        id: 'genesis-2',
+        title: 'Genesis Chapter 2',
+        audio_file_url: 'mock-url-2',
+        original_language: 'en',
+        target_language: 'en',
+        duration_seconds: 650,
+        description: 'The book of Genesis, Chapter 2',
+        status: 'active',
+        user_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
     ];
 
     // Simple mock search - return recordings that contain the query
