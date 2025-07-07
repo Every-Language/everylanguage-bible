@@ -10,6 +10,9 @@ export { useChapterViewStore } from './chapterViewStore';
 // Verse view store
 export { useVerseViewStore } from './verseViewStore';
 
+// Queue store
+export { useQueueStore } from './queueStore';
+
 // Future stores will be exported here:
 // export { useAuthStore } from './authStore';
 // export { useSettingsStore } from './settingsStore';

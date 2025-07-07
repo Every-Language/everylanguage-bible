@@ -31,6 +31,12 @@ jest.mock('@/app/providers', () => ({
   TamaguiProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+// Mock Tamagui core to prevent duplicate config warnings
+jest.mock('@tamagui/core', () => ({
+  TamaguiProvider: ({ children }: { children: React.ReactNode }) => children,
+  createTamagui: jest.fn(() => ({})),
+}));
+
 jest.mock('@/shared/store', () => ({
   useTheme: () => ({ isDark: false }),
 }));
