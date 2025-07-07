@@ -55,7 +55,7 @@
     "expo-updates": "~0.28.15",
     "i18next": "^25.2.1",
     "posthog-react-native": "^4.1.0",
-    "react": "19.0.0",
+    "react": "19.1.0",
     "react-dom": "19.0.0",
     "react-i18next": "^15.5.3",
     "react-native": "0.79.4",
