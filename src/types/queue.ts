@@ -68,6 +68,7 @@ export interface QueueActions {
 
   // Automatic queue management
   populateAutomaticQueue: (startingChapterId: string) => void;
+  updateAutomaticQueueFromUserQueue: () => void;
   clearAutomaticQueue: () => void;
   initializeDefaultQueue: () => void;
 

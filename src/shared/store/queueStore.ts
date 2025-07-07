@@ -40,7 +40,7 @@ function parseRecordingId(
   return { bookName, chapter };
 }
 
-// Helper function to find next 5 chapters starting from a given chapter
+// Helper function to find next chapters starting from a given chapter
 function findNextChapters(
   startingChapterId: string,
   count: number = 5
@@ -85,6 +85,55 @@ function findNextChapters(
   return nextChapters;
 }
 
+// Helper function to find the first non-playlist item in the queue
+function findFirstNonPlaylistItem(queue: QueueItem[]): QueueItem | null {
+  return queue.find(item => item.type !== 'playlist') || null;
+}
+
+// Helper function to get actual verse count for a chapter
+function getChapterVerseCount(bookName: string, chapter: number): number {
+  // Common chapters with known verse counts (this could be expanded or moved to a data file)
+  const verseCountMap: Record<string, Record<number, number>> = {
+    John: { 1: 51, 2: 25, 3: 36, 4: 54, 5: 47, 6: 71 },
+    Luke: { 1: 80, 2: 52, 3: 38, 4: 44, 5: 39 },
+    Matthew: { 1: 25, 2: 23, 3: 17, 4: 25, 5: 48 },
+    Mark: { 1: 45, 2: 28, 3: 35, 4: 41, 5: 43 },
+  };
+
+  return verseCountMap[bookName]?.[chapter] || 35; // Default to 35 if not found
+}
+
+// Helper function to create a passage for the remaining part of a chapter
+function createRemainingChapterPassage(
+  passage: any,
+  currentChapterId: string
+): any {
+  const parsed = parseRecordingId(currentChapterId);
+  if (!parsed) return null;
+
+  const { bookName, chapter } = parsed;
+
+  // Get actual verse count for this chapter
+  const actualTotalVerses = getChapterVerseCount(bookName, chapter);
+  const remainingVerses = actualTotalVerses - passage.end_verse;
+
+  if (remainingVerses <= 0) {
+    return null; // No remaining verses
+  }
+
+  return {
+    id: `${currentChapterId}-remaining-${passage.end_verse + 1}-${actualTotalVerses}`,
+    chapter_id: currentChapterId,
+    start_verse: passage.end_verse + 1,
+    end_verse: actualTotalVerses,
+    start_time_seconds: passage.end_time_seconds,
+    end_time_seconds: passage.end_time_seconds + remainingVerses * 20, // Estimate ~20 seconds per verse
+    title: `${bookName} Chapter ${chapter} (verses ${passage.end_verse + 1}-${actualTotalVerses})`,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
 // Create mock chapter data for automatic queue population
 function createMockChapter(chapterId: string): Chapter {
   const parsed = parseRecordingId(chapterId);
@@ -126,16 +175,26 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
   isUserQueueActive: false,
   bibleBooks: [],
 
-  // Initialize default queue with John 1 and Luke 1 in user queue
+  // Initialize default queue with John 1 and Luke 1:15-55 in user queue
   initializeDefaultQueue: () => {
     try {
-      // Create John 1 chapter
+      // Create John 1 chapter (full chapter)
       const johnChapter = createMockChapter('john-1');
       const johnQueueItem = createQueueItem('chapter', johnChapter);
 
-      // Create Luke 1 chapter
-      const lukeChapter = createMockChapter('luke-1');
-      const lukeQueueItem = createQueueItem('chapter', lukeChapter);
+      // Create Luke 1:15-55 passage (partial chapter)
+      const lukePassage = {
+        id: 'luke-1-15-55',
+        chapter_id: 'luke-1',
+        start_verse: 15,
+        end_verse: 55,
+        start_time_seconds: 280, // Roughly 14 verses * 20 seconds each
+        end_time_seconds: 1100, // Roughly 55 verses * 20 seconds each
+        title: 'Luke Chapter 1 (verses 15-55)',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const lukeQueueItem = createQueueItem('passage', lukePassage);
 
       set(state => ({
         userQueue: {
@@ -146,7 +205,12 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
         isUserQueueActive: true,
       }));
 
-      console.log('Default user queue initialized with John 1 and Luke 1');
+      // Update automatic queue based on the new user queue
+      get().updateAutomaticQueueFromUserQueue();
+
+      console.log(
+        'Default user queue initialized with John 1 and Luke 1:15-55'
+      );
     } catch (error) {
       console.error('Error initializing default queue:', error);
     }
@@ -171,6 +235,9 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       },
       isUserQueueActive: true,
     }));
+
+    // Update automatic queue based on the new user queue
+    get().updateAutomaticQueueFromUserQueue();
   },
 
   addToUserQueueBack: itemData => {
@@ -187,6 +254,9 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       },
       isUserQueueActive: true,
     }));
+
+    // Update automatic queue based on the new user queue
+    get().updateAutomaticQueueFromUserQueue();
   },
 
   removeFromUserQueue: (index: number) => {
@@ -209,6 +279,9 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
         isUserQueueActive: newItems.length > 0,
       };
     });
+
+    // Update automatic queue based on the new user queue
+    get().updateAutomaticQueueFromUserQueue();
   },
 
   reorderUserQueue: (fromIndex: number, toIndex: number) => {
@@ -243,6 +316,9 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
         },
       };
     });
+
+    // Update automatic queue based on the new user queue
+    get().updateAutomaticQueueFromUserQueue();
   },
 
   clearUserQueue: () => {
@@ -254,6 +330,9 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       },
       isUserQueueActive: false,
     }));
+
+    // Update automatic queue based on the new user queue (will clear it since user queue is empty)
+    get().updateAutomaticQueueFromUserQueue();
   },
 
   // Automatic queue management
@@ -263,6 +342,60 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       const chapter = createMockChapter(chapterId);
       return createQueueItem('chapter', chapter);
     });
+
+    set(() => ({
+      automaticQueue: {
+        items: automaticItems,
+        currentIndex: -1,
+        isActive: automaticItems.length > 0,
+      },
+    }));
+  },
+
+  // Dynamically update automatic queue based on current user queue top item
+  updateAutomaticQueueFromUserQueue: () => {
+    const { userQueue } = get();
+    const firstNonPlaylistItem = findFirstNonPlaylistItem(userQueue.items);
+
+    if (!firstNonPlaylistItem) {
+      // No non-playlist items, clear automatic queue
+      get().clearAutomaticQueue();
+      return;
+    }
+
+    const automaticItems: QueueItem[] = [];
+
+    if (firstNonPlaylistItem.type === 'chapter') {
+      // For full chapters, add the next 5 chapters
+      const chapter = firstNonPlaylistItem.data as Chapter;
+      const chapterId = `${chapter.book_name.toLowerCase().replace(/\s+/g, '-')}-${chapter.chapter_number}`;
+      const nextChapterIds = findNextChapters(chapterId, 5);
+
+      nextChapterIds.forEach(nextChapterId => {
+        const nextChapter = createMockChapter(nextChapterId);
+        automaticItems.push(createQueueItem('chapter', nextChapter));
+      });
+    } else if (firstNonPlaylistItem.type === 'passage') {
+      // For passages, add remaining part of current chapter first, then next 4 chapters
+      const passage = firstNonPlaylistItem.data as any; // Using any since Passage type from types/queue.ts
+      const currentChapterId = passage.chapter_id;
+
+      // First, try to add the remaining part of the current chapter
+      const remainingPassage = createRemainingChapterPassage(
+        passage,
+        currentChapterId
+      );
+      if (remainingPassage) {
+        automaticItems.push(createQueueItem('passage', remainingPassage));
+      }
+
+      // Then add the next 4 full chapters
+      const nextChapterIds = findNextChapters(currentChapterId, 4);
+      nextChapterIds.forEach(nextChapterId => {
+        const nextChapter = createMockChapter(nextChapterId);
+        automaticItems.push(createQueueItem('chapter', nextChapter));
+      });
+    }
 
     set(() => ({
       automaticQueue: {
@@ -307,15 +440,8 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       };
     });
 
-    // If this is the first item from user queue, clear and repopulate automatic queue
-    if (isUserQueueActive && userQueue.currentIndex === -1 && nextIndex === 0) {
-      const currentItem = userQueue.items[0];
-      if (currentItem && currentItem.type === 'chapter') {
-        const chapter = currentItem.data as Chapter;
-        const chapterId = `${chapter.book_name.toLowerCase().replace(/\s+/g, '-')}-${chapter.chapter_number}`;
-        get().populateAutomaticQueue(chapterId);
-      }
-    }
+    // Note: Automatic queue is now dynamically updated based on user queue changes
+    // No need for manual population here since updateAutomaticQueueFromUserQueue() handles it
 
     return true;
   },
