@@ -1509,5 +1509,82 @@
         { "chapter": 22, "verses": 21 }
       ]
     }
-  ]
+  ],
+  "onboarding": {
+    "splash": {
+      "title": "EL Bible",
+      "subtitle": "Hear God's Word in your language",
+      "loading": "Preparing your experience..."
+    },
+    "audioSample": {
+      "title": "Tap to hear God's Word",
+      "subtitle": "Experience the Bible in audio format. Listen to this sample to see how it works.",
+      "sampleVerse": "In the beginning God created the heavens and the earth. The earth was without form and void, and darkness was over the face of the deep. And the Spirit of God was hovering over the face of the waters.",
+      "tapToPlay": "Tap the play button above to hear this verse in your language",
+      "book": "Genesis",
+      "chapter": "Chapter 1 - Sample"
+    },
+    "basicSetup": {
+      "title": "Essential Setup",
+      "subtitle": "Configure your preferences for the best experience",
+      "audioSettings": "Audio Settings",
+      "audioEnabled": "Audio Enabled",
+      "audioEnabledDesc": "Allow audio playback for Bible readings",
+      "autoPlay": "Auto-play",
+      "autoPlayDesc": "Automatically start playing when selecting content"
+    },
+    "contentPreview": {
+      "title": "Popular Content",
+      "subtitle": "Discover God's Word in your language",
+      "featuredBooks": "Featured Books",
+      "book": {
+        "genesis": {
+          "title": "Genesis",
+          "subtitle": "The Beginning",
+          "duration": "45 min",
+          "chapters": "50 chapters"
+        },
+        "psalms": {
+          "title": "Psalms",
+          "subtitle": "Songs of Praise",
+          "duration": "2.5 hours",
+          "chapters": "150 chapters"
+        },
+        "john": {
+          "title": "John",
+          "subtitle": "The Gospel",
+          "duration": "1.2 hours",
+          "chapters": "21 chapters"
+        },
+        "romans": {
+          "title": "Romans",
+          "subtitle": "Paul's Letter",
+          "duration": "55 min",
+          "chapters": "16 chapters"
+        }
+      }
+    },
+    "languageDetection": {
+      "title": "We think you speak",
+      "subtitle": "Is this correct? We'll use this language for your Bible experience.",
+      "confirm": "Yes, correct",
+      "change": "Change"
+    },
+    "quickStart": {
+      "title": "You're All Set!",
+      "subtitle": "Your Bible listening experience is ready. Choose how you'd like to begin your journey.",
+      "welcome": "Welcome to EL Bible! ",
+      "startListening": "Start Listening Now",
+      "startListeningDesc": "Jump right into the Bible with our recommended content",
+      "recommended": "RECOMMENDED",
+      "features": [
+        "Personalized recommendations",
+        "Quick access to popular books",
+        "Guided listening experience"
+      ]
+    },
+    "skip": "Skip",
+    "next": "Next",
+    "finish": "Finish"
+  }
 }

@@ -48,7 +48,7 @@ function parseRecordingId(
 // Generate mock verse text for any book/chapter/verse
 function generateMockVerseText(
   bookName: string,
-  chapter: number,
+  _chapter: number,
   verse: number
 ): string {
   const verseTexts = [
@@ -107,11 +107,11 @@ export interface IAudioService {
 // Main AudioService implementation
 export class AudioService implements IAudioService {
   private cache: Map<string, AudioChapter> = new Map();
-  private dbClient: any; // Replace with actual database client
+  // private dbClient: any; // Replace with actual database client
 
-  constructor(dbClient?: any) {
-    this.dbClient = dbClient;
-  }
+  // constructor(dbClient?: any) {
+  //   this.dbClient = dbClient;
+  // }
 
   // Fetch all audio recordings
   async getAudioRecordings(): Promise<AudioRecording[]> {

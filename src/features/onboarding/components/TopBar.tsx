@@ -13,6 +13,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import Paginator from './Paginator';
 import { NavigationProp } from '@/types/onboarding';
+import { useTranslation } from '@/shared/hooks';
 
 const TopBar = (props: {
   scrollX: Animated.Value;
@@ -20,6 +21,7 @@ const TopBar = (props: {
   scrollBackWards: () => void;
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
 
   const { scrollX, currentIndex, scrollBackWards } = props;
@@ -79,7 +81,7 @@ const TopBar = (props: {
         onPress={() => {
           navigation.navigate('Home');
         }}>
-        <Text style={styles.skipText}>skip</Text>
+        <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
       </TouchableOpacity>
     </View>
   );

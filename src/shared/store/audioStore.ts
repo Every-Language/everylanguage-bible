@@ -96,6 +96,8 @@ interface AudioState {
   initializeBibleBooks: () => void;
   findNextChapter: (currentRecordingId: string) => string | null;
   findPreviousChapter: (currentRecordingId: string) => string | null;
+
+  currentBook: Book | null;
 }
 
 // Initial state will be set by MainNavigator when it loads John 1
@@ -123,6 +125,9 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   // Bible navigation state
   bibleBooks: [],
+
+  // Loading states
+  currentBook: null,
 
   // Initialize Bible books data
   initializeBibleBooks: () => {
@@ -208,6 +213,10 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       const uiHelper = new ChapterUIHelper(chapter);
       const verseDisplayData = uiHelper.getVerseDisplayData(0);
 
+      // Find the full Book object from bibleBooks
+      const { bibleBooks } = get();
+      const bookObj = bibleBooks.find(b => b.name === chapter.bookName) || null;
+
       set({
         currentRecording: chapter.audioRecording,
         currentChapter: chapter,
@@ -216,6 +225,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         currentTime: 0,
         totalTime: chapter.totalDuration,
         isLoading: false,
+        currentBook: bookObj,
       });
 
       console.log(

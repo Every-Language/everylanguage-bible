@@ -9,14 +9,6 @@ import TopBar from '../components/TopBar';
 import BottomBar from '../components/BottomBar';
 
 const OnBoardingScreen = () => {
-  // Check list
-  // 1. **Splash Screen**: Brief branded loading with progress indicator
-  // 2. **Language Detection**: "We think you speak [Language]. Is this correct?"
-  // 3. **Audio Sample**: "Tap to hear God's Word in your language"
-  // 4. **Basic Setup**: Essential preferences with smart defaults
-  // 5. **Content Preview**: Sample of popular content in their language
-  // 6. **Quick Start**: "Start listening now" or "Explore more
-
   const { colors, isDark } = useTheme();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -80,7 +72,11 @@ const OnBoardingScreen = () => {
             }
           )}
           renderItem={({ item }) => (
-            <OnBoardingItem id={item.id} component={item.component} />
+            <OnBoardingItem
+              id={item.id}
+              component={item.component}
+              scrollForward={scrollForward}
+            />
           )}
         />
         <BottomBar currentIndex={currentIndex} scrollForward={scrollForward} />
