@@ -227,10 +227,7 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       userQueue: {
         ...state.userQueue,
         items: [item, ...state.userQueue.items],
-        currentIndex:
-          state.userQueue.currentIndex >= 0
-            ? state.userQueue.currentIndex + 1
-            : 0,
+        currentIndex: 0, // Point to the new first item
         isActive: true,
       },
       isUserQueueActive: true,
@@ -352,14 +349,24 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
     }));
   },
 
-  // Dynamically update automatic queue based on current user queue top item
+    // Dynamically update automatic queue based on current user queue top item
   updateAutomaticQueueFromUserQueue: () => {
-    const { userQueue } = get();
+    const { userQueue, automaticQueue } = get();
     const firstNonPlaylistItem = findFirstNonPlaylistItem(userQueue.items);
-
+    
     if (!firstNonPlaylistItem) {
-      // No non-playlist items, clear automatic queue
-      get().clearAutomaticQueue();
+      // No non-playlist items, keep existing automatic queue if it exists
+      // Only clear if there was no automatic queue before
+      if (automaticQueue.items.length === 0) {
+        get().clearAutomaticQueue();
+      }
+      return;
+    }
+    
+    // Check if the first item is a playlist - if so, don't update automatic queue
+    const firstItem = userQueue.items[0];
+    if (firstItem && firstItem.type === 'playlist') {
+      // Keep the existing automatic queue unchanged when playlist is at top
       return;
     }
 
@@ -473,14 +480,57 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
   },
 
   getCurrentItem: () => {
-    const { userQueue, automaticQueue, isUserQueueActive } = get();
-    const activeQueue = isUserQueueActive ? userQueue : automaticQueue;
+    const { userQueue, automaticQueue } = get();
 
-    if (
-      activeQueue.currentIndex >= 0 &&
-      activeQueue.currentIndex < activeQueue.items.length
-    ) {
-      return activeQueue.items[activeQueue.currentIndex] || null;
+    // If user queue is empty but automatic queue has items, move the first automatic item to user queue
+    if (userQueue.items.length === 0 && automaticQueue.items.length > 0) {
+      const firstAutomaticItem = automaticQueue.items[0];
+      if (firstAutomaticItem) {
+        // Move first automatic item to user queue
+        get().addToUserQueueBack({
+          type: firstAutomaticItem.type,
+          data: firstAutomaticItem.data,
+        });
+        // Remove from automatic queue
+        set(state => ({
+          automaticQueue: {
+            ...state.automaticQueue,
+            items: state.automaticQueue.items.slice(1),
+          },
+        }));
+        // Set user queue as active and point to first item
+        set({
+          isUserQueueActive: true,
+          userQueue: {
+            ...get().userQueue,
+            currentIndex: 0,
+            isActive: true,
+          },
+        });
+        // Return the moved item (now at index 0 in user queue)
+        return get().userQueue.items[0] || null;
+      }
+    }
+
+    // Always prioritize user queue if it has items
+    if (userQueue.items.length > 0) {
+      // If user queue doesn't have a current index set, start from 0
+      const currentIndex = userQueue.currentIndex >= 0 ? userQueue.currentIndex : 0;
+      if (currentIndex < userQueue.items.length) {
+        // Make sure user queue is active
+        if (!get().isUserQueueActive) {
+          set({ isUserQueueActive: true });
+        }
+        return userQueue.items[currentIndex] || null;
+      }
+    }
+
+    // Fall back to automatic queue only if user queue is completely empty
+    if (automaticQueue.items.length > 0) {
+      const currentIndex = automaticQueue.currentIndex >= 0 ? automaticQueue.currentIndex : 0;
+      if (currentIndex < automaticQueue.items.length) {
+        return automaticQueue.items[currentIndex] || null;
+      }
     }
 
     return null;

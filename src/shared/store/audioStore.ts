@@ -73,6 +73,10 @@ interface AudioState {
   // Verse navigation actions
   previousVerse: () => Promise<void>;
   nextVerse: () => Promise<void>;
+  
+  // Queue integration actions
+  onItemFinished: () => Promise<void>;
+  addPreviousChapterToQueue: (currentRecordingId: string) => Promise<void>;
 
   // Playlist actions
   addToPlaylist: (recording: AudioRecording) => void;
@@ -429,7 +433,9 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         console.log('Previous chapter: seeking to verse 1 of current chapter');
         return true;
       } else {
-        // At verse 1, so go to previous chapter and seek to verse 1
+        // At verse 1, so add previous chapter to queue and go to it
+        await get().addPreviousChapterToQueue(currentRecording.id);
+        
         const previousChapterRecordingId = get().findPreviousChapter(
           currentRecording.id
         );
@@ -444,7 +450,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
             if (firstSegmentOfPrevChapter) {
               get().seek(firstSegmentOfPrevChapter.startTime);
               console.log(
-                `Previous chapter: loaded ${previousChapterRecordingId} and seeking to verse 1`
+                `Previous chapter: added previous chapter to queue, loaded ${previousChapterRecordingId} and seeking to verse 1`
               );
             }
           }
@@ -470,6 +476,10 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       if (isPlaying && currentTime < totalTime) {
         get().setProgress(currentTime + 1);
         setTimeout(simulateProgress, 1000);
+      } else if (isPlaying && currentTime >= totalTime) {
+        // Item finished playing
+        set({ isPlaying: false });
+        get().onItemFinished();
       }
     };
     setTimeout(simulateProgress, 1000);
@@ -546,24 +556,30 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         `Previous verse: seeking to segment ${prevSegment.segmentNumber} at ${prevSegment.startTime}s`
       );
     } else {
-      // At beginning of chapter, try to go to previous chapter and seek to last verse
-      const success = await get().playPrevious();
-      if (success) {
-        // After loading previous chapter, seek to the last verse
-        const { currentUIHelper: newUIHelper, currentChapter } = get();
-        if (newUIHelper && currentChapter) {
-          const lastSegment = newUIHelper.getSegmentByVerseNumber(
-            currentChapter.totalSegments
-          );
-          if (lastSegment) {
-            get().seek(lastSegment.startTime);
-            console.log(
-              `Previous verse: loaded previous chapter and seeking to last verse ${currentChapter.totalSegments} at ${lastSegment.startTime}s`
+      // At beginning of chapter - add previous chapter to queue and navigate to it
+      const { currentRecording } = get();
+      if (currentRecording) {
+        await get().addPreviousChapterToQueue(currentRecording.id);
+        
+        // Now navigate to the previous chapter
+        const success = await get().playPrevious();
+        if (success) {
+          // After loading previous chapter, seek to the last verse
+          const { currentUIHelper: newUIHelper, currentChapter } = get();
+          if (newUIHelper && currentChapter) {
+            const lastSegment = newUIHelper.getSegmentByVerseNumber(
+              currentChapter.totalSegments
             );
+            if (lastSegment) {
+              get().seek(lastSegment.startTime);
+              console.log(
+                `Previous verse: added previous chapter to queue, loaded it, and seeking to last verse ${currentChapter.totalSegments} at ${lastSegment.startTime}s`
+              );
+            }
           }
+        } else {
+          console.log('Previous verse: already at beginning');
         }
-      } else {
-        console.log('Previous verse: already at beginning');
       }
     }
   },
@@ -599,10 +615,20 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         `Next verse: seeking to segment ${nextSegment.segmentNumber} at ${nextSegment.startTime}s`
       );
     } else {
-      // At end of chapter, try to go to next chapter
+      // At end of chapter, try to go to next chapter via queue system
       const success = await get().playNext();
-      if (!success) {
-        console.log('Next verse: already at end');
+      if (success) {
+        // After loading next chapter, seek to verse 1
+        const { currentUIHelper: newUIHelper } = get();
+        if (newUIHelper) {
+          const firstSegment = newUIHelper.getSegmentByVerseNumber(1);
+          if (firstSegment) {
+            get().seek(firstSegment.startTime);
+            console.log(`Next verse: loaded next chapter and seeking to verse 1 at ${firstSegment.startTime}s`);
+          }
+        }
+      } else {
+        console.log('Next verse: already at end of queue');
       }
     }
   },
@@ -660,11 +686,85 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       const passage = queueItem.data;
       const chapterId = passage.chapter_id;
       await get().setCurrentAudio(chapterId);
-      // TODO: Implement seeking to passage start time
+      get().seek(passage.start_time_seconds);
     } else if (queueItem.type === 'playlist') {
       // For playlists, we'd need to load the first item in the playlist
       // TODO: Implement playlist loading
       console.log('Playlist playback not yet implemented');
+    }
+  },
+
+  // Sync audio store with queue's current item
+  syncWithQueue: async () => {
+    const queueStore = useQueueStore.getState();
+    const currentQueueItem = queueStore.getCurrentItem();
+    
+    if (currentQueueItem) {
+      await get().playFromQueueItem(currentQueueItem);
+      console.log('Audio store synced with queue:', currentQueueItem);
+    } else {
+      console.log('No queue item to sync with');
+    }
+  },
+
+  // Handle when an item finishes playing - remove it from queue
+  onItemFinished: async () => {
+    const queueStore = useQueueStore.getState();
+    const currentItem = queueStore.getCurrentItem();
+    
+    if (currentItem) {
+      // Remove the finished item from the queue
+      const activeQueue = queueStore.getActiveQueue();
+      const currentIndex = activeQueue.currentIndex;
+      
+      if (queueStore.isUserQueueActive && currentIndex >= 0) {
+        queueStore.removeFromUserQueue(currentIndex);
+      }
+      
+      // Try to play the next item
+      const success = await queueStore.playNext();
+      if (success) {
+        const nextItem = queueStore.getCurrentItem();
+        if (nextItem) {
+          await get().playFromQueueItem(nextItem);
+        }
+      }
+    }
+  },
+
+  // Add previous chapter to the front of the user queue
+  addPreviousChapterToQueue: async (currentRecordingId: string) => {
+    const previousChapterRecordingId = get().findPreviousChapter(currentRecordingId);
+    
+    if (previousChapterRecordingId) {
+      const queueStore = useQueueStore.getState();
+      
+      // Parse the previous chapter ID to get book and chapter info
+      const parsed = parseRecordingId(previousChapterRecordingId);
+      if (parsed) {
+        const { bookName, chapter } = parsed;
+        
+        // Create mock chapter data for the previous chapter
+        const previousChapter = {
+          id: previousChapterRecordingId,
+          book_name: bookName,
+          chapter_number: chapter,
+          title: `${bookName} Chapter ${chapter}`,
+          audio_file_url: `https://example.com/${previousChapterRecordingId}.mp3`,
+          duration_seconds: 600 + chapter * 30,
+          language: 'en',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        
+        // Add to the front of the user queue
+        queueStore.addToUserQueueFront({
+          type: 'chapter',
+          data: previousChapter,
+        });
+        
+        console.log(`Added previous chapter ${bookName} ${chapter} to front of queue`);
+      }
     }
   },
 }));

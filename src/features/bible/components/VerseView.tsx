@@ -5,7 +5,7 @@ import { Stack, Text } from '@tamagui/core';
 import { Card } from '@tamagui/card';
 import { Button } from '@tamagui/button';
 import { Image } from '@tamagui/image';
-import { useVerseViewStore } from '@/shared/store';
+import { useVerseViewStore, useQueueStore, useAudioStore } from '@/shared/store';
 import { getBookImageSource } from '@/shared/services';
 import { type Book } from '@/shared/utils';
 import { useTheme } from '@/shared/store';
@@ -121,25 +121,58 @@ export const VerseView: React.FC<VerseViewProps> = ({
     console.log(`Add verse ${verseNumber} to queue`);
   };
 
-  const handlePlayChapter = () => {
-    // Play the entire chapter from the beginning
-    onChapterSelect(selectedBook, selectedChapter);
-    console.log(
-      `Playing entire chapter ${selectedChapter} of ${selectedBook.name}`
-    );
+  // Helper function to create chapter data compatible with queue system
+  const createChapterData = (book: Book, chapterNumber: number) => {
+    const bookId = book.name.toLowerCase().replace(/\s+/g, '-');
+    const chapterId = `${bookId}-${chapterNumber}`;
+    
+    return {
+      id: chapterId,
+      book_name: book.name,
+      chapter_number: chapterNumber,
+      title: `${book.name} Chapter ${chapterNumber}`,
+      audio_file_url: `https://example.com/${chapterId}.mp3`,
+      duration_seconds: 600 + chapterNumber * 30, // Vary duration based on chapter
+      language: 'en',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  };
+
+  const handlePlayChapter = async () => {
+    // Create chapter data
+    const chapter = createChapterData(selectedBook, selectedChapter);
+    
+    // Add to front of queue
+    const queueStore = useQueueStore.getState();
+    queueStore.addToUserQueueFront({
+      type: 'chapter',
+      data: chapter,
+    });
+    
+    // Start playing immediately
+    const audioStore = useAudioStore.getState();
+    await audioStore.playFromQueueItem({
+      type: 'chapter',
+      data: chapter,
+    });
+    
+    audioStore.play();
+    console.log(`Playing chapter ${selectedChapter} of ${selectedBook.name}`);
   };
 
   const handleAddChapterToQueue = () => {
-    // Add all verses to queue
-    const allVerses = Array.from(
-      { length: getDummyVerseCount(selectedChapter) },
-      (_, i) => i + 1
-    );
-    console.log(
-      `Adding all ${allVerses.length} verses of ${selectedBook.name} chapter ${selectedChapter} to queue:`,
-      allVerses
-    );
-    // TODO: Implement actual add all verses to queue functionality
+    // Create chapter data
+    const chapter = createChapterData(selectedBook, selectedChapter);
+    
+    // Add to back of queue
+    const queueStore = useQueueStore.getState();
+    queueStore.addToUserQueueBack({
+      type: 'chapter',
+      data: chapter,
+    });
+    
+    console.log(`Added chapter ${selectedChapter} of ${selectedBook.name} to queue`);
   };
 
   // Generate dummy playback time based on verse count
