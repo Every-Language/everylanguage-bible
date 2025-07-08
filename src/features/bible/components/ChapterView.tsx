@@ -43,26 +43,26 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
       marginVertical='$1'
       marginHorizontal='$2'
       padding='$2'
-      backgroundColor={colors.background}
-      borderColor={colors.primary + '20'}
+      backgroundColor='$background'
+      borderColor='$color4'
       borderWidth={1}
       testID={testID}
       onPress={onCardPress}>
       <Stack
         flexDirection='row'
-        alignItems='center'
+        items='center'
         justifyContent='space-between'
         flex={1}>
-        <Stack flexDirection='row' alignItems='center' gap='$2'>
-          <Text fontSize='$4' fontWeight='600' color={colors.text}>
+        <Stack flexDirection='row' items='center' gap='$2'>
+          <Text fontSize='$4' fontWeight='600' color='$color'>
             Chapter {chapterNumber}
           </Text>
-          <Text fontSize='$2' fontWeight='400' color={colors.secondary}>
+          <Text fontSize='$2' fontWeight='400' color='$secondary'>
             {verseCount} verses
           </Text>
         </Stack>
 
-        <Stack flexDirection='row' alignItems='center' gap='$2'>
+        <Stack flexDirection='row' items='center' gap='$2'>
           {/* Add to Queue Button */}
           <TouchableOpacity
             onPress={onAddToQueue}

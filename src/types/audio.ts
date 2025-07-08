@@ -81,24 +81,11 @@ export interface SegmentScrollState {
 // Utility class for segment calculations
 export class SegmentCalculator {
   private segments: TranslationSegment[];
-  private averageSegmentDuration: number;
 
   constructor(segments: TranslationSegment[]) {
     this.segments = segments.sort(
       (a, b) => a.start_time_seconds - b.start_time_seconds
     );
-    this.averageSegmentDuration = this.calculateAverageSegmentDuration();
-  }
-
-  private calculateAverageSegmentDuration(): number {
-    if (this.segments.length === 0) return 30; // default 30 seconds
-
-    const totalDuration = this.segments.reduce(
-      (sum, segment) =>
-        sum + (segment.end_time_seconds - segment.start_time_seconds),
-      0
-    );
-    return totalDuration / this.segments.length;
   }
 
   getCurrentSegment(currentTime: number): AudioSegment | undefined {

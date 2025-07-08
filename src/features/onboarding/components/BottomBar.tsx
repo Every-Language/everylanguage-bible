@@ -4,12 +4,14 @@ import { Dimensions, useTheme } from '@/shared';
 import { useNavigation } from '@react-navigation/native';
 import Slides from '../screens/slides';
 import { NavigationProp } from '@/types/onboarding';
+import { useTranslation } from '@/shared/hooks';
 
 const BottomBar = (props: {
   scrollForward: () => void;
   currentIndex: number;
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const { scrollForward, currentIndex } = props;
 
@@ -43,11 +45,11 @@ const BottomBar = (props: {
             navigation.navigate('Home');
           }}
           style={styles.nextButton}>
-          <Text style={styles.nextText}>Finish</Text>
+          <Text style={styles.nextText}>{t('onboarding.finish')}</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity onPress={scrollForward} style={styles.nextButton}>
-          <Text style={styles.nextText}>Next</Text>
+          <Text style={styles.nextText}>{t('onboarding.next')}</Text>
         </TouchableOpacity>
       )}
     </View>

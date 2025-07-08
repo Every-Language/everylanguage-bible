@@ -94,9 +94,22 @@ describe('AudioService', () => {
   });
 
   describe('getAudioRecordings', () => {
-    it('should return empty array for now (placeholder implementation)', async () => {
+    it('should return mock recording data for testing', async () => {
       const result = await service.getAudioRecordings();
-      expect(result).toEqual([]);
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        id: 'genesis-1',
+        title: 'Genesis Chapter 1',
+        audio_file_url: 'mock-url-1',
+        original_language: 'en',
+        target_language: 'en',
+        duration_seconds: 600,
+        description: 'The book of Genesis, Chapter 1',
+        status: 'active',
+        user_id: null,
+        created_at: expect.any(String),
+        updated_at: expect.any(String),
+      });
     });
   });
 
@@ -192,10 +205,11 @@ describe('AudioService', () => {
     it('should generate sequential timing for segments', async () => {
       const result = await service.getTranslationSegments('genesis-1');
 
-      expect(result[0].start_time_seconds).toBe(0);
-      expect(result[0].end_time_seconds).toBe(16);
-      expect(result[1].start_time_seconds).toBe(20);
-      expect(result[1].end_time_seconds).toBe(37);
+      expect(result).toHaveLength(22);
+      expect(result[0]?.start_time_seconds).toBe(0);
+      expect(result[0]?.end_time_seconds).toBe(16);
+      expect(result[1]?.start_time_seconds).toBe(20);
+      expect(result[1]?.end_time_seconds).toBe(37);
     });
 
     it('should vary verse text based on book type', async () => {
@@ -204,10 +218,15 @@ describe('AudioService', () => {
       const psalms = await service.getTranslationSegments('psalms-1');
       const matthew = await service.getTranslationSegments('matthew-1');
 
-      expect(genesis[0].original_text).not.toContain('And the Lord said:');
-      expect(deuteronomy[0].original_text).toContain('And the Lord said:');
-      expect(psalms[0].original_text).toContain('Praise the Lord!');
-      expect(matthew[0].original_text).toContain('Jesus said:');
+      expect(genesis).toHaveLength(22);
+      expect(deuteronomy).toHaveLength(22);
+      expect(psalms).toHaveLength(22);
+      expect(matthew).toHaveLength(22);
+
+      expect(genesis[0]?.original_text).not.toContain('And the Lord said:');
+      expect(deuteronomy[0]?.original_text).toContain('And the Lord said:');
+      expect(psalms[0]?.original_text).toContain('Praise the Lord!');
+      expect(matthew[0]?.original_text).toContain('Jesus said:');
     });
   });
 
@@ -230,9 +249,11 @@ describe('AudioService', () => {
       const result = await service.getAudioChapter('genesis-1');
 
       expect(result).toBeTruthy();
-      expect(result!.bookName).toBe('Genesis');
-      expect(result!.chapterNumber).toBe(1);
-      expect(result!.segments).toHaveLength(22);
+      if (result) {
+        expect(result.bookName).toBe('Genesis');
+        expect(result.chapterNumber).toBe(1);
+        expect(result.segments).toHaveLength(22);
+      }
     });
 
     it('should handle errors gracefully', async () => {
@@ -251,9 +272,10 @@ describe('AudioService', () => {
   });
 
   describe('searchAudioRecordings', () => {
-    it('should return empty array (placeholder implementation)', async () => {
-      const result = await service.searchAudioRecordings('test query');
-      expect(result).toEqual([]);
+    it('should return mock recording data for search query', async () => {
+      const result = await service.searchAudioRecordings('genesis');
+      expect(result).toHaveLength(2);
+      expect(result[0]?.title).toBe('Genesis Chapter 1');
     });
   });
 

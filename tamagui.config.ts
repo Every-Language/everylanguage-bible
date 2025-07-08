@@ -1,59 +1,33 @@
+import { defaultConfig } from '@tamagui/config/v4';
 import { createTamagui } from '@tamagui/core';
-import { createInterFont } from '@tamagui/font-inter';
-import { shorthands } from '@tamagui/shorthands';
-import { themes, tokens } from '@tamagui/themes';
-import { createAnimations } from '@tamagui/animations-react-native';
 
-const animations = createAnimations({
-  bouncy: {
-    type: 'spring',
-    damping: 10,
-    mass: 0.9,
-    stiffness: 100,
-  },
-  lazy: {
-    type: 'spring',
-    damping: 20,
-    stiffness: 60,
-  },
-  quick: {
-    type: 'spring',
-    damping: 20,
-    mass: 1.2,
-    stiffness: 250,
-  },
-});
+// Our custom theme colors that integrate with Tamagui
+const lightTheme = {
+  ...defaultConfig.themes.light,
+  background: '#EBE5D9', // primaryLight - warm cream/beige
+  color: '#070707', // secondaryDark - almost black
+  primary: '#264854', // primaryAccent - dark blue-green
+  secondary: '#AD915A', // secondaryAccent - warm brown/tan
+};
 
-const headingFont = createInterFont();
-const bodyFont = createInterFont();
+const darkTheme = {
+  ...defaultConfig.themes.dark,
+  background: '#282827', // primaryDark - very dark gray
+  color: '#EBE5D9', // primaryLight - warm cream (for contrast)
+  primary: '#92BEC3', // secondaryLight - light blue-green
+  secondary: '#AD915A', // secondaryAccent - warm brown/tan (consistent)
+};
 
-const config = createTamagui({
-  animations,
-  defaultTheme: 'light',
-  shouldAddPrefersColorThemes: false,
-  themeClassNameOnRoot: false,
-  shorthands,
-  fonts: {
-    heading: headingFont,
-    body: bodyFont,
+export const config = createTamagui({
+  ...defaultConfig,
+  themes: {
+    ...defaultConfig.themes,
+    light: lightTheme,
+    dark: darkTheme,
   },
-  themes,
-  tokens,
-  media: {
-    xs: { maxWidth: 660 },
-    sm: { maxWidth: 800 },
-    md: { maxWidth: 1020 },
-    lg: { maxWidth: 1280 },
-    xl: { maxWidth: 1420 },
-    xxl: { maxWidth: 1600 },
-    gtXs: { minWidth: 660 + 1 },
-    gtSm: { minWidth: 800 + 1 },
-    gtMd: { minWidth: 1020 + 1 },
-    gtLg: { minWidth: 1280 + 1 },
-    short: { maxHeight: 820 },
-    tall: { minHeight: 820 },
-    hoverNone: { hover: 'none' },
-    pointerCoarse: { pointer: 'coarse' },
+  settings: {
+    ...defaultConfig.settings,
+    styleCompat: 'react-native', // Recommended for React Native compatibility
   },
 });
 
