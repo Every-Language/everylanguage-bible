@@ -20,7 +20,13 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
+  useAnimatedGestureHandler,
+  runOnJS,
 } from 'react-native-reanimated';
+import {
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
+} from 'react-native-gesture-handler';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
 import { useTranslation } from '@/shared/hooks';
@@ -150,13 +156,17 @@ const TextModeView: React.FC<TextModeViewProps> = ({
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }} pointerEvents='box-none'>
       <ScrollView
         ref={scrollViewRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: Dimensions.spacing.md }}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps='handled'
+        nestedScrollEnabled={true}
+        scrollEventThrottle={16}
+        removeClippedSubviews={false}
+        overScrollMode='never'
         onScrollBeginDrag={handleScrollBegin}
         onScrollEndDrag={handleScrollEnd}
         onMomentumScrollEnd={handleScrollEnd}>
@@ -252,7 +262,7 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
   const handleItemPress = React.useCallback(
     async (item: any) => {
       try {
-        await playFromQueueItem(item);
+        await playFromQueueItem(item, true); // true = from queue
 
         // If playing from user queue and automatic queue is empty, populate it
         if (automaticQueue.items.length === 0 && item.type === 'chapter') {
@@ -299,7 +309,9 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
   const currentItem = getCurrentItem();
 
   return (
-    <View style={{ flex: 1, padding: Dimensions.spacing.md }}>
+    <View
+      style={{ flex: 1, padding: Dimensions.spacing.md }}
+      pointerEvents='box-none'>
       {/* Header */}
       <View style={{ marginBottom: Dimensions.spacing.md }}>
         <Text
@@ -318,7 +330,12 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={true}
         contentContainerStyle={{ paddingBottom: Dimensions.spacing.md }}
-        nestedScrollEnabled={true}>
+        nestedScrollEnabled={true}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps='handled'
+        removeClippedSubviews={false}
+        overScrollMode='never'
+        bounces={false}>
         {/* User Queue Section */}
         <View style={{ marginBottom: Dimensions.spacing.lg }}>
           <View
@@ -340,13 +357,14 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
 
           {/* User Queue Items */}
           {userQueue.items.length > 0 ? (
-            <View style={{ minHeight: 100, flex: 1 }}>
+            <View style={{ minHeight: 100, flex: 1 }} pointerEvents='auto'>
               <DraggableFlatList
                 data={userQueue.items}
                 onDragEnd={handleUserQueueDragEnd}
                 keyExtractor={item => item.id}
-                scrollEnabled={false}
-                activationDistance={10}
+                scrollEnabled={true}
+                nestedScrollEnabled={true}
+                activationDistance={15}
                 renderItem={({ item, drag, isActive, getIndex }) => (
                   <ScaleDecorator>
                     <ShadowDecorator>
@@ -418,12 +436,13 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
 
           {/* Auto Queue Items */}
           {automaticQueue.items.length > 0 ? (
-            <View>
+            <View pointerEvents='auto'>
               {automaticQueue.items.map((item, _index) => (
                 <View
                   key={item.id}
-                  style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ flex: 1 }}>
+                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                  pointerEvents='auto'>
+                  <View style={{ flex: 1 }} pointerEvents='auto'>
                     <QueueItemComponent
                       item={item}
                       isFromUserQueue={false}
@@ -513,7 +532,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
   }));
 
   return (
-    <View style={{ flex: 1, overflow: 'hidden' }}>
+    <View style={{ flex: 1, overflow: 'hidden' }} pointerEvents='box-none'>
       <Animated.View
         style={[
           {
@@ -522,8 +541,9 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
             height: '100%',
           },
           animatedStyle,
-        ]}>
-        <View style={{ width: '50%', height: '100%' }}>
+        ]}
+        pointerEvents='box-none'>
+        <View style={{ width: '50%', height: '100%' }} pointerEvents='auto'>
           <TextModeView
             verseDisplayData={verseDisplayData}
             currentTime={currentTime}
@@ -531,7 +551,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
             onSeek={onSeek}
           />
         </View>
-        <View style={{ width: '50%', height: '100%' }}>
+        <View style={{ width: '50%', height: '100%' }} pointerEvents='auto'>
           <QueueModeView title={title} subtitle={subtitle} />
         </View>
       </Animated.View>
@@ -645,7 +665,8 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
         padding: Dimensions.spacing.md,
         backgroundColor: colors.background,
       }}
-      testID='expanded-media-content'>
+      testID='expanded-media-content'
+      pointerEvents='box-none'>
       {/* Book Info Row */}
       <View
         style={{
@@ -759,7 +780,9 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
       </View>
 
       {/* Content Area */}
-      <View style={{ flex: 1, marginTop: Dimensions.spacing.md }}>
+      <View
+        style={{ flex: 1, marginTop: Dimensions.spacing.md }}
+        pointerEvents='auto'>
         <ContentSwitcher
           mode={currentMode}
           verseDisplayData={currentVerseDisplayData}
@@ -796,8 +819,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     previousVerse,
     nextVerse,
     playPrevious,
-    playNext,
     togglePlayPause,
+    onItemFinished,
   } = useAudioStore();
 
   // Expansion state management
@@ -811,6 +834,9 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
   const expansionValue = useSharedValue(0);
+
+  // Drag gesture handling
+  const startY = useSharedValue(0);
 
   // Handle expand/contract functionality
   const handleExpandContractPress = () => {
@@ -831,6 +857,67 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       });
     }
   };
+
+  // Update isExpanded state when animation completes
+  const updateExpansionState = (targetValue: number) => {
+    setIsExpanded(targetValue === 1);
+  };
+
+  // Drag gesture handler
+  const gestureHandler =
+    useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
+      onStart: (_, context) => {
+        startY.value = expansionValue.value;
+        context['startY'] = startY.value;
+      },
+      onActive: (event, context) => {
+        // Calculate drag progress
+        // Negative translationY means dragging up (expanding)
+        // Positive translationY means dragging down (collapsing)
+        const dragDistance = -event.translationY;
+        const maxDragDistance = screenHeight * 0.3; // Allow dragging up to 30% of screen height
+
+        // Calculate new expansion value based on drag distance
+        const dragProgress = dragDistance / maxDragDistance;
+        const newValue = Math.max(
+          0,
+          Math.min(1, (context['startY'] as number) + dragProgress)
+        );
+
+        expansionValue.value = newValue;
+      },
+      onEnd: event => {
+        // Determine final state based on velocity and position
+        const velocity = -event.velocityY; // Negative velocityY means upward velocity
+        const currentValue = expansionValue.value;
+
+        // Velocity threshold for quick swipes (pixels per second)
+        const velocityThreshold = 500;
+
+        // Position threshold for slow drags
+        const positionThreshold = 0.3;
+
+        let targetValue: number;
+
+        if (Math.abs(velocity) > velocityThreshold) {
+          // Fast swipe - follow velocity direction
+          targetValue = velocity > 0 ? 1 : 0;
+        } else {
+          // Slow drag - use position threshold
+          targetValue = currentValue > positionThreshold ? 1 : 0;
+        }
+
+        // Animate to final position
+        expansionValue.value = withSpring(targetValue, {
+          damping: 20,
+          stiffness: 300,
+          velocity: velocity / 1000, // Pass velocity for natural feel
+        });
+
+        // Update React state
+        runOnJS(updateExpansionState)(targetValue);
+      },
+    });
 
   // Get display text from audio store data
   const displayText = () => {
@@ -889,35 +976,45 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   // Calculate the height of the bottom controls section
   const bottomControlsHeight = 190; // Increased height for all controls: expand bar + title + progress + buttons + padding
 
+  // Animated style for the expand/contract bar - provides visual feedback during drag
+  const animatedBarStyle = useAnimatedStyle(() => {
+    const expansion = expansionValue.value;
+    return {
+      backgroundColor: expansion > 0.1 ? '#888888' : '#666666', // Lighter when being dragged
+      width: 100 + expansion * 20, // Slightly wider when expanded
+    };
+  });
+
   // Container animation - expands from bottom to fill most of screen
   const animatedContainerStyle = useAnimatedStyle(() => {
     const expansion = expansionValue.value;
+    const expandedHeight = screenHeight - insets.top;
+    const currentHeight =
+      bottomControlsHeight +
+      insets.bottom +
+      (expandedHeight - (bottomControlsHeight + insets.bottom)) * expansion;
 
-    if (expansion === 0) {
-      // Collapsed state - container extends to bottom of screen, content above safe area
-      return {
-        position: 'absolute',
-        bottom: 0, // Extend to bottom of screen
-        left: 0,
-        right: 0,
-        height: bottomControlsHeight + insets.bottom, // Add safe area to height
-      };
-    } else {
-      // Expanded state - fills from top safe area to bottom of screen
-      const expandedHeight = screenHeight - insets.top;
-      const currentHeight =
-        bottomControlsHeight +
-        insets.bottom +
-        (expandedHeight - (bottomControlsHeight + insets.bottom)) * expansion;
+    return {
+      position: 'absolute',
+      bottom: 0, // Always extend to bottom of screen
+      left: 0,
+      right: 0,
+      height: currentHeight,
+    };
+  });
 
-      return {
-        position: 'absolute',
-        bottom: 0, // Extend to bottom of screen
-        left: 0,
-        right: 0,
-        height: currentHeight,
-      };
-    }
+  // Animation for middle area - grows upward while bottom stays fixed
+  const animatedMiddleAreaStyle = useAnimatedStyle(() => {
+    const expansion = expansionValue.value;
+    const expandedHeight = screenHeight - insets.top;
+    const maxMiddleHeight =
+      expandedHeight - bottomControlsHeight - insets.bottom;
+    const currentMiddleHeight = maxMiddleHeight * expansion;
+
+    return {
+      height: currentMiddleHeight,
+      opacity: expansion > 0.1 ? 1 : 0, // Fade in when expanding
+    };
   });
 
   const styles = StyleSheet.create({
@@ -933,20 +1030,21 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       borderTopRightRadius: Dimensions.radius.xl,
       ...Dimensions.shadow.lg,
       zIndex: 1000,
+      elevation: 1000, // Android-specific elevation
       opacity: 1, // Always 100% opaque
       flexDirection: 'column',
     },
     expandContractTouchArea: {
-      paddingVertical: Dimensions.spacing.md,
+      paddingTop: Dimensions.spacing.xs, // Reduced from md to xs for less white space
+      paddingBottom: Dimensions.spacing.xs, // Reduced from sm to xs for tighter spacing
       paddingHorizontal: Dimensions.spacing.xl,
       alignSelf: 'center',
     },
     expandContractBar: {
-      width: 100,
       height: 5,
-      backgroundColor: '#666666',
       borderRadius: 2.5,
       alignSelf: 'center',
+      // Width and backgroundColor are handled by animatedBarStyle for drag feedback
     },
     middleArea: {
       flex: 1,
@@ -997,29 +1095,35 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       testID={testID}
       accessibilityLabel={t('audio.audioPlayerControls')}>
       {/* Expand/Contract Bar - Always at the top of the container */}
-      <TouchableOpacity
-        style={styles.expandContractTouchArea}
-        onPress={handleExpandContractPress}
-        testID='mini-player-expand-contract-bar'
-        accessibilityLabel={
-          isExpanded ? t('audio.contractPlayer') : t('audio.expandPlayer')
-        }
-        accessibilityRole='button'>
-        <View style={styles.expandContractBar} />
-      </TouchableOpacity>
+      <PanGestureHandler onGestureEvent={gestureHandler}>
+        <Animated.View style={styles.expandContractTouchArea}>
+          <TouchableOpacity
+            onPress={handleExpandContractPress}
+            testID='mini-player-expand-contract-bar'
+            accessibilityLabel={
+              isExpanded ? t('audio.contractPlayer') : t('audio.expandPlayer')
+            }
+            accessibilityRole='button'
+            style={{ paddingVertical: 8, paddingHorizontal: 20 }}>
+            <Animated.View
+              style={[styles.expandContractBar, animatedBarStyle]}
+            />
+          </TouchableOpacity>
+        </Animated.View>
+      </PanGestureHandler>
 
-      {/* Middle Area - Only visible when expanded */}
-      {isExpanded && (
-        <View style={styles.middleArea}>
-          <ExpandedMediaContent
-            onTextPress={() => {}}
-            onQueuePress={() => {}}
-            onVersionPress={() => setShowVersionPopup(true)}
-            onVersePress={handleVersePress}
-            onSeek={seek}
-          />
-        </View>
-      )}
+      {/* Middle Area - Animates height while bottom controls stay fixed */}
+      <Animated.View
+        style={[styles.middleArea, animatedMiddleAreaStyle]}
+        pointerEvents='auto'>
+        <ExpandedMediaContent
+          onTextPress={() => {}}
+          onQueuePress={() => {}}
+          onVersionPress={() => setShowVersionPopup(true)}
+          onVersePress={handleVersePress}
+          onSeek={seek}
+        />
+      </Animated.View>
 
       {/* Bottom Controls - Fixed at bottom of container */}
       <View style={styles.bottomControlsContainer}>
@@ -1104,7 +1208,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
           {/* Next Chapter - » */}
           <TouchableOpacity
-            onPress={playNext}
+            onPress={onItemFinished}
             style={[
               styles.circularButton,
               { backgroundColor: colors.primary + '20' },

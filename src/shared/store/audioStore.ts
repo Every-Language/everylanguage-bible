@@ -52,6 +52,13 @@ interface AudioState {
   currentUIHelper: ChapterUIHelper | null;
   currentVerseDisplayData: VerseDisplayData[];
 
+  // Track what's currently playing (separate from queue)
+  currentlyPlaying: {
+    type: 'chapter' | 'passage' | 'playlist' | null;
+    data: any;
+    fromQueue: boolean; // true if playing from queue, false if playing directly
+  } | null;
+
   // Playlist state
   playlist: AudioRecording[];
   currentPlaylistIndex: number;
@@ -73,7 +80,7 @@ interface AudioState {
   // Verse navigation actions
   previousVerse: () => Promise<void>;
   nextVerse: () => Promise<void>;
-  
+
   // Queue integration actions
   onItemFinished: () => Promise<void>;
   addPreviousChapterToQueue: (currentRecordingId: string) => Promise<void>;
@@ -104,7 +111,7 @@ interface AudioState {
   findPreviousChapter: (currentRecordingId: string) => string | null;
 
   // Queue integration
-  playFromQueueItem: (queueItem: any) => Promise<void>;
+  playFromQueueItem: (queueItem: any, fromQueue: boolean) => Promise<void>;
 }
 
 // Initial state will be set by MainNavigator when it loads John 1
@@ -124,6 +131,9 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   // UI state
   currentUIHelper: null,
   currentVerseDisplayData: [],
+
+  // Track what's currently playing (separate from queue)
+  currentlyPlaying: null,
 
   // Playlist state
   playlist: [],
@@ -435,7 +445,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       } else {
         // At verse 1, so add previous chapter to queue and go to it
         await get().addPreviousChapterToQueue(currentRecording.id);
-        
+
         const previousChapterRecordingId = get().findPreviousChapter(
           currentRecording.id
         );
@@ -560,7 +570,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       const { currentRecording } = get();
       if (currentRecording) {
         await get().addPreviousChapterToQueue(currentRecording.id);
-        
+
         // Now navigate to the previous chapter
         const success = await get().playPrevious();
         if (success) {
@@ -624,7 +634,9 @@ export const useAudioStore = create<AudioState>((set, get) => ({
           const firstSegment = newUIHelper.getSegmentByVerseNumber(1);
           if (firstSegment) {
             get().seek(firstSegment.startTime);
-            console.log(`Next verse: loaded next chapter and seeking to verse 1 at ${firstSegment.startTime}s`);
+            console.log(
+              `Next verse: loaded next chapter and seeking to verse 1 at ${firstSegment.startTime}s`
+            );
           }
         }
       } else {
@@ -676,7 +688,16 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   },
 
   // Queue integration
-  playFromQueueItem: async (queueItem: any) => {
+  playFromQueueItem: async (queueItem: any, fromQueue: boolean = true) => {
+    // Set currently playing state
+    set({
+      currentlyPlaying: {
+        type: queueItem.type,
+        data: queueItem.data,
+        fromQueue,
+      },
+    });
+
     if (queueItem.type === 'chapter') {
       const chapter = queueItem.data;
       const chapterId = `${chapter.book_name.toLowerCase().replace(/\s+/g, '-')}-${chapter.chapter_number}`;
@@ -698,52 +719,84 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   syncWithQueue: async () => {
     const queueStore = useQueueStore.getState();
     const currentQueueItem = queueStore.getCurrentItem();
-    
+
     if (currentQueueItem) {
-      await get().playFromQueueItem(currentQueueItem);
+      await get().playFromQueueItem(currentQueueItem, true);
       console.log('Audio store synced with queue:', currentQueueItem);
     } else {
       console.log('No queue item to sync with');
     }
   },
 
-  // Handle when an item finishes playing - remove it from queue
+  // Handle when an item finishes playing
   onItemFinished: async () => {
-    const queueStore = useQueueStore.getState();
-    const currentItem = queueStore.getCurrentItem();
-    
-    if (currentItem) {
-      // Remove the finished item from the queue
-      const activeQueue = queueStore.getActiveQueue();
-      const currentIndex = activeQueue.currentIndex;
-      
-      if (queueStore.isUserQueueActive && currentIndex >= 0) {
-        queueStore.removeFromUserQueue(currentIndex);
-      }
-      
-      // Try to play the next item
-      const success = await queueStore.playNext();
-      if (success) {
-        const nextItem = queueStore.getCurrentItem();
-        if (nextItem) {
-          await get().playFromQueueItem(nextItem);
+    const { currentlyPlaying } = get();
+
+    if (!currentlyPlaying) {
+      console.log('No currently playing item to finish');
+      return;
+    }
+
+    if (currentlyPlaying.fromQueue) {
+      // Item was from queue, remove it and play next from queue
+      const queueStore = useQueueStore.getState();
+      const currentItem = queueStore.getCurrentItem();
+
+      if (currentItem && queueStore.isUserQueueActive) {
+        const activeQueue = queueStore.getActiveQueue();
+        const currentIndex = activeQueue.currentIndex;
+
+        if (currentIndex >= 0) {
+          // Remove the finished item from user queue
+          queueStore.removeFromUserQueue(currentIndex);
         }
+      }
+
+      // Try to play the next item from queue
+      const nextQueueItem = queueStore.getCurrentItem();
+      if (nextQueueItem) {
+        await get().playFromQueueItem(nextQueueItem, true);
+        get().play();
+        console.log(
+          'Queue item finished, playing next from queue:',
+          nextQueueItem
+        );
+      } else {
+        // No more items in queue
+        set({ currentlyPlaying: null, isPlaying: false });
+        console.log('Queue finished, no more items to play');
+      }
+    } else {
+      // Item was played directly (not from queue)
+      // Check if there's something in the user queue to play next
+      const queueStore = useQueueStore.getState();
+      const nextQueueItem = queueStore.getCurrentItem();
+
+      if (nextQueueItem) {
+        await get().playFromQueueItem(nextQueueItem, true);
+        get().play();
+        console.log('Direct play finished, starting queue:', nextQueueItem);
+      } else {
+        // No queue items, just stop
+        set({ currentlyPlaying: null, isPlaying: false });
+        console.log('Direct play finished, no queue items to continue with');
       }
     }
   },
 
   // Add previous chapter to the front of the user queue
   addPreviousChapterToQueue: async (currentRecordingId: string) => {
-    const previousChapterRecordingId = get().findPreviousChapter(currentRecordingId);
-    
+    const previousChapterRecordingId =
+      get().findPreviousChapter(currentRecordingId);
+
     if (previousChapterRecordingId) {
       const queueStore = useQueueStore.getState();
-      
+
       // Parse the previous chapter ID to get book and chapter info
       const parsed = parseRecordingId(previousChapterRecordingId);
       if (parsed) {
         const { bookName, chapter } = parsed;
-        
+
         // Create mock chapter data for the previous chapter
         const previousChapter = {
           id: previousChapterRecordingId,
@@ -756,14 +809,16 @@ export const useAudioStore = create<AudioState>((set, get) => ({
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        
+
         // Add to the front of the user queue
         queueStore.addToUserQueueFront({
           type: 'chapter',
           data: previousChapter,
         });
-        
-        console.log(`Added previous chapter ${bookName} ${chapter} to front of queue`);
+
+        console.log(
+          `Added previous chapter ${bookName} ${chapter} to front of queue`
+        );
       }
     }
   },

@@ -5,7 +5,11 @@ import { Stack, Text } from '@tamagui/core';
 import { Card } from '@tamagui/card';
 import { Button } from '@tamagui/button';
 import { Image } from '@tamagui/image';
-import { useVerseViewStore, useQueueStore, useAudioStore } from '@/shared/store';
+import {
+  useVerseViewStore,
+  useQueueStore,
+  useAudioStore,
+} from '@/shared/store';
 import { getBookImageSource } from '@/shared/services';
 import { type Book } from '@/shared/utils';
 import { useTheme } from '@/shared/store';
@@ -101,7 +105,7 @@ const VerseItem: React.FC<VerseItemProps> = ({
 
 export const VerseView: React.FC<VerseViewProps> = ({
   onVerseSelect,
-  onChapterSelect,
+  onChapterSelect: _onChapterSelect,
 }) => {
   const { isOpen, selectedBook, selectedChapter, closeVerseView } =
     useVerseViewStore();
@@ -125,7 +129,7 @@ export const VerseView: React.FC<VerseViewProps> = ({
   const createChapterData = (book: Book, chapterNumber: number) => {
     const bookId = book.name.toLowerCase().replace(/\s+/g, '-');
     const chapterId = `${bookId}-${chapterNumber}`;
-    
+
     return {
       id: chapterId,
       book_name: book.name,
@@ -142,37 +146,37 @@ export const VerseView: React.FC<VerseViewProps> = ({
   const handlePlayChapter = async () => {
     // Create chapter data
     const chapter = createChapterData(selectedBook, selectedChapter);
-    
-    // Add to front of queue
-    const queueStore = useQueueStore.getState();
-    queueStore.addToUserQueueFront({
-      type: 'chapter',
-      data: chapter,
-    });
-    
-    // Start playing immediately
+
+    // Start playing immediately WITHOUT adding to queue
     const audioStore = useAudioStore.getState();
-    await audioStore.playFromQueueItem({
-      type: 'chapter',
-      data: chapter,
-    });
-    
+    await audioStore.playFromQueueItem(
+      {
+        type: 'chapter',
+        data: chapter,
+      },
+      false
+    ); // false = not from queue, playing directly
+
     audioStore.play();
-    console.log(`Playing chapter ${selectedChapter} of ${selectedBook.name}`);
+    console.log(
+      `Playing chapter ${selectedChapter} of ${selectedBook.name} (not added to queue)`
+    );
   };
 
   const handleAddChapterToQueue = () => {
     // Create chapter data
     const chapter = createChapterData(selectedBook, selectedChapter);
-    
+
     // Add to back of queue
     const queueStore = useQueueStore.getState();
     queueStore.addToUserQueueBack({
       type: 'chapter',
       data: chapter,
     });
-    
-    console.log(`Added chapter ${selectedChapter} of ${selectedBook.name} to queue`);
+
+    console.log(
+      `Added chapter ${selectedChapter} of ${selectedBook.name} to queue`
+    );
   };
 
   // Generate dummy playback time based on verse count

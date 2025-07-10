@@ -5,7 +5,11 @@ import { Stack, Text } from '@tamagui/core';
 import { Card } from '@tamagui/card';
 import { Button } from '@tamagui/button';
 import { Image } from '@tamagui/image';
-import { useChapterViewStore, useQueueStore, useAudioStore } from '@/shared/store';
+import {
+  useChapterViewStore,
+  useQueueStore,
+  useAudioStore,
+} from '@/shared/store';
 import { getBookImageSource } from '@/shared/services';
 import { type Book } from '@/shared/utils';
 import { useTheme } from '@/shared/store';
@@ -113,7 +117,7 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
   const createChapterData = (book: Book, chapterNumber: number) => {
     const bookId = book.name.toLowerCase().replace(/\s+/g, '-');
     const chapterId = `${bookId}-${chapterNumber}`;
-    
+
     return {
       id: chapterId,
       book_name: book.name,
@@ -130,23 +134,21 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
   const handleChapterPress = async (chapterNumber: number) => {
     // Create chapter data
     const chapter = createChapterData(selectedBook, chapterNumber);
-    
-    // Add to front of queue
-    const queueStore = useQueueStore.getState();
-    queueStore.addToUserQueueFront({
-      type: 'chapter',
-      data: chapter,
-    });
-    
-    // Start playing immediately
+
+    // Start playing immediately WITHOUT adding to queue
     const audioStore = useAudioStore.getState();
-    await audioStore.playFromQueueItem({
-      type: 'chapter',
-      data: chapter,
-    });
-    
+    await audioStore.playFromQueueItem(
+      {
+        type: 'chapter',
+        data: chapter,
+      },
+      false
+    ); // false = not from queue, playing directly
+
     audioStore.play();
-    console.log(`Playing chapter ${chapterNumber} of ${selectedBook.name}`);
+    console.log(
+      `Playing chapter ${chapterNumber} of ${selectedBook.name} (not added to queue)`
+    );
   };
 
   const handleChapterCardPress = (chapterNumber: number) => {
@@ -156,15 +158,17 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
   const handleAddToQueue = (chapterNumber: number) => {
     // Create chapter data
     const chapter = createChapterData(selectedBook, chapterNumber);
-    
+
     // Add to back of queue
     const queueStore = useQueueStore.getState();
     queueStore.addToUserQueueBack({
       type: 'chapter',
       data: chapter,
     });
-    
-    console.log(`Added chapter ${chapterNumber} of ${selectedBook.name} to queue`);
+
+    console.log(
+      `Added chapter ${chapterNumber} of ${selectedBook.name} to queue`
+    );
   };
 
   const handlePlayBook = () => {
