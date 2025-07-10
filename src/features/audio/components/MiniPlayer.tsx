@@ -309,19 +309,6 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
 
   return (
     <View style={{ flex: 1, padding: Dimensions.spacing.md }}>
-      {/* Header */}
-      <View style={{ marginBottom: Dimensions.spacing.md }}>
-        <Text
-          style={{
-            fontSize: Fonts.size.lg,
-            fontWeight: Fonts.weight.bold,
-            color: colors.text,
-            textAlign: 'center',
-          }}>
-          {t('audio.queue', 'Queue')}
-        </Text>
-      </View>
-
       {/* Scrollable Content */}
       <GestureScrollView
         style={{ flex: 1 }}
@@ -352,7 +339,7 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
 
           {/* User Queue Items */}
           {userQueue.items.length > 0 ? (
-            <View style={{ minHeight: 100, flex: 1 }} pointerEvents='auto'>
+            <View style={{ minHeight: 100, flex: 1 }}>
               <DraggableFlatList
                 data={userQueue.items}
                 onDragEnd={handleUserQueueDragEnd}
@@ -429,13 +416,12 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
 
           {/* Auto Queue Items */}
           {automaticQueue.items.length > 0 ? (
-            <View pointerEvents='auto'>
+            <View>
               {automaticQueue.items.map((item, _index) => (
                 <View
                   key={item.id}
-                  style={{ flexDirection: 'row', alignItems: 'center' }}
-                  pointerEvents='auto'>
-                  <View style={{ flex: 1 }} pointerEvents='auto'>
+                  style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
                     <QueueItemComponent
                       item={item}
                       isFromUserQueue={false}
@@ -525,7 +511,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
   }));
 
   return (
-    <View style={{ flex: 1, overflow: 'hidden' }} pointerEvents='box-none'>
+    <View style={{ flex: 1, overflow: 'hidden' }}>
       <Animated.View
         style={[
           {
@@ -534,9 +520,8 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
             height: '100%',
           },
           animatedStyle,
-        ]}
-        pointerEvents='box-none'>
-        <View style={{ width: '50%', height: '100%' }} pointerEvents='auto'>
+        ]}>
+        <View style={{ width: '50%', height: '100%' }}>
           <TextModeView
             verseDisplayData={verseDisplayData}
             currentTime={currentTime}
@@ -544,7 +529,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
             onSeek={onSeek}
           />
         </View>
-        <View style={{ width: '50%', height: '100%' }} pointerEvents='auto'>
+        <View style={{ width: '50%', height: '100%' }}>
           <QueueModeView title={title} subtitle={subtitle} />
         </View>
       </Animated.View>
@@ -655,11 +640,17 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
       style={{
         flex: 1,
         margin: 0,
-        padding: Dimensions.spacing.md,
+        paddingHorizontal: Dimensions.spacing.md,
+        paddingTop: Dimensions.spacing.md,
+        paddingBottom: Dimensions.spacing.xs,
         backgroundColor: colors.background,
       }}
       testID='expanded-media-content'
-      pointerEvents='box-none'>
+      onStartShouldSetResponder={() => true}
+      onMoveShouldSetResponder={() => true}
+      onResponderGrant={() => {
+        // Prevent scroll events from falling through by capturing them
+      }}>
       {/* Book Info Row */}
       <View
         style={{
@@ -773,9 +764,7 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
       </View>
 
       {/* Content Area */}
-      <View
-        style={{ flex: 1, marginTop: Dimensions.spacing.md }}
-        pointerEvents='auto'>
+      <View style={{ flex: 1, marginTop: Dimensions.spacing.xs }}>
         <ContentSwitcher
           mode={currentMode}
           verseDisplayData={currentVerseDisplayData}
@@ -807,6 +796,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     totalTime,
     isPlaying,
     playbackSpeed,
+    currentVerseDisplayData,
     // Actions
     seek,
     previousVerse,
@@ -856,30 +846,59 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     setIsExpanded(targetValue === 1);
   };
 
-  // Drag gesture handler
+  // Drag gesture handler - only responds to primarily vertical gestures
   const gestureHandler =
     useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
-      onStart: (_, context) => {
+      onStart: (event, context) => {
         startY.value = expansionValue.value;
         context['startY'] = startY.value;
+        context['initialX'] = event.translationX;
+        context['initialY'] = event.translationY;
+        context['shouldHandle'] = false; // Will be determined in onActive
       },
       onActive: (event, context) => {
-        // Calculate drag progress
-        // Negative translationY means dragging up (expanding)
-        // Positive translationY means dragging down (collapsing)
-        const dragDistance = -event.translationY;
-        const maxDragDistance = screenHeight * 0.3; // Allow dragging up to 30% of screen height
-
-        // Calculate new expansion value based on drag distance
-        const dragProgress = dragDistance / maxDragDistance;
-        const newValue = Math.max(
-          0,
-          Math.min(1, (context['startY'] as number) + dragProgress)
+        // Determine gesture direction early in the gesture
+        const deltaX = Math.abs(
+          event.translationX - (context['initialX'] as number)
+        );
+        const deltaY = Math.abs(
+          event.translationY - (context['initialY'] as number)
         );
 
-        expansionValue.value = newValue;
+        // Only handle if this is primarily a vertical gesture
+        // Allow some horizontal movement but prioritize vertical
+        if (deltaY > 10 || deltaX < deltaY * 0.5) {
+          context['shouldHandle'] = true;
+        } else if (deltaX > 20 && deltaX > deltaY * 2) {
+          // This is clearly a horizontal gesture - don't handle it
+          context['shouldHandle'] = false;
+          return;
+        }
+
+        // Only process vertical expansion if we should handle this gesture
+        if (context['shouldHandle']) {
+          // Calculate drag progress
+          // Negative translationY means dragging up (expanding)
+          // Positive translationY means dragging down (collapsing)
+          const dragDistance = -event.translationY;
+          const maxDragDistance = screenHeight * 0.3; // Allow dragging up to 30% of screen height
+
+          // Calculate new expansion value based on drag distance
+          const dragProgress = dragDistance / maxDragDistance;
+          const newValue = Math.max(
+            0,
+            Math.min(1, (context['startY'] as number) + dragProgress)
+          );
+
+          expansionValue.value = newValue;
+        }
       },
-      onEnd: event => {
+      onEnd: (event, context) => {
+        // Only handle end if we were handling the gesture
+        if (!context['shouldHandle']) {
+          return;
+        }
+
         // Determine final state based on velocity and position
         const velocity = -event.velocityY; // Negative velocityY means upward velocity
         const currentValue = expansionValue.value;
@@ -1028,10 +1047,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       flexDirection: 'column',
     },
     expandContractTouchArea: {
-      paddingTop: Dimensions.spacing.xs, // Reduced from md to xs for less white space
-      paddingBottom: Dimensions.spacing.xs, // Reduced from sm to xs for tighter spacing
-      paddingHorizontal: Dimensions.spacing.xl,
-      alignSelf: 'center',
+      paddingTop: Dimensions.spacing.xs, // Keep top thin as before
+      paddingBottom: Dimensions.spacing.xs, // Keep bottom thin too
+      paddingHorizontal: 0, // Full width touch area
+      width: '100%', // Full width
+      alignItems: 'center', // Center content
     },
     expandContractBar: {
       height: 5,
@@ -1046,7 +1066,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     },
     bottomControlsContainer: {
       paddingHorizontal: Dimensions.spacing.md,
-      paddingTop: Dimensions.spacing.sm, // Reduced from md to sm for less space between expand bar and title
+      paddingTop: 2, // Minimal spacing for very tight layout
       paddingBottom: Dimensions.spacing.md + insets.bottom, // Add safe area padding back
       backgroundColor: colors.background,
     },
@@ -1088,7 +1108,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       testID={testID}
       accessibilityLabel={t('audio.audioPlayerControls')}>
       {/* Expand/Contract Bar - Always at the top of the container */}
-      <PanGestureHandler onGestureEvent={gestureHandler}>
+      <PanGestureHandler
+        onGestureEvent={gestureHandler}
+        simultaneousHandlers={[]}
+        shouldCancelWhenOutside={false}
+        enableTrackpadTwoFingerGesture={false}>
         <Animated.View style={styles.expandContractTouchArea}>
           <TouchableOpacity
             onPress={handleExpandContractPress}
@@ -1097,7 +1121,12 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               isExpanded ? t('audio.contractPlayer') : t('audio.expandPlayer')
             }
             accessibilityRole='button'
-            style={{ paddingVertical: 8, paddingHorizontal: 20 }}>
+            style={{
+              paddingVertical: 8, // Back to original size
+              paddingHorizontal: 0, // Remove horizontal padding since we want full width
+              width: '100%', // Full width
+              alignItems: 'center', // Center the visual bar
+            }}>
             <Animated.View
               style={[styles.expandContractBar, animatedBarStyle]}
             />
@@ -1106,9 +1135,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       </PanGestureHandler>
 
       {/* Middle Area - Animates height while bottom controls stay fixed */}
-      <Animated.View
-        style={[styles.middleArea, animatedMiddleAreaStyle]}
-        pointerEvents='auto'>
+      <Animated.View style={[styles.middleArea, animatedMiddleAreaStyle]}>
         <ExpandedMediaContent
           onTextPress={() => {}}
           onQueuePress={() => {}}
@@ -1119,99 +1146,208 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       </Animated.View>
 
       {/* Bottom Controls - Fixed at bottom of container */}
-      <View style={styles.bottomControlsContainer}>
-        {/* Top Row: Text and Version/Speed */}
-        <View style={styles.topRow}>
-          <View style={styles.textContainer}>
-            <Text style={styles.title} numberOfLines={1}>
-              {displayText()}
-            </Text>
-          </View>
-          {!isExpanded && (
-            <VersionText style={{ marginLeft: Dimensions.spacing.sm }} />
-          )}
-          {isExpanded && (
+      {!isExpanded ? (
+        // When collapsed, wrap bottom controls with gesture handler for upward swipes
+        <PanGestureHandler
+          onGestureEvent={gestureHandler}
+          simultaneousHandlers={[]}
+          shouldCancelWhenOutside={false}
+          enableTrackpadTwoFingerGesture={false}>
+          <Animated.View style={styles.bottomControlsContainer}>
+            {/* Top Row: Text and Version/Speed */}
+            <View style={styles.topRow}>
+              <View style={styles.textContainer}>
+                <Text style={styles.title} numberOfLines={1}>
+                  {displayText()}
+                </Text>
+              </View>
+              <VersionText style={{ marginLeft: Dimensions.spacing.sm }} />
+            </View>
+
+            {/* Progress Bar */}
+            <ProgressBar
+              currentTime={currentTime}
+              totalTime={totalTime}
+              onSeek={seek}
+              seekable={totalTime > 0}
+              testID='mini-player-progress'
+              verseMarkers={currentVerseDisplayData.map(verse => ({
+                verseNumber: verse.verseNumber,
+                startTime: verse.startTime,
+                endTime: verse.endTime,
+              }))}
+            />
+
+            {/* Five Circular Control Buttons */}
+            <View style={styles.controlsRow}>
+              {/* Previous Chapter - « */}
+              <TouchableOpacity
+                onPress={playPrevious}
+                style={[
+                  styles.circularButton,
+                  { backgroundColor: colors.primary + '20' },
+                ]}
+                testID='mini-player-previous-chapter'
+                accessibilityLabel={t('audio.previousChapter')}>
+                <PreviousChapterIcon size={20} color={colors.primary} />
+              </TouchableOpacity>
+
+              {/* Previous Verse - ‹ */}
+              <TouchableOpacity
+                onPress={previousVerse}
+                style={[
+                  styles.circularButton,
+                  { backgroundColor: colors.primary + '20' },
+                ]}
+                testID='mini-player-previous-verse'
+                accessibilityLabel={t('audio.previousVerse')}>
+                <PreviousVerseIcon size={20} color={colors.primary} />
+              </TouchableOpacity>
+
+              {/* Play/Pause - Center button */}
+              <TouchableOpacity
+                onPress={togglePlayPause}
+                style={[
+                  styles.circularButton,
+                  styles.primaryButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                testID='mini-player-play-pause'
+                accessibilityLabel={
+                  isPlaying ? t('audio.pause') : t('audio.play')
+                }>
+                {isPlaying ? (
+                  <PauseIcon size={28} color={colors.background} />
+                ) : (
+                  <PlayIcon size={28} color={colors.background} />
+                )}
+              </TouchableOpacity>
+
+              {/* Next Verse - › */}
+              <TouchableOpacity
+                onPress={nextVerse}
+                style={[
+                  styles.circularButton,
+                  { backgroundColor: colors.primary + '20' },
+                ]}
+                testID='mini-player-next-verse'
+                accessibilityLabel={t('audio.nextVerse')}>
+                <NextVerseIcon size={20} color={colors.primary} />
+              </TouchableOpacity>
+
+              {/* Next Chapter - » */}
+              <TouchableOpacity
+                onPress={onItemFinished}
+                style={[
+                  styles.circularButton,
+                  { backgroundColor: colors.primary + '20' },
+                ]}
+                testID='mini-player-next-chapter'
+                accessibilityLabel={t('audio.nextChapter')}>
+                <NextChapterIcon size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </PanGestureHandler>
+      ) : (
+        <View style={styles.bottomControlsContainer}>
+          {/* Top Row: Text and Version/Speed */}
+          <View style={styles.topRow}>
+            <View style={styles.textContainer}>
+              <Text style={styles.title} numberOfLines={1}>
+                {displayText()}
+              </Text>
+            </View>
             <SpeedControl style={{ marginLeft: Dimensions.spacing.xs }} />
-          )}
-        </View>
+          </View>
 
-        {/* Progress Bar */}
-        <ProgressBar
-          currentTime={currentTime}
-          totalTime={totalTime}
-          onSeek={seek}
-          seekable={totalTime > 0}
-          testID='mini-player-progress'
-        />
-
-        {/* Five Circular Control Buttons */}
-        <View style={styles.controlsRow}>
-          {/* Previous Chapter - « */}
-          <TouchableOpacity
-            onPress={playPrevious}
-            style={[
-              styles.circularButton,
-              { backgroundColor: colors.primary + '20' },
-            ]}
-            testID='mini-player-previous-chapter'
-            accessibilityLabel={t('audio.previousChapter')}>
-            <PreviousChapterIcon size={20} color={colors.primary} />
-          </TouchableOpacity>
-
-          {/* Previous Verse - ‹ */}
-          <TouchableOpacity
-            onPress={previousVerse}
-            style={[
-              styles.circularButton,
-              { backgroundColor: colors.primary + '20' },
-            ]}
-            testID='mini-player-previous-verse'
-            accessibilityLabel={t('audio.previousVerse')}>
-            <PreviousVerseIcon size={20} color={colors.primary} />
-          </TouchableOpacity>
-
-          {/* Play/Pause - Center button */}
-          <TouchableOpacity
-            onPress={togglePlayPause}
-            style={[
-              styles.circularButton,
-              styles.primaryButton,
-              { backgroundColor: colors.primary },
-            ]}
-            testID='mini-player-play-pause'
-            accessibilityLabel={isPlaying ? t('audio.pause') : t('audio.play')}>
-            {isPlaying ? (
-              <PauseIcon size={28} color={colors.background} />
-            ) : (
-              <PlayIcon size={28} color={colors.background} />
+          {/* Progress Bar */}
+          <ProgressBar
+            currentTime={currentTime}
+            totalTime={totalTime}
+            onSeek={seek}
+            seekable={totalTime > 0}
+            testID='mini-player-progress'
+            verseMarkers={currentVerseDisplayData.map(
+              (verse: VerseDisplayData) => ({
+                verseNumber: verse.verseNumber,
+                startTime: verse.startTime,
+                endTime: verse.endTime,
+              })
             )}
-          </TouchableOpacity>
+          />
 
-          {/* Next Verse - › */}
-          <TouchableOpacity
-            onPress={nextVerse}
-            style={[
-              styles.circularButton,
-              { backgroundColor: colors.primary + '20' },
-            ]}
-            testID='mini-player-next-verse'
-            accessibilityLabel={t('audio.nextVerse')}>
-            <NextVerseIcon size={20} color={colors.primary} />
-          </TouchableOpacity>
+          {/* Five Circular Control Buttons */}
+          <View style={styles.controlsRow}>
+            {/* Previous Chapter - « */}
+            <TouchableOpacity
+              onPress={playPrevious}
+              style={[
+                styles.circularButton,
+                { backgroundColor: colors.primary + '20' },
+              ]}
+              testID='mini-player-previous-chapter'
+              accessibilityLabel={t('audio.previousChapter')}>
+              <PreviousChapterIcon size={20} color={colors.primary} />
+            </TouchableOpacity>
 
-          {/* Next Chapter - » */}
-          <TouchableOpacity
-            onPress={onItemFinished}
-            style={[
-              styles.circularButton,
-              { backgroundColor: colors.primary + '20' },
-            ]}
-            testID='mini-player-next-chapter'
-            accessibilityLabel={t('audio.nextChapter')}>
-            <NextChapterIcon size={20} color={colors.primary} />
-          </TouchableOpacity>
+            {/* Previous Verse - ‹ */}
+            <TouchableOpacity
+              onPress={previousVerse}
+              style={[
+                styles.circularButton,
+                { backgroundColor: colors.primary + '20' },
+              ]}
+              testID='mini-player-previous-verse'
+              accessibilityLabel={t('audio.previousVerse')}>
+              <PreviousVerseIcon size={20} color={colors.primary} />
+            </TouchableOpacity>
+
+            {/* Play/Pause - Center button */}
+            <TouchableOpacity
+              onPress={togglePlayPause}
+              style={[
+                styles.circularButton,
+                styles.primaryButton,
+                { backgroundColor: colors.primary },
+              ]}
+              testID='mini-player-play-pause'
+              accessibilityLabel={
+                isPlaying ? t('audio.pause') : t('audio.play')
+              }>
+              {isPlaying ? (
+                <PauseIcon size={28} color={colors.background} />
+              ) : (
+                <PlayIcon size={28} color={colors.background} />
+              )}
+            </TouchableOpacity>
+
+            {/* Next Verse - › */}
+            <TouchableOpacity
+              onPress={nextVerse}
+              style={[
+                styles.circularButton,
+                { backgroundColor: colors.primary + '20' },
+              ]}
+              testID='mini-player-next-verse'
+              accessibilityLabel={t('audio.nextVerse')}>
+              <NextVerseIcon size={20} color={colors.primary} />
+            </TouchableOpacity>
+
+            {/* Next Chapter - » */}
+            <TouchableOpacity
+              onPress={onItemFinished}
+              style={[
+                styles.circularButton,
+                { backgroundColor: colors.primary + '20' },
+              ]}
+              testID='mini-player-next-chapter'
+              accessibilityLabel={t('audio.nextChapter')}>
+              <NextChapterIcon size={20} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Version Change Popup */}
       <Modal
