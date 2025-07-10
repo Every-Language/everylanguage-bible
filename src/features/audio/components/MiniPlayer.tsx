@@ -26,6 +26,7 @@ import Animated, {
 import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
+  ScrollView as GestureScrollView,
 } from 'react-native-gesture-handler';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
@@ -156,8 +157,8 @@ const TextModeView: React.FC<TextModeViewProps> = ({
   };
 
   return (
-    <View style={{ flex: 1 }} pointerEvents='box-none'>
-      <ScrollView
+    <View style={{ flex: 1 }}>
+      <GestureScrollView
         ref={scrollViewRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: Dimensions.spacing.md }}
@@ -165,8 +166,7 @@ const TextModeView: React.FC<TextModeViewProps> = ({
         keyboardShouldPersistTaps='handled'
         nestedScrollEnabled={true}
         scrollEventThrottle={16}
-        removeClippedSubviews={false}
-        overScrollMode='never'
+        bounces={true}
         onScrollBeginDrag={handleScrollBegin}
         onScrollEndDrag={handleScrollEnd}
         onMomentumScrollEnd={handleScrollEnd}>
@@ -220,7 +220,7 @@ const TextModeView: React.FC<TextModeViewProps> = ({
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </GestureScrollView>
     </View>
   );
 };
@@ -309,9 +309,7 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
   const currentItem = getCurrentItem();
 
   return (
-    <View
-      style={{ flex: 1, padding: Dimensions.spacing.md }}
-      pointerEvents='box-none'>
+    <View style={{ flex: 1, padding: Dimensions.spacing.md }}>
       {/* Header */}
       <View style={{ marginBottom: Dimensions.spacing.md }}>
         <Text
@@ -326,16 +324,14 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView
+      <GestureScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={true}
         contentContainerStyle={{ paddingBottom: Dimensions.spacing.md }}
         nestedScrollEnabled={true}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps='handled'
-        removeClippedSubviews={false}
-        overScrollMode='never'
-        bounces={false}>
+        bounces={true}>
         {/* User Queue Section */}
         <View style={{ marginBottom: Dimensions.spacing.lg }}>
           <View
@@ -493,7 +489,7 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
             </View>
           )}
         </View>
-      </ScrollView>
+      </GestureScrollView>
     </View>
   );
 };
