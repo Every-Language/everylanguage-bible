@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import DraggableFlatList, {
   ScaleDecorator,
-  ShadowDecorator,
   OpacityDecorator,
 } from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -363,23 +362,21 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
                 activationDistance={15}
                 renderItem={({ item, drag, isActive, getIndex }) => (
                   <ScaleDecorator>
-                    <ShadowDecorator>
-                      <OpacityDecorator>
-                        <QueueItemComponent
-                          item={item}
-                          isFromUserQueue={true}
-                          onPress={() => handleItemPress(item)}
-                          onRemove={() => {
-                            const index = getIndex();
-                            if (index !== undefined) {
-                              handleRemoveFromUserQueue(index);
-                            }
-                          }}
-                          drag={drag}
-                          isActive={isActive || currentItem?.id === item.id}
-                        />
-                      </OpacityDecorator>
-                    </ShadowDecorator>
+                    <OpacityDecorator>
+                      <QueueItemComponent
+                        item={item}
+                        isFromUserQueue={true}
+                        onPress={() => handleItemPress(item)}
+                        onRemove={() => {
+                          const index = getIndex();
+                          if (index !== undefined) {
+                            handleRemoveFromUserQueue(index);
+                          }
+                        }}
+                        drag={drag}
+                        isActive={isActive || currentItem?.id === item.id}
+                      />
+                    </OpacityDecorator>
                   </ScaleDecorator>
                 )}
               />

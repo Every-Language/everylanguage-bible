@@ -111,17 +111,18 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
   const styles = StyleSheet.create({
     container: {
       flexDirection: 'row',
-      backgroundColor: isFromUserQueue
-        ? colors.primary + '10'
-        : colors.background,
+      backgroundColor: isActive
+        ? colors.primary + '20'
+        : isFromUserQueue
+          ? colors.primary + '10'
+          : colors.background,
       borderRadius: Dimensions.radius.md,
       padding: Dimensions.spacing.sm,
       marginVertical: Dimensions.spacing.xs,
       marginHorizontal: Dimensions.spacing.sm,
       borderWidth: isActive ? 2 : 1,
-      borderColor: isActive ? colors.primary : colors.text + '20',
+      borderColor: isActive ? colors.primary : colors.text + '15',
       alignItems: 'center',
-      ...Dimensions.shadow.sm,
     },
     queueTypeIndicator: {
       marginRight: Dimensions.spacing.sm,
