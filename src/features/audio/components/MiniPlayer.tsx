@@ -1212,7 +1212,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       style={[styles.container, animatedContainerStyle]}
       testID={testID}
       accessibilityLabel={t('audio.audioPlayerControls')}>
-      {/* Expand/Contract Bar - Always at the top of the container */}
+      {/* Expand/Contract Bar - Always visible at the top of the container */}
       <PanGestureHandler
         onGestureEvent={gestureHandler}
         simultaneousHandlers={[]}
@@ -1241,25 +1241,50 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
       {/* Middle Area - Animates height while bottom controls stay fixed */}
       <Animated.View style={[styles.middleArea, animatedMiddleAreaStyle]}>
-        <PanGestureHandler
-          onGestureEvent={horizontalGestureHandler}
-          simultaneousHandlers={[]}
-          shouldCancelWhenOutside={false}
-          enableTrackpadTwoFingerGesture={false}
-          activeOffsetX={[-20, 20]}
-          failOffsetY={[-20, 20]}>
-          <Animated.View style={{ flex: 1 }}>
-            <ExpandedMediaContent
-              onTextPress={() => setExpandedMode('text')}
-              onQueuePress={() => setExpandedMode('queue')}
-              onVersionPress={() => setShowVersionPopup(true)}
-              onVersePress={handleVersePress}
-              onSeek={seek}
-              currentMode={expandedMode}
-              slideAnimation={horizontalSlideAnimation}
-            />
-          </Animated.View>
-        </PanGestureHandler>
+        {/* When expanded, wrap the content with gesture handler for expand/contract */}
+        {isExpanded ? (
+          <PanGestureHandler
+            onGestureEvent={gestureHandler}
+            simultaneousHandlers={[]}
+            shouldCancelWhenOutside={false}
+            enableTrackpadTwoFingerGesture={false}
+            activeOffsetY={[-20, 20]}
+            failOffsetX={[-20, 20]}>
+            <Animated.View style={{ flex: 1 }}>
+              {/* Horizontal gesture handler for mode switching in expanded view */}
+              <PanGestureHandler
+                onGestureEvent={horizontalGestureHandler}
+                simultaneousHandlers={[]}
+                shouldCancelWhenOutside={false}
+                enableTrackpadTwoFingerGesture={false}
+                activeOffsetX={[-20, 20]}
+                failOffsetY={[-20, 20]}>
+                <Animated.View style={{ flex: 1 }}>
+                  <ExpandedMediaContent
+                    onTextPress={() => setExpandedMode('text')}
+                    onQueuePress={() => setExpandedMode('queue')}
+                    onVersionPress={() => setShowVersionPopup(true)}
+                    onVersePress={handleVersePress}
+                    onSeek={seek}
+                    currentMode={expandedMode}
+                    slideAnimation={horizontalSlideAnimation}
+                  />
+                </Animated.View>
+              </PanGestureHandler>
+            </Animated.View>
+          </PanGestureHandler>
+        ) : (
+          /* When collapsed, just show the content without gesture handling */
+          <ExpandedMediaContent
+            onTextPress={() => setExpandedMode('text')}
+            onQueuePress={() => setExpandedMode('queue')}
+            onVersionPress={() => setShowVersionPopup(true)}
+            onVersePress={handleVersePress}
+            onSeek={seek}
+            currentMode={expandedMode}
+            slideAnimation={horizontalSlideAnimation}
+          />
+        )}
       </Animated.View>
 
       {/* Bottom Controls - Fixed at bottom of container */}
