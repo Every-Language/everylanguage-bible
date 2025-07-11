@@ -4,11 +4,8 @@ export { useAudioStore } from './audioStore';
 // Theme store
 export { useThemeStore, useTheme } from './themeStore';
 
-// Chapter view store
-export { useChapterViewStore } from './chapterViewStore';
-
-// Verse view store
-export { useVerseViewStore } from './verseViewStore';
+// Chapter card store (unified chapter/verse view)
+export { useChapterCardStore } from './chapterCardStore';
 
 // Queue store
 export { useQueueStore } from './queueStore';

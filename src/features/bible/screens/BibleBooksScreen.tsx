@@ -11,15 +11,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BookCard, ChapterGrid, OptionsPanel } from '@/shared/components/ui';
 import { MoreIcon } from '@/shared/components/ui/icons/AudioIcons';
-import { ChapterView, VerseView } from '../components';
+import { ChapterCard } from '../components';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
-import {
-  useAudioStore,
-  useTheme,
-  useChapterViewStore,
-  useVerseViewStore,
-} from '@/shared/store';
+import { useAudioStore, useTheme, useChapterCardStore } from '@/shared/store';
 import { useMiniPlayerHeight } from '@/shared/hooks';
 
 interface BibleBooksScreenProps {
@@ -35,9 +30,8 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
 }) => {
   const { colors, toggleTheme } = useTheme();
   const { currentBook, currentChapter } = useAudioStore();
-  const { openChapterView, closeChapterView, isOpen, selectedBook } =
-    useChapterViewStore();
-  const { openVerseView } = useVerseViewStore();
+  const { openChapterCard, closeChapterCard, isOpen, selectedBook } =
+    useChapterCardStore();
   const insets = useSafeAreaInsets();
   const { collapsedHeight } = useMiniPlayerHeight();
   const [books, setBooks] = useState<Book[]>([]);
@@ -59,7 +53,8 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         const bibleBooks = loadBibleBooks();
         setBooks(bibleBooks);
       } catch (error) {
-        console.error('Error loading books:', error);
+        // Error loading books - could implement error reporting here
+        void error;
       } finally {
         setLoading(false);
       }
@@ -74,11 +69,11 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       lastExpandedBookRef.current = book.id;
       setExpandedBookId(null);
     } else if (isOpen && selectedBook?.id === book.id) {
-      // If chapter view is open for this book, close it
-      closeChapterView();
+      // If chapter card is open for this book, close it
+      closeChapterCard();
     } else {
-      // Otherwise, open chapter view overlay
-      openChapterView(book);
+      // Otherwise, open chapter card overlay
+      openChapterCard(book);
     }
   };
 
@@ -101,16 +96,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       onChapterSelect(expandedBook, chapterNumber);
       // Keep the chapter grid open so user can see highlighting and select other chapters
     }
-  };
-
-  const handleChapterViewChapterSelect = (book: Book, chapter: number) => {
-    // Play the chapter when play button is pressed
-    onChapterSelect(book, chapter);
-  };
-
-  const handleChapterViewVerseViewOpen = (book: Book, chapter: number) => {
-    // Open verse view when chapter card is pressed
-    openVerseView(book, chapter);
   };
 
   const handleOptionsPress = () => {
@@ -346,16 +331,10 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         </View>
       </ScrollView>
 
-      {/* Chapter View Overlay */}
-      <ChapterView
-        onChapterSelect={handleChapterViewChapterSelect}
-        onVerseViewOpen={handleChapterViewVerseViewOpen}
-      />
-
-      {/* Verse View Overlay - positioned in front of ChapterView but behind media player */}
-      <VerseView
-        onVerseSelect={onVerseSelect}
+      {/* Chapter Card - unified chapter/verse view */}
+      <ChapterCard
         onChapterSelect={onChapterSelect}
+        onVerseSelect={onVerseSelect}
       />
 
       {/* Options Panel */}

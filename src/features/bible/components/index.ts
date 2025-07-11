@@ -1,3 +1,2 @@
 // Bible components
-export { ChapterView } from './ChapterView';
-export { VerseView } from './VerseView';
+export { ChapterCard } from './ChapterCard';
