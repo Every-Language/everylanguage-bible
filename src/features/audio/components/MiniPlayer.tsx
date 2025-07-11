@@ -55,15 +55,15 @@ interface MiniPlayerProps {
 // Content mode types
 type ContentMode = 'text' | 'queue';
 
-// Text mode component - now uses data from audio store
-interface TextModeViewProps {
+// Track text view component - now uses data from audio store
+interface TrackTextViewProps {
   verseDisplayData: VerseDisplayData[];
   currentTime: number;
   onVersePress?: ((verseNumber: number) => void) | undefined;
   onSeek?: ((time: number) => void) | undefined;
 }
 
-const TextModeView: React.FC<TextModeViewProps> = ({
+const TrackTextView: React.FC<TrackTextViewProps> = ({
   verseDisplayData,
   currentTime: _currentTime,
   onVersePress,
@@ -224,13 +224,13 @@ const TextModeView: React.FC<TextModeViewProps> = ({
   );
 };
 
-// Queue mode component
-interface QueueModeViewProps {
+// Queue view component
+interface QueueViewProps {
   title?: string | undefined;
   subtitle?: string | undefined;
 }
 
-const QueueModeView: React.FC<QueueModeViewProps> = ({
+const QueueView: React.FC<QueueViewProps> = ({
   title: _title,
   subtitle: _subtitle,
 }) => {
@@ -506,7 +506,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
           animatedStyle,
         ]}>
         <View style={{ width: '50%', height: '100%' }}>
-          <TextModeView
+          <TrackTextView
             verseDisplayData={verseDisplayData}
             currentTime={currentTime}
             onVersePress={onVersePress}
@@ -514,7 +514,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
           />
         </View>
         <View style={{ width: '50%', height: '100%' }}>
-          <QueueModeView title={title} subtitle={subtitle} />
+          <QueueView title={title} subtitle={subtitle} />
         </View>
       </Animated.View>
     </View>
@@ -1050,7 +1050,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   // Handle verse press - navigation handled by audio store
   const handleVersePress = (verseNumber: number) => {
     console.log(
-      `Verse ${verseNumber} tapped - seeking handled by TextModeView`
+      `Verse ${verseNumber} tapped - seeking handled by TrackTextView`
     );
   };
 

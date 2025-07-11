@@ -98,6 +98,7 @@ function getChapterVerseCount(bookName: string, chapter: number): number {
     Luke: { 1: 80, 2: 52, 3: 38, 4: 44, 5: 39 },
     Matthew: { 1: 25, 2: 23, 3: 17, 4: 25, 5: 48 },
     Mark: { 1: 45, 2: 28, 3: 35, 4: 41, 5: 43 },
+    Galatians: { 1: 24, 2: 21, 3: 29, 4: 31, 5: 26, 6: 18 },
   };
 
   return verseCountMap[bookName]?.[chapter] || 35; // Default to 35 if not found
@@ -175,12 +176,12 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
   isUserQueueActive: false,
   bibleBooks: [],
 
-  // Initialize default queue with John 1 and Luke 1:15-55 in user queue
+  // Initialize default queue with Galatians 1 and Luke 1:15-55 in user queue
   initializeDefaultQueue: () => {
     try {
-      // Create John 1 chapter (full chapter)
-      const johnChapter = createMockChapter('john-1');
-      const johnQueueItem = createQueueItem('chapter', johnChapter);
+      // Create Galatians 1 chapter (full chapter)
+      const galatiansChapter = createMockChapter('galatians-1');
+      const galatiansQueueItem = createQueueItem('chapter', galatiansChapter);
 
       // Create Luke 1:15-55 passage (partial chapter)
       const lukePassage = {
@@ -199,7 +200,7 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       set(state => ({
         userQueue: {
           ...state.userQueue,
-          items: [johnQueueItem, lukeQueueItem],
+          items: [galatiansQueueItem, lukeQueueItem],
           isActive: true,
         },
         isUserQueueActive: true,
@@ -209,7 +210,7 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       get().updateAutomaticQueueFromUserQueue();
 
       console.log(
-        'Default user queue initialized with John 1 and Luke 1:15-55'
+        'Default user queue initialized with Galatians 1 and Luke 1:15-55'
       );
     } catch (error) {
       console.error('Error initializing default queue:', error);

@@ -24,33 +24,33 @@ export const MainNavigator: React.FC = () => {
   } = audioStore;
   const { initializeDefaultQueue } = useQueueStore();
 
-  // Set up John 1 as default when app starts
+  // Set up Galatians 1 as default when app starts
   useEffect(() => {
     const initializeDefaultAudio = async () => {
       // Initialize Bible books data first
       initializeBibleBooks();
 
-      // Initialize the queue with John 1 and Luke 1
+      // Initialize the queue with Galatians 1 and Luke 1
       initializeDefaultQueue();
 
       // Only set default if no proper chapter is loaded (ignore mock recording)
       if (!currentChapter) {
         try {
-          // Create a John 1 recording ID
-          const johnBook: Book = {
-            id: '43', // Book ID is the order number padded
-            name: 'John',
-            chapters: 21,
+          // Create a Galatians 1 recording ID
+          const galatiansBook: Book = {
+            id: '48', // Book ID is the order number padded
+            name: 'Galatians',
+            chapters: 6,
             testament: 'new',
-            imagePath: '43_john.png',
-            order: 43, // John is the 43rd book
+            imagePath: '48_galatians.png',
+            order: 48, // Galatians is the 48th book
           };
-          const johnRecordingId = getRecordingId(johnBook, 1);
+          const galatiansRecordingId = getRecordingId(galatiansBook, 1);
 
-          // Load John 1 but don't start playing
-          await setCurrentAudio(johnRecordingId);
+          // Load Galatians 1 but don't start playing
+          await setCurrentAudio(galatiansRecordingId);
           console.log(
-            'Initialized with John 1 - verse data should now be populated'
+            'Initialized with Galatians 1 - verse data should now be populated'
           );
         } catch (error) {
           console.error('Failed to initialize default audio:', error);
