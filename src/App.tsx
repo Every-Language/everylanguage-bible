@@ -33,7 +33,10 @@ export default function App() {
             <Stack.Navigator initialRouteName='Onboarding'>
               <Stack.Screen
                 name='Home'
-                options={{ headerShown: false }}
+                options={{
+                  headerShown: false,
+                  gestureEnabled: false,
+                }}
                 component={AppContent}
               />
               <Stack.Screen

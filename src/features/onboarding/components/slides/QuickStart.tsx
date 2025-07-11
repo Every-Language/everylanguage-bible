@@ -20,12 +20,12 @@ const QuickStart: React.FC<QuickStartProps> = () => {
 
   const handleStartListening = () => {
     console.log('Start listening now');
-    navigation.navigate('Home');
+    navigation.replace('Home');
   };
 
   const handleExploreMore = () => {
     console.log('Explore more');
-    navigation.navigate('Home');
+    navigation.replace('Home');
   };
 
   const styles = StyleSheet.create({

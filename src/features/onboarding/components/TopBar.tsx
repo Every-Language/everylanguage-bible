@@ -79,7 +79,7 @@ const TopBar = (props: {
 
       <TouchableOpacity
         onPress={() => {
-          navigation.navigate('Home');
+          navigation.replace('Home');
         }}>
         <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
       </TouchableOpacity>

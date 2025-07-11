@@ -42,7 +42,7 @@ const BottomBar = (props: {
       {currentIndex == Slides.length - 1 ? (
         <TouchableOpacity
           onPress={() => {
-            navigation.navigate('Home');
+            navigation.replace('Home');
           }}
           style={styles.nextButton}>
           <Text style={styles.nextText}>{t('onboarding.finish')}</Text>
