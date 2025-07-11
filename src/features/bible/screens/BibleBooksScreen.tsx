@@ -4,46 +4,435 @@ import {
   StyleSheet,
   Text,
   ActivityIndicator,
-  ScrollView,
   TouchableOpacity,
   Dimensions as RNDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BookCard, ChapterGrid, OptionsPanel } from '@/shared/components/ui';
+import {
+  PanGestureHandler,
+  ScrollView as GestureScrollView,
+} from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { OptionsPanel, ToggleButtons } from '@/shared/components/ui';
 import { MoreIcon } from '@/shared/components/ui/icons/AudioIcons';
 import { ChapterCard } from '../components';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
-import { useAudioStore, useTheme, useChapterCardStore } from '@/shared/store';
-import { useMiniPlayerHeight } from '@/shared/hooks';
+import { useTheme, useChapterCardStore } from '@/shared/store';
+import {
+  useMiniPlayerHeight,
+  useHorizontalSlideAnimation,
+} from '@/shared/hooks';
+import { getBookImageSource } from '@/shared/services';
 
 interface BibleBooksScreenProps {
   onChapterSelect: (book: Book, chapter: number) => void;
   onVerseSelect: (book: Book, chapter: number, verse: number) => void;
 }
 
-const BOOKS_PER_ROW = Dimensions.layout.booksPerRow;
+type TestamentMode = 'old' | 'new';
+
+// Go to Testament Tile Component
+interface GoToTestamentTileProps {
+  targetTestament: 'old' | 'new';
+  previewBooks: Book[];
+  onPress: () => void;
+  testID?: string;
+}
+
+const GoToTestamentTile: React.FC<GoToTestamentTileProps> = ({
+  targetTestament,
+  previewBooks,
+  onPress,
+  testID,
+}) => {
+  const { colors } = useTheme();
+
+  const styles = StyleSheet.create({
+    container: {
+      backgroundColor: colors.secondary + '30', // Different fill color
+      borderRadius: Dimensions.radius.lg,
+      padding: Dimensions.spacing.sm,
+      borderWidth: 2,
+      borderColor: colors.primary + '20', // Same border as regular tiles
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      aspectRatio: 1, // Square tiles
+    },
+    miniIconsContainer: {
+      flex: 1,
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      alignContent: 'space-between',
+      padding: Dimensions.spacing.sm,
+    },
+    miniBookImage: {
+      width: '30%',
+      aspectRatio: 1,
+      borderRadius: 4,
+      tintColor: colors.text,
+    },
+    miniFallbackIcon: {
+      width: '30%',
+      aspectRatio: 1,
+      borderRadius: 4,
+      backgroundColor: colors.secondary + '50',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    miniFallbackEmoji: {
+      fontSize: 16,
+      color: colors.text,
+    },
+    title: {
+      fontSize: Fonts.size.lg,
+      fontWeight: Fonts.weight.semibold,
+      textAlign: 'center',
+      color: colors.text,
+      lineHeight: 22,
+      alignSelf: 'stretch',
+    },
+  });
+
+  const renderMiniBookImage = (book: Book) => {
+    const imageSource = getBookImageSource(book.imagePath);
+
+    if (imageSource) {
+      return (
+        <Animated.Image
+          key={book.id}
+          source={imageSource}
+          style={styles.miniBookImage}
+          resizeMode='contain'
+        />
+      );
+    }
+
+    return (
+      <View key={book.id} style={styles.miniFallbackIcon}>
+        <Text style={styles.miniFallbackEmoji}>📖</Text>
+      </View>
+    );
+  };
+
+  return (
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onPress}
+      accessibilityRole='button'
+      accessibilityLabel={`Go to ${targetTestament === 'old' ? 'Old' : 'New'} Testament`}
+      testID={testID}>
+      <View style={styles.miniIconsContainer}>
+        {previewBooks.slice(0, 6).map(book => renderMiniBookImage(book))}
+      </View>
+      <Text style={styles.title} numberOfLines={2}>
+        Go to {targetTestament === 'old' ? 'Old' : 'New'} Testament
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+// Square Book Tile Component
+interface BookTileProps {
+  book: Book;
+  onPress: () => void;
+  testID?: string;
+}
+
+const BookTile: React.FC<BookTileProps> = ({ book, onPress, testID }) => {
+  const { colors } = useTheme();
+
+  const styles = StyleSheet.create({
+    container: {
+      backgroundColor: colors.background,
+      borderRadius: Dimensions.radius.lg,
+      padding: Dimensions.spacing.sm,
+      borderWidth: 2,
+      borderColor: colors.primary + '20',
+      alignItems: 'center',
+      justifyContent: 'center',
+      aspectRatio: 1, // Square tiles
+    },
+    imageContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: Dimensions.spacing.xs,
+    },
+    bookImage: {
+      //width: 64,
+      //height: 64,
+      flex: 1,
+      maxWidth: '100%',
+      borderRadius: Dimensions.radius.sm,
+      tintColor: colors.text,
+    },
+    fallbackIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: Dimensions.radius.sm,
+      backgroundColor: colors.secondary + '30',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    fallbackEmoji: {
+      fontSize: 28,
+      color: colors.text,
+    },
+    title: {
+      fontSize: Fonts.size.lg,
+      fontWeight: Fonts.weight.semibold,
+      textAlign: 'center',
+      color: colors.text,
+      lineHeight: 22,
+    },
+  });
+
+  const renderBookImage = () => {
+    const imageSource = getBookImageSource(book.imagePath);
+
+    if (imageSource) {
+      return (
+        <Animated.Image
+          source={imageSource}
+          style={styles.bookImage}
+          resizeMode='contain'
+        />
+      );
+    }
+
+    return (
+      <View style={styles.fallbackIcon}>
+        <Text style={styles.fallbackEmoji}>📖</Text>
+      </View>
+    );
+  };
+
+  return (
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onPress}
+      accessibilityRole='button'
+      accessibilityLabel={`${book.name} book`}
+      testID={testID}>
+      <View style={styles.imageContainer}>{renderBookImage()}</View>
+      <Text style={styles.title} numberOfLines={2}>
+        {book.name}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+// Testament View Component
+interface TestamentViewProps {
+  books: Book[];
+  title: string;
+  onBookPress: (book: Book) => void;
+  isOldTestament?: boolean;
+  newTestamentBooks?: Book[];
+  onGoToNewTestament?: () => void;
+}
+
+const TestamentView: React.FC<TestamentViewProps> = ({
+  books,
+  title,
+  onBookPress,
+  isOldTestament = false,
+  newTestamentBooks = [],
+  onGoToNewTestament,
+}) => {
+  const { colors } = useTheme();
+  const { collapsedHeight } = useMiniPlayerHeight();
+
+  // Calculate screen width for equal spacing
+  const screenWidth = RNDimensions.get('window').width;
+  const TILES_PER_ROW = 2;
+
+  // Calculate equal spacing: left edge, between tiles, right edge
+  const totalHorizontalPadding = Dimensions.spacing.lg * 2; // Left and right padding
+  const availableWidth = screenWidth - totalHorizontalPadding;
+  const spaceBetweenTiles = Dimensions.spacing.md;
+  const tileWidth = (availableWidth - spaceBetweenTiles) / TILES_PER_ROW;
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: Dimensions.spacing.lg,
+    },
+    title: {
+      fontSize: Fonts.size['2xl'],
+      fontWeight: Fonts.weight.bold,
+      color: colors.primary,
+      textAlign: 'center',
+      marginBottom: Dimensions.spacing.lg,
+      marginTop: Dimensions.spacing.md,
+    },
+    tilesContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    },
+    tileWrapper: {
+      width: tileWidth,
+      marginBottom: Dimensions.spacing.md,
+    },
+    scrollContent: {
+      paddingBottom: collapsedHeight + Dimensions.spacing.md,
+    },
+  });
+
+  // Group books into rows for proper spacing
+  const createBookRows = (
+    booksList: Book[],
+    includeSpecialTile: boolean = false
+  ) => {
+    const rows: Book[][] = [];
+    const booksToProcess = includeSpecialTile
+      ? [
+          ...booksList,
+          { id: 'go-to-new-testament', isSpecialTile: true } as any,
+        ]
+      : booksList;
+
+    for (let i = 0; i < booksToProcess.length; i += TILES_PER_ROW) {
+      rows.push(booksToProcess.slice(i, i + TILES_PER_ROW));
+    }
+    return rows;
+  };
+
+  const bookRows = createBookRows(books, isOldTestament);
+
+  return (
+    <GestureScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled={true}
+      scrollEventThrottle={16}
+      keyboardShouldPersistTaps='handled'
+      bounces={true}>
+      <Text style={styles.title}>{title}</Text>
+
+      {bookRows.map((row, rowIndex) => (
+        <View
+          key={`row-${rowIndex}`}
+          style={[
+            styles.tilesContainer,
+            row.length === 1 && { justifyContent: 'center' },
+          ]}>
+          {row.map((book, _bookIndex) => (
+            <View key={book.id} style={styles.tileWrapper}>
+              {(book as any).isSpecialTile ? (
+                <GoToTestamentTile
+                  targetTestament='new'
+                  previewBooks={newTestamentBooks}
+                  onPress={onGoToNewTestament || (() => {})}
+                  testID='go-to-new-testament-tile'
+                />
+              ) : (
+                <BookTile
+                  book={book}
+                  onPress={() => onBookPress(book)}
+                  testID={`book-tile-${book.id}`}
+                />
+              )}
+            </View>
+          ))}
+          {/* Add empty space if row is incomplete and there are 2+ items */}
+          {row.length < TILES_PER_ROW && row.length > 1 && (
+            <View style={styles.tileWrapper} />
+          )}
+        </View>
+      ))}
+    </GestureScrollView>
+  );
+};
+
+// Content Switcher with 200% width animation
+interface ContentSwitcherProps {
+  oldTestamentBooks: Book[];
+  newTestamentBooks: Book[];
+  onBookPress: (book: Book) => void;
+  onGoToNewTestament: () => void;
+  slideAnimation: Animated.SharedValue<number>;
+}
+
+const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
+  oldTestamentBooks,
+  newTestamentBooks,
+  onBookPress,
+  onGoToNewTestament,
+  slideAnimation,
+}) => {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: `${slideAnimation.value * -50}%` }],
+  }));
+
+  return (
+    <View style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+      <Animated.View
+        style={[
+          {
+            flexDirection: 'row',
+            width: '200%',
+            height: '100%',
+          },
+          animatedStyle,
+        ]}>
+        <View style={{ width: '50%', height: '100%' }}>
+          <TestamentView
+            books={oldTestamentBooks}
+            title='Old Testament'
+            onBookPress={onBookPress}
+            isOldTestament={true}
+            newTestamentBooks={newTestamentBooks}
+            onGoToNewTestament={onGoToNewTestament}
+          />
+        </View>
+        <View style={{ width: '50%', height: '100%' }}>
+          <TestamentView
+            books={newTestamentBooks}
+            title='New Testament'
+            onBookPress={onBookPress}
+          />
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
 
 export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
   onVerseSelect,
 }) => {
   const { colors, toggleTheme } = useTheme();
-  const { currentBook, currentChapter } = useAudioStore();
-  const { openChapterCard, closeChapterCard, isOpen, selectedBook } =
-    useChapterCardStore();
+  const { openChapterCard } = useChapterCardStore();
   const insets = useSafeAreaInsets();
-  const { collapsedHeight } = useMiniPlayerHeight();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
+  const [testamentMode, setTestamentMode] = useState<TestamentMode>('old');
   const [showOptionsPanel, setShowOptionsPanel] = useState(false);
   const [optionsButtonPosition, setOptionsButtonPosition] = useState({
     top: 0,
     right: 0,
   });
-  const lastExpandedBookRef = useRef<string | null>(null);
   const optionsButtonRef = useRef<View>(null);
+
+  // Use the horizontal slide animation hook
+  const { slideAnimation, gestureHandler, updateAnimation } =
+    useHorizontalSlideAnimation({
+      onModeChange: (newMode: string) =>
+        setTestamentMode(newMode as TestamentMode),
+      modes: ['old', 'new'],
+      currentMode: testamentMode,
+    });
+
+  // Update animation when testament mode changes externally
+  useEffect(() => {
+    updateAnimation(testamentMode);
+  }, [testamentMode, updateAnimation]);
 
   useEffect(() => {
     const loadBooks = async () => {
@@ -64,38 +453,12 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   }, []);
 
   const handleBookPress = (book: Book) => {
-    // If this book's chapter grid is currently open, close it
-    if (expandedBookId === book.id) {
-      lastExpandedBookRef.current = book.id;
-      setExpandedBookId(null);
-    } else if (isOpen && selectedBook?.id === book.id) {
-      // If chapter card is open for this book, close it
-      closeChapterCard();
-    } else {
-      // Otherwise, open chapter card overlay
-      openChapterCard(book);
-    }
+    // Open chapter card overlay for the selected book
+    openChapterCard(book);
   };
 
-  const handleBookLongPress = (book: Book) => {
-    // Long press: Show/hide chapter grid
-    if (expandedBookId === book.id) {
-      // If same book is long-pressed, close the expansion
-      lastExpandedBookRef.current = book.id; // Keep track for animation
-      setExpandedBookId(null);
-    } else {
-      // Open the expansion for this book
-      lastExpandedBookRef.current = null; // Clear previous tracking
-      setExpandedBookId(book.id);
-    }
-  };
-
-  const handleChapterPress = (chapterNumber: number) => {
-    const expandedBook = books.find(book => book.id === expandedBookId);
-    if (expandedBook) {
-      onChapterSelect(expandedBook, chapterNumber);
-      // Keep the chapter grid open so user can see highlighting and select other chapters
-    }
+  const handleGoToNewTestament = () => {
+    setTestamentMode('new');
   };
 
   const handleOptionsPress = () => {
@@ -117,25 +480,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     setShowOptionsPanel(false);
   };
 
-  // Determine which chapter should be highlighted for a given book
-  const getSelectedChapterForBook = (book: Book) => {
-    // If this book matches the currently playing book, highlight the current chapter
-    if (currentBook && currentBook.id === book.id && currentChapter) {
-      return currentChapter;
-    }
-
-    return null;
-  };
-
-  // Group books into rows
-  const createBookRows = (booksList: Book[]) => {
-    const rows: Book[][] = [];
-    for (let i = 0; i < booksList.length; i += BOOKS_PER_ROW) {
-      rows.push(booksList.slice(i, i + BOOKS_PER_ROW));
-    }
-    return rows;
-  };
-
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -144,14 +488,14 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     header: {
       paddingTop: insets.top + Dimensions.spacing.md,
       paddingHorizontal: Dimensions.spacing.xl,
-      paddingBottom: Dimensions.spacing.md,
+      paddingBottom: Dimensions.spacing.sm,
     },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center', // Center the content
-      marginBottom: Dimensions.spacing.xs,
-      position: 'relative', // For absolute positioning of options button
+      justifyContent: 'center',
+      marginBottom: Dimensions.spacing.md,
+      position: 'relative',
     },
     title: {
       fontSize: Fonts.size['3xl'],
@@ -171,38 +515,9 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       justifyContent: 'center',
       alignItems: 'center',
     },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingBottom: collapsedHeight + 2, // Mini player height + 2px buffer
-    },
-    testamentSection: {
-      marginBottom: Dimensions.spacing['2xl'],
-    },
-    testamentTitle: {
-      fontSize: Fonts.size['2xl'],
-      fontWeight: Fonts.weight.bold,
-      color: colors.primary, // Use theme primary for testament titles
-      marginBottom: Dimensions.spacing.lg,
-      marginTop: Dimensions.spacing.sm,
-      textAlign: 'center',
-    },
-    booksContainer: {
+    toggleContainer: {
       paddingHorizontal: Dimensions.spacing.md,
-    },
-    bookRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      marginBottom: 0,
-    },
-    bookContainer: {
-      flex: 1,
-      maxWidth: '33.33%',
-    },
-    bookTouchable: {
-      borderRadius: Dimensions.radius.xl,
-      overflow: 'hidden',
+      marginBottom: Dimensions.spacing.sm,
     },
     loadingContainer: {
       flex: 1,
@@ -213,65 +528,9 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     loadingText: {
       marginTop: Dimensions.spacing.md,
       fontSize: Fonts.size.base,
-      color: colors.secondary, // Use theme secondary for loading text
+      color: colors.secondary,
     },
   });
-
-  const renderBookRow = (
-    row: Book[],
-    rowIndex: number,
-    sectionTitle: string
-  ) => {
-    // Check if any book in this row is expanded
-    const expandedBookInRow = row.find(book => book.id === expandedBookId);
-    // Check if any book in this row was previously expanded (for animation)
-    const shouldShowChapterGrid =
-      expandedBookInRow ||
-      row.some(book => lastExpandedBookRef.current === book.id);
-    const bookToShow =
-      expandedBookInRow ||
-      (lastExpandedBookRef.current
-        ? row.find(book => book.id === lastExpandedBookRef.current)
-        : null);
-
-    return (
-      <View key={`${sectionTitle}-row-${rowIndex}`}>
-        {/* Book Row */}
-        <View style={styles.bookRow}>
-          {row.map(book => (
-            <View key={book.id} style={styles.bookContainer}>
-              <View style={styles.bookTouchable}>
-                <BookCard
-                  bookName={book.name}
-                  bookId={book.id}
-                  bookImage={book.imagePath}
-                  onPress={() => handleBookPress(book)}
-                  onLongPress={() => handleBookLongPress(book)}
-                  isSelected={expandedBookId === book.id}
-                />
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* Chapter Grid (render if currently expanded or was recently expanded for animation) */}
-        {shouldShowChapterGrid && bookToShow && (
-          <ChapterGrid
-            chapterCount={bookToShow.chapters}
-            onChapterPress={handleChapterPress}
-            isVisible={!!expandedBookInRow}
-            testID={`chapter-grid-${bookToShow.id}`}
-            selectedChapter={getSelectedChapterForBook(bookToShow)}
-            onAnimationComplete={() => {
-              if (!expandedBookInRow) {
-                lastExpandedBookRef.current = null;
-              }
-            }}
-          />
-        )}
-      </View>
-    );
-  };
 
   if (loading) {
     return (
@@ -286,8 +545,11 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   const oldTestamentBooks = books.filter(book => book.testament === 'old');
   const newTestamentBooks = books.filter(book => book.testament === 'new');
 
-  const oldTestamentRows = createBookRows(oldTestamentBooks);
-  const newTestamentRows = createBookRows(newTestamentBooks);
+  // Toggle button options
+  const toggleOptions = [
+    { key: 'old', label: 'Old Testament' },
+    { key: 'new', label: 'New Testament' },
+  ];
 
   return (
     <View style={styles.container}>
@@ -306,30 +568,36 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Old Testament Section */}
-        <View style={styles.testamentSection}>
-          <Text style={styles.testamentTitle}>Old Testament</Text>
-          <View style={styles.booksContainer}>
-            {oldTestamentRows.map((row, index) =>
-              renderBookRow(row, index, 'old-testament')
-            )}
-          </View>
-        </View>
+      {/* Toggle Buttons */}
+      <View style={styles.toggleContainer}>
+        <ToggleButtons
+          options={toggleOptions}
+          selectedKey={testamentMode}
+          onSelect={(key: string) => setTestamentMode(key as TestamentMode)}
+          testID='testament-toggle'
+          height={32}
+          fontSize={Fonts.size.base}
+        />
+      </View>
 
-        {/* New Testament Section */}
-        <View style={styles.testamentSection}>
-          <Text style={styles.testamentTitle}>New Testament</Text>
-          <View style={styles.booksContainer}>
-            {newTestamentRows.map((row, index) =>
-              renderBookRow(row, index, 'new-testament')
-            )}
-          </View>
-        </View>
-      </ScrollView>
+      {/* Content Area with Swipe Support */}
+      <PanGestureHandler
+        onGestureEvent={gestureHandler}
+        simultaneousHandlers={[]}
+        shouldCancelWhenOutside={false}
+        enableTrackpadTwoFingerGesture={false}
+        activeOffsetX={[-20, 20]}
+        failOffsetY={[-20, 20]}>
+        <Animated.View style={{ flex: 1 }}>
+          <ContentSwitcher
+            oldTestamentBooks={oldTestamentBooks}
+            newTestamentBooks={newTestamentBooks}
+            onBookPress={handleBookPress}
+            onGoToNewTestament={handleGoToNewTestament}
+            slideAnimation={slideAnimation}
+          />
+        </Animated.View>
+      </PanGestureHandler>
 
       {/* Chapter Card - unified chapter/verse view */}
       <ChapterCard
