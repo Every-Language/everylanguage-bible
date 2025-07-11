@@ -418,36 +418,14 @@ const QueueModeView: React.FC<QueueModeViewProps> = ({
           {automaticQueue.items.length > 0 ? (
             <View>
               {automaticQueue.items.map((item, _index) => (
-                <View
+                <QueueItemComponent
                   key={item.id}
-                  style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ flex: 1 }}>
-                    <QueueItemComponent
-                      item={item}
-                      isFromUserQueue={false}
-                      onPress={() => handleItemPress(item)}
-                      isActive={currentItem?.id === item.id}
-                    />
-                  </View>
-                  <TouchableOpacity
-                    style={{
-                      padding: Dimensions.spacing.sm,
-                      marginLeft: Dimensions.spacing.xs,
-                      backgroundColor: colors.primary + '20',
-                      borderRadius: Dimensions.radius.sm,
-                    }}
-                    onPress={() => handleMoveToUserQueue(item)}
-                    hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
-                    <Text
-                      style={{
-                        fontSize: Fonts.size.sm,
-                        color: colors.primary,
-                        fontWeight: Fonts.weight.bold,
-                      }}>
-                      +
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                  item={item}
+                  isFromUserQueue={false}
+                  onPress={() => handleItemPress(item)}
+                  onAdd={() => handleMoveToUserQueue(item)}
+                  isActive={currentItem?.id === item.id}
+                />
               ))}
             </View>
           ) : (

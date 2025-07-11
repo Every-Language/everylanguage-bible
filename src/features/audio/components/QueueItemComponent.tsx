@@ -9,6 +9,7 @@ interface QueueItemComponentProps {
   isFromUserQueue: boolean;
   onPress?: () => void;
   onRemove?: () => void;
+  onAdd?: () => void; // New prop for adding to user queue
   drag?: () => void;
   isActive?: boolean;
 }
@@ -18,6 +19,7 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
   isFromUserQueue,
   onPress,
   onRemove,
+  onAdd, // New prop
   drag,
   isActive = false,
 }) => {
@@ -151,10 +153,15 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
       justifyContent: 'center',
       marginLeft: Dimensions.spacing.sm,
     },
+    userQueueRightSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginLeft: Dimensions.spacing.sm,
+    },
     duration: {
       fontSize: Fonts.size.sm,
       color: colors.text + '60',
-      marginBottom: Dimensions.spacing.xs,
+      marginRight: Dimensions.spacing.sm, // Add margin when used with remove button
     },
     dragHandle: {
       padding: Dimensions.spacing.xs,
@@ -183,15 +190,35 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
       borderRadius: 1.5,
     },
     removeButton: {
-      padding: Dimensions.spacing.xs,
-      marginTop: Dimensions.spacing.xs,
+      padding: Dimensions.spacing.sm, // Made larger (was xs)
       borderRadius: Dimensions.radius.sm,
       backgroundColor: colors.secondary + '20',
+      minWidth: 32, // Same size as plus buttons
+      minHeight: 32, // Same size as plus buttons
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     removeButtonText: {
-      fontSize: 12,
+      fontSize: Fonts.size.sm, // Made larger (was 12)
       color: colors.secondary,
-      fontWeight: Fonts.weight.medium,
+      fontWeight: Fonts.weight.bold, // Made bold to match plus buttons
+    },
+    addButton: {
+      padding: Dimensions.spacing.sm,
+      borderRadius: Dimensions.radius.sm,
+      backgroundColor: colors.primary + '20',
+      minWidth: 32,
+      minHeight: 32,
+      justifyContent: 'center',
+      alignItems: 'center',
+      position: 'absolute',
+      top: Dimensions.spacing.sm,
+      right: Dimensions.spacing.sm,
+    },
+    addButtonText: {
+      fontSize: Fonts.size.sm,
+      color: colors.primary,
+      fontWeight: Fonts.weight.bold,
     },
   });
 
@@ -269,24 +296,45 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
         </Text>
       </View>
 
-      {/* Right Section - Duration and Remove Button */}
-      <View style={styles.rightSection}>
-        {details.duration > 0 && (
-          <Text style={styles.duration}>
-            {formatDuration(details.duration)}
-          </Text>
-        )}
+      {/* Right Section - Duration and Action Button */}
+      {isFromUserQueue ? (
+        // User queue: timestamp to the left of X button
+        <View style={styles.userQueueRightSection}>
+          {details.duration > 0 && (
+            <Text style={styles.duration}>
+              {formatDuration(details.duration)}
+            </Text>
+          )}
 
-        {/* Remove Button (only for user queue items) */}
-        {isFromUserQueue && onRemove && (
-          <TouchableOpacity
-            style={styles.removeButton}
-            onPress={onRemove}
-            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
-            <Text style={styles.removeButtonText}>✕</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          {onRemove && (
+            <TouchableOpacity
+              style={styles.removeButton}
+              onPress={onRemove}
+              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
+              <Text style={styles.removeButtonText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        // Non-user queue: duration positioned to avoid plus button
+        <View style={styles.rightSection}>
+          {details.duration > 0 && (
+            <Text style={[styles.duration, { marginRight: 40 }]}>
+              {formatDuration(details.duration)}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Add Button for Non-User Queue Items - positioned on the item */}
+      {!isFromUserQueue && onAdd && (
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={onAdd}
+          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
+          <Text style={styles.addButtonText}>+</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 };
