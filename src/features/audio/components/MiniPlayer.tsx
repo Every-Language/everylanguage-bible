@@ -486,6 +486,7 @@ interface ContentSwitcherProps {
   onSeek?: ((time: number) => void) | undefined;
   title?: string;
   subtitle?: string;
+  slideAnimation?: Animated.SharedValue<number> | undefined;
 }
 
 const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
@@ -496,22 +497,27 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
   onSeek,
   title,
   subtitle,
+  slideAnimation: externalSlideAnimation,
 }) => {
-  const slideAnimation = useSharedValue(0);
+  const internalSlideAnimation = useSharedValue(0);
+  const slideAnimation = externalSlideAnimation || internalSlideAnimation;
 
-  // Update animation when mode changes
+  // Update animation when mode changes (only if using internal animation)
   React.useEffect(() => {
-    slideAnimation.value = withTiming(mode === 'text' ? 0 : 1, {
-      duration: 300,
-    });
-  }, [mode, slideAnimation]);
+    if (!externalSlideAnimation) {
+      slideAnimation.value = withTiming(mode === 'text' ? 0 : 1, {
+        duration: 300,
+      });
+    }
+  }, [mode, slideAnimation, externalSlideAnimation]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: `${slideAnimation.value * -50}%` }],
   }));
 
   return (
-    <View style={{ flex: 1, overflow: 'hidden' }}>
+    <View style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+      {/* Content */}
       <Animated.View
         style={[
           {
@@ -544,6 +550,8 @@ interface ExpandedMediaContentProps {
   onVersionPress?: () => void;
   onVersePress?: (verseNumber: number) => void;
   onSeek?: (time: number) => void;
+  currentMode?: ContentMode;
+  slideAnimation?: Animated.SharedValue<number> | undefined;
 }
 
 const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
@@ -552,6 +560,8 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
   onVersionPress,
   onVersePress,
   onSeek,
+  currentMode = 'text',
+  slideAnimation,
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -565,9 +575,6 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
     bibleBooks,
     initializeBibleBooks,
   } = useAudioStore();
-
-  // Mode state
-  const [currentMode, setCurrentMode] = useState<ContentMode>('text');
 
   // Get chapter info
   const title =
@@ -718,7 +725,6 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
             borderColor: colors.primary,
           }}
           onPress={() => {
-            setCurrentMode('text');
             onTextPress?.();
           }}
           testID='expanded-text-button'>
@@ -747,7 +753,6 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
             borderColor: colors.primary,
           }}
           onPress={() => {
-            setCurrentMode('queue');
             onQueuePress?.();
           }}
           testID='expanded-queue-button'>
@@ -773,6 +778,7 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
           onSeek={onSeek}
           title={title}
           subtitle={subtitle}
+          slideAnimation={slideAnimation}
         />
       </View>
     </View>
@@ -928,6 +934,91 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
         // Update React state
         runOnJS(updateExpansionState)(targetValue);
+      },
+    });
+
+  // Horizontal swipe gesture handler for mode switching in expanded view
+  const [expandedMode, setExpandedMode] = useState<ContentMode>('text');
+  const horizontalSlideAnimation = useSharedValue(0); // 0 = text, 1 = queue
+
+  // Update animation when mode changes (from button presses)
+  React.useEffect(() => {
+    horizontalSlideAnimation.value = withTiming(
+      expandedMode === 'text' ? 0 : 1,
+      {
+        duration: 300,
+      }
+    );
+  }, [expandedMode, horizontalSlideAnimation]);
+
+  const horizontalGestureHandler =
+    useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
+      onStart: (_, context) => {
+        context['shouldHandle'] = false;
+        context['startValue'] = horizontalSlideAnimation.value;
+      },
+      onActive: (event, context) => {
+        const deltaX = Math.abs(event.translationX);
+        const deltaY = Math.abs(event.translationY);
+
+        // Only handle if this is clearly a horizontal gesture
+        if (deltaX > 20 && deltaX > deltaY * 2) {
+          context['shouldHandle'] = true;
+
+          // Add visual feedback during drag - follow the user's finger
+          const dragProgress = event.translationX / 200; // Adjust sensitivity
+          const startValue = context['startValue'] as number;
+          const newValue = Math.max(0, Math.min(1, startValue - dragProgress));
+          horizontalSlideAnimation.value = newValue;
+        }
+      },
+      onEnd: (event, context) => {
+        if (!context['shouldHandle']) {
+          // Reset animation to current mode if gesture wasn't handled
+          horizontalSlideAnimation.value = withSpring(
+            expandedMode === 'text' ? 0 : 1,
+            {
+              damping: 20,
+              stiffness: 300,
+            }
+          );
+          return;
+        }
+
+        // Determine final state based on velocity and position (same logic as expand/contract)
+        const velocity = event.velocityX;
+        const currentValue = horizontalSlideAnimation.value;
+
+        // Velocity threshold for quick swipes (same as expand/contract)
+        const velocityThreshold = 500;
+
+        // Position threshold for slow drags (same as expand/contract)
+        const positionThreshold = 0.3;
+
+        let targetValue: number;
+
+        if (Math.abs(velocity) > velocityThreshold) {
+          // Fast swipe - follow velocity direction
+          // Positive velocity = swipe right = go to text (0)
+          // Negative velocity = swipe left = go to queue (1)
+          targetValue = velocity > 0 ? 0 : 1;
+        } else {
+          // Slow drag - use position threshold
+          targetValue = currentValue > positionThreshold ? 1 : 0;
+        }
+
+        // Always use spring animation (same as expand/contract)
+        horizontalSlideAnimation.value = withSpring(targetValue, {
+          damping: 20,
+          stiffness: 300,
+          velocity: velocity / 1000, // Pass velocity for natural feel
+        });
+
+        // Update mode state
+        const newMode: ContentMode = targetValue === 0 ? 'text' : 'queue';
+        if (newMode !== expandedMode) {
+          runOnJS(setExpandedMode)(newMode);
+        }
       },
     });
 
@@ -1136,13 +1227,25 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
       {/* Middle Area - Animates height while bottom controls stay fixed */}
       <Animated.View style={[styles.middleArea, animatedMiddleAreaStyle]}>
-        <ExpandedMediaContent
-          onTextPress={() => {}}
-          onQueuePress={() => {}}
-          onVersionPress={() => setShowVersionPopup(true)}
-          onVersePress={handleVersePress}
-          onSeek={seek}
-        />
+        <PanGestureHandler
+          onGestureEvent={horizontalGestureHandler}
+          simultaneousHandlers={[]}
+          shouldCancelWhenOutside={false}
+          enableTrackpadTwoFingerGesture={false}
+          activeOffsetX={[-20, 20]}
+          failOffsetY={[-20, 20]}>
+          <Animated.View style={{ flex: 1 }}>
+            <ExpandedMediaContent
+              onTextPress={() => setExpandedMode('text')}
+              onQueuePress={() => setExpandedMode('queue')}
+              onVersionPress={() => setShowVersionPopup(true)}
+              onVersePress={handleVersePress}
+              onSeek={seek}
+              currentMode={expandedMode}
+              slideAnimation={horizontalSlideAnimation}
+            />
+          </Animated.View>
+        </PanGestureHandler>
       </Animated.View>
 
       {/* Bottom Controls - Fixed at bottom of container */}
