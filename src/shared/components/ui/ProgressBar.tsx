@@ -10,6 +10,7 @@ import Animated, {
   useSharedValue,
   runOnJS,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
 
@@ -131,6 +132,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
     // Seek to the closest verse
     if (closestVerse) {
+      // Trigger haptic feedback for tap-to-seek
+      triggerSeekHapticFeedback();
       onSeek(closestVerse.startTime);
     }
   };
@@ -146,10 +149,32 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const setDragVerse = (verseNum: number) => setDragVerseNumber(verseNum);
   const clearDragVerse = () => setDragVerseNumber(null);
 
+  // Haptic feedback functions with different intensities
+  const triggerSeekHapticFeedback = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+  };
+
+  const triggerFinalSeekHapticFeedback = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
+  // Debounced haptic feedback to prevent too many rapid calls
+  const lastHapticTime = useRef<number>(0);
+  const triggerDebouncedHaptic = () => {
+    const now = Date.now();
+    if (now - lastHapticTime.current > 50) {
+      // 50ms debounce
+      lastHapticTime.current = now;
+      triggerSeekHapticFeedback();
+    }
+  };
+
   // Final seek function - only called at end of drag
   const finalSeekToVerse = (verseNum: number) => {
     const verse = verseMarkers.find(v => v.verseNumber === verseNum);
     if (verse && onSeek) {
+      // Trigger haptic feedback for final seek
+      triggerFinalSeekHapticFeedback();
       onSeek(verse.startTime);
     }
   };
@@ -190,6 +215,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
               if (newVerseNumber !== dragVerseNumber) {
                 runOnJS(setDragVerse)(newVerseNumber);
 
+                // Trigger debounced haptic feedback when crossing verse boundaries
+                runOnJS(triggerDebouncedHaptic)();
+
                 // Position bead to align with elapsed progress border
                 const verseProgress = verse.startTime / totalTime;
                 dragProgress.value = verseProgress;
@@ -219,7 +247,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const animatedBeadStyle = useAnimatedStyle(() => {
     // Position bead center exactly on the progress border edge
     const leftPosition =
-      trackWidth > 0 ? dragProgress.value * trackWidth - 6 : -6; // Center bead on progress position
+      trackWidth > 0
+        ? dragProgress.value * trackWidth - 6 - trackWidth / verseMarkers.length
+        : -6; // Center bead on progress position, offset by one verse length
     return {
       left: leftPosition,
       transform: [{ scale: isDragging ? 1.2 : 1.0 }],
