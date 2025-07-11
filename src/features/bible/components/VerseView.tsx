@@ -144,10 +144,64 @@ export const VerseView: React.FC<VerseViewProps> = ({
   };
 
   const handlePlayChapter = async () => {
+    const queueStore = useQueueStore.getState();
+    const playMode = queueStore.getPlayMode();
+
     // Create chapter data
     const chapter = createChapterData(selectedBook, selectedChapter);
 
-    // Start playing immediately WITHOUT adding to queue
+    // If in queue mode, check if we should switch to flow mode or add to queue
+    if (playMode === 'queue') {
+      const { userQueue } = queueStore;
+
+      // If only one item in queue (the currently playing one), switch to flow mode
+      if (userQueue.items.length === 1) {
+        // Remove the current item from queue and clear automatic queue to ensure flow mode
+        queueStore.removeFromUserQueue(
+          userQueue.currentIndex >= 0 ? userQueue.currentIndex : 0
+        );
+        queueStore.clearAutomaticQueue(); // Prevent getCurrentItem() from moving automatic items back
+        console.log(
+          '🔄 MODE TRANSITION: Switched from queue mode to flow mode (removed last item, playing new selection)'
+        );
+
+        // Play directly in flow mode
+        const audioStore = useAudioStore.getState();
+        await audioStore.playFromQueueItem(
+          {
+            type: 'chapter',
+            data: chapter,
+          },
+          false
+        ); // false = not from queue, playing directly
+        audioStore.play();
+        console.log(
+          `Playing chapter ${selectedChapter} of ${selectedBook.name} (not added to queue)`
+        );
+        return;
+      }
+
+      // Multiple items in queue, add to front as before
+      queueStore.addToUserQueueFront({
+        type: 'chapter',
+        data: chapter,
+      });
+
+      console.log(
+        `Added ${selectedBook.name} Chapter ${selectedChapter} to front of queue (queue mode)`
+      );
+
+      // Play the newly added item (now at front of queue)
+      const currentItem = queueStore.getCurrentItem();
+      if (currentItem) {
+        const audioStore = useAudioStore.getState();
+        await audioStore.playFromQueueItem(currentItem, true);
+        audioStore.play();
+      }
+      return;
+    }
+
+    // Flow mode: Start playing immediately WITHOUT adding to queue
     const audioStore = useAudioStore.getState();
     await audioStore.playFromQueueItem(
       {

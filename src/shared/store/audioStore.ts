@@ -328,7 +328,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   playNext: async () => {
     const { playlist, currentPlaylistIndex, currentRecording } = get();
 
-    // If we have a playlist, use playlist navigation (priority over queue)
+    // If we have a playlist, use playlist navigation (priority over queue and modes)
     if (playlist.length > 0) {
       // Only advance if already started
       if (currentPlaylistIndex === -1) {
@@ -346,40 +346,45 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       return false;
     }
 
-    // Try to use the queue system
+    // Use mode-aware navigation
     const queueStore = useQueueStore.getState();
-    const currentQueueItem = queueStore.getCurrentItem();
+    const playMode = queueStore.getPlayMode();
 
-    if (currentQueueItem) {
-      // We're currently playing from a queue
-      const success = await queueStore.playNext();
+    console.log(`Play next: using ${playMode} mode navigation`);
+
+    if (playMode === 'queue') {
+      // Queue mode: advance through queue items
+      const success = queueStore.playNextInQueueMode();
       if (success) {
         const nextItem = queueStore.getCurrentItem();
-        if (nextItem && nextItem.type === 'chapter') {
-          const chapter = nextItem.data as any;
-          const chapterId = `${chapter.book_name.toLowerCase().replace(/\s+/g, '-')}-${chapter.chapter_number}`;
-          await get().setCurrentAudio(chapterId);
+        if (nextItem) {
+          await get().playFromQueueItem(nextItem, true);
+          console.log(`Play next: loaded next queue item`);
           return true;
         }
       }
-      return success;
-    }
-
-    // Bible chapter navigation - only if we have a current recording
-    if (currentRecording) {
-      const nextChapterRecordingId = get().findNextChapter(currentRecording.id);
-      if (nextChapterRecordingId) {
-        await get().setCurrentAudio(nextChapterRecordingId);
-        console.log(`Next chapter: loaded ${nextChapterRecordingId}`);
-        return true;
-      } else {
-        console.log('Next chapter: already at end of Bible');
-        return false;
+      console.log('Play next: no more items in queue');
+      return false;
+    } else {
+      // Flow mode: navigate through Bible sequence
+      if (currentRecording) {
+        const nextChapterRecordingId = queueStore.playNextInFlowMode(
+          currentRecording.id
+        );
+        if (nextChapterRecordingId) {
+          await get().setCurrentAudio(nextChapterRecordingId);
+          console.log(
+            `Play next: loaded next chapter ${nextChapterRecordingId}`
+          );
+          return true;
+        } else {
+          console.log('Play next: already at end of Bible');
+          return false;
+        }
       }
+      console.log('Play next: no current recording');
+      return false;
     }
-
-    console.log('Next chapter: no current recording');
-    return false;
   },
 
   playPrevious: async () => {
@@ -391,7 +396,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       currentTime,
     } = get();
 
-    // If we have a playlist, use playlist navigation (priority over queue)
+    // If we have a playlist, use playlist navigation (priority over queue and modes)
     if (playlist.length > 0) {
       // Only go back if index > 0
       if (currentPlaylistIndex <= 0) {
@@ -409,71 +414,70 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       return false;
     }
 
-    // Try to use the queue system
+    // Use mode-aware navigation
     const queueStore = useQueueStore.getState();
-    const currentQueueItem = queueStore.getCurrentItem();
+    const playMode = queueStore.getPlayMode();
 
-    if (currentQueueItem) {
-      // We're currently playing from a queue
-      const success = await queueStore.playPrevious();
+    console.log(`Play previous: using ${playMode} mode navigation`);
+
+    if (playMode === 'queue') {
+      // Queue mode: try to go back to previously played item
+      const success = queueStore.playPreviousInQueueMode();
       if (success) {
         const prevItem = queueStore.getCurrentItem();
-        if (prevItem && prevItem.type === 'chapter') {
-          const chapter = prevItem.data as any;
-          const chapterId = `${chapter.book_name.toLowerCase().replace(/\s+/g, '-')}-${chapter.chapter_number}`;
-          await get().setCurrentAudio(chapterId);
+        if (prevItem) {
+          await get().playFromQueueItem(prevItem, true);
+          console.log(`Play previous: loaded previous queue item`);
           return true;
         }
       }
-      return success;
-    }
+      console.log('Play previous: no previously played items available');
+      return false;
+    } else {
+      // Flow mode: restart chapter or go to previous chapter
+      if (currentRecording && currentUIHelper) {
+        const currentSegment = currentUIHelper.getCurrentSegment(currentTime);
 
-    // Bible chapter navigation with "restart chapter" logic - only if we have a current recording
-    if (currentRecording && currentUIHelper) {
-      const currentSegment = currentUIHelper.getCurrentSegment(currentTime);
+        // Check if we're at verse 1 (first segment) or very close to the beginning
+        const firstSegment = currentUIHelper.getSegmentByVerseNumber(1);
+        const isAtFirstVerse =
+          currentSegment?.segmentNumber === 1 || currentTime < 5; // 5 second threshold
 
-      // Check if we're at verse 1 (first segment) or very close to the beginning
-      const firstSegment = currentUIHelper.getSegmentByVerseNumber(1);
-      const isAtFirstVerse =
-        currentSegment?.segmentNumber === 1 || currentTime < 5; // 5 second threshold
-
-      if (!isAtFirstVerse && firstSegment) {
-        // Not at verse 1, so go to verse 1 of current chapter
-        get().seek(firstSegment.startTime);
-        console.log('Previous chapter: seeking to verse 1 of current chapter');
-        return true;
-      } else {
-        // At verse 1, so add previous chapter to queue and go to it
-        await get().addPreviousChapterToQueue(currentRecording.id);
-
-        const previousChapterRecordingId = get().findPreviousChapter(
-          currentRecording.id
-        );
-        if (previousChapterRecordingId) {
-          await get().setCurrentAudio(previousChapterRecordingId);
-
-          // After loading previous chapter, seek to verse 1
-          const { currentUIHelper: newUIHelper } = get();
-          if (newUIHelper) {
-            const firstSegmentOfPrevChapter =
-              newUIHelper.getSegmentByVerseNumber(1);
-            if (firstSegmentOfPrevChapter) {
-              get().seek(firstSegmentOfPrevChapter.startTime);
-              console.log(
-                `Previous chapter: added previous chapter to queue, loaded ${previousChapterRecordingId} and seeking to verse 1`
-              );
-            }
-          }
+        if (!isAtFirstVerse && firstSegment) {
+          // Not at verse 1, so go to verse 1 of current chapter
+          get().seek(firstSegment.startTime);
+          console.log('Play previous: seeking to verse 1 of current chapter');
           return true;
         } else {
-          console.log('Previous chapter: already at beginning of Bible');
-          return false;
+          // At verse 1, so go to previous chapter
+          const previousChapterRecordingId = queueStore.playPreviousInFlowMode(
+            currentRecording.id
+          );
+          if (previousChapterRecordingId) {
+            await get().setCurrentAudio(previousChapterRecordingId);
+
+            // After loading previous chapter, seek to verse 1
+            const { currentUIHelper: newUIHelper } = get();
+            if (newUIHelper) {
+              const firstSegmentOfPrevChapter =
+                newUIHelper.getSegmentByVerseNumber(1);
+              if (firstSegmentOfPrevChapter) {
+                get().seek(firstSegmentOfPrevChapter.startTime);
+                console.log(
+                  `Play previous: loaded previous chapter ${previousChapterRecordingId} and seeking to verse 1`
+                );
+              }
+            }
+            return true;
+          } else {
+            console.log('Play previous: already at beginning of Bible');
+            return false;
+          }
         }
       }
+      console.log('Play previous: no current recording or UI helper');
+      return false;
     }
-
-    console.log('Previous chapter: no current recording or UI helper');
-    return false;
   },
 
   // Control actions
@@ -566,29 +570,65 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         `Previous verse: seeking to segment ${prevSegment.segmentNumber} at ${prevSegment.startTime}s`
       );
     } else {
-      // At beginning of chapter - add previous chapter to queue and navigate to it
+      // At beginning of chapter - use mode-aware navigation
       const { currentRecording } = get();
       if (currentRecording) {
-        await get().addPreviousChapterToQueue(currentRecording.id);
+        const queueStore = useQueueStore.getState();
+        const playMode = queueStore.getPlayMode();
 
-        // Now navigate to the previous chapter
-        const success = await get().playPrevious();
-        if (success) {
-          // After loading previous chapter, seek to the last verse
-          const { currentUIHelper: newUIHelper, currentChapter } = get();
-          if (newUIHelper && currentChapter) {
-            const lastSegment = newUIHelper.getSegmentByVerseNumber(
-              currentChapter.totalSegments
-            );
-            if (lastSegment) {
-              get().seek(lastSegment.startTime);
-              console.log(
-                `Previous verse: added previous chapter to queue, loaded it, and seeking to last verse ${currentChapter.totalSegments} at ${lastSegment.startTime}s`
-              );
+        console.log(
+          `Previous verse: at beginning of chapter, using ${playMode} mode navigation`
+        );
+
+        if (playMode === 'queue') {
+          // Queue mode: try to go back to previously played item
+          const success = queueStore.playPreviousInQueueMode();
+          if (success) {
+            const prevItem = queueStore.getCurrentItem();
+            if (prevItem) {
+              await get().playFromQueueItem(prevItem, true);
+
+              // Seek to last verse of previous item
+              const { currentUIHelper: newUIHelper, currentChapter } = get();
+              if (newUIHelper && currentChapter) {
+                const lastSegment = newUIHelper.getSegmentByVerseNumber(
+                  currentChapter.totalSegments
+                );
+                if (lastSegment) {
+                  get().seek(lastSegment.startTime);
+                  console.log(
+                    `Previous verse: loaded previous queue item and seeking to last verse`
+                  );
+                }
+              }
             }
+          } else {
+            console.log('Previous verse: no previously played items available');
           }
         } else {
-          console.log('Previous verse: already at beginning');
+          // Flow mode: go to previous chapter in Bible sequence
+          const prevChapterRecordingId = queueStore.playPreviousInFlowMode(
+            currentRecording.id
+          );
+          if (prevChapterRecordingId) {
+            await get().setCurrentAudio(prevChapterRecordingId);
+
+            // Seek to last verse
+            const { currentUIHelper: newUIHelper, currentChapter } = get();
+            if (newUIHelper && currentChapter) {
+              const lastSegment = newUIHelper.getSegmentByVerseNumber(
+                currentChapter.totalSegments
+              );
+              if (lastSegment) {
+                get().seek(lastSegment.startTime);
+                console.log(
+                  `Previous verse: loaded previous chapter ${prevChapterRecordingId} and seeking to last verse`
+                );
+              }
+            }
+          } else {
+            console.log('Previous verse: already at beginning of Bible');
+          }
         }
       }
     }
@@ -599,6 +639,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       currentTime,
       currentUIHelper,
       currentSegment: storedCurrentSegment,
+      currentRecording,
     } = get();
 
     if (!currentUIHelper) {
@@ -625,22 +666,62 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         `Next verse: seeking to segment ${nextSegment.segmentNumber} at ${nextSegment.startTime}s`
       );
     } else {
-      // At end of chapter, try to go to next chapter via queue system
-      const success = await get().playNext();
-      if (success) {
-        // After loading next chapter, seek to verse 1
-        const { currentUIHelper: newUIHelper } = get();
-        if (newUIHelper) {
-          const firstSegment = newUIHelper.getSegmentByVerseNumber(1);
-          if (firstSegment) {
-            get().seek(firstSegment.startTime);
-            console.log(
-              `Next verse: loaded next chapter and seeking to verse 1 at ${firstSegment.startTime}s`
-            );
+      // At end of chapter - forwardVerse acts like forwardChapter
+      // Use mode-aware navigation
+      const queueStore = useQueueStore.getState();
+      const playMode = queueStore.getPlayMode();
+
+      console.log(
+        `Next verse: at end of chapter, using ${playMode} mode navigation`
+      );
+
+      if (playMode === 'queue') {
+        // Queue mode: advance to next item in queue
+        const success = queueStore.playNextInQueueMode();
+        if (success) {
+          const nextItem = queueStore.getCurrentItem();
+          if (nextItem) {
+            await get().playFromQueueItem(nextItem, true);
+
+            // Seek to verse 1 of new item
+            const { currentUIHelper: newUIHelper } = get();
+            if (newUIHelper) {
+              const firstSegment = newUIHelper.getSegmentByVerseNumber(1);
+              if (firstSegment) {
+                get().seek(firstSegment.startTime);
+                console.log(
+                  `Next verse: loaded next queue item and seeking to verse 1`
+                );
+              }
+            }
           }
+        } else {
+          console.log('Next verse: no more items in queue');
         }
       } else {
-        console.log('Next verse: already at end of queue');
+        // Flow mode: go to next chapter in Bible sequence
+        if (currentRecording) {
+          const nextChapterRecordingId = queueStore.playNextInFlowMode(
+            currentRecording.id
+          );
+          if (nextChapterRecordingId) {
+            await get().setCurrentAudio(nextChapterRecordingId);
+
+            // Seek to verse 1
+            const { currentUIHelper: newUIHelper } = get();
+            if (newUIHelper) {
+              const firstSegment = newUIHelper.getSegmentByVerseNumber(1);
+              if (firstSegment) {
+                get().seek(firstSegment.startTime);
+                console.log(
+                  `Next verse: loaded next chapter ${nextChapterRecordingId} and seeking to verse 1`
+                );
+              }
+            }
+          } else {
+            console.log('Next verse: already at end of Bible');
+          }
+        }
       }
     }
   },
@@ -730,56 +811,100 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   // Handle when an item finishes playing
   onItemFinished: async () => {
-    const { currentlyPlaying } = get();
+    const { currentRecording } = get();
+    const queueStore = useQueueStore.getState();
+    const playMode = queueStore.getPlayMode();
 
-    if (!currentlyPlaying) {
-      console.log('No currently playing item to finish');
-      return;
-    }
+    console.log(`Item finished: using ${playMode} mode for next action`);
 
-    if (currentlyPlaying.fromQueue) {
-      // Item was from queue, remove it and play next from queue
-      const queueStore = useQueueStore.getState();
+    if (playMode === 'queue') {
+      // Queue mode: move current item to recently played and advance
       const currentItem = queueStore.getCurrentItem();
 
-      if (currentItem && queueStore.isUserQueueActive) {
-        const activeQueue = queueStore.getActiveQueue();
-        const currentIndex = activeQueue.currentIndex;
+      if (currentItem) {
+        // Move finished item to recently played
+        queueStore.addToRecentlyPlayed(currentItem);
 
-        if (currentIndex >= 0) {
-          // Remove the finished item from user queue
-          queueStore.removeFromUserQueue(currentIndex);
+        // Remove from user queue (this will advance to next item)
+        const currentIndex =
+          queueStore.userQueue.currentIndex >= 0
+            ? queueStore.userQueue.currentIndex
+            : 0;
+        queueStore.removeFromUserQueue(currentIndex);
+
+        // Try to play the next item
+        const nextItem = queueStore.getCurrentItem();
+        if (nextItem) {
+          await get().playFromQueueItem(nextItem, true);
+          get().play();
+          console.log(
+            'Queue item finished, playing next from queue:',
+            nextItem
+          );
+        } else {
+          // Queue is now empty - transition to flowPlayMode
+          console.log(
+            '🔄 MODE TRANSITION: Switched from queue mode to flow mode (queue finished)'
+          );
+
+          // Continue with next chapter in Bible sequence if we have current recording
+          if (currentRecording) {
+            const nextChapterRecordingId = queueStore.playNextInFlowMode(
+              currentRecording.id
+            );
+            if (nextChapterRecordingId) {
+              await get().setCurrentAudio(nextChapterRecordingId);
+
+              // Update currently playing state to reflect we're no longer from queue
+              set({
+                currentlyPlaying: {
+                  type: 'chapter',
+                  data: null, // Will be set by setCurrentAudio
+                  fromQueue: false,
+                },
+              });
+
+              get().play();
+              console.log(
+                `Transitioned to flow mode, playing ${nextChapterRecordingId}`
+              );
+            } else {
+              // At end of Bible
+              set({ currentlyPlaying: null, isPlaying: false });
+              console.log('Reached end of Bible');
+            }
+          } else {
+            // No current recording to continue from
+            set({ currentlyPlaying: null, isPlaying: false });
+            console.log('No current recording to continue playback');
+          }
         }
-      }
-
-      // Try to play the next item from queue
-      const nextQueueItem = queueStore.getCurrentItem();
-      if (nextQueueItem) {
-        await get().playFromQueueItem(nextQueueItem, true);
-        get().play();
-        console.log(
-          'Queue item finished, playing next from queue:',
-          nextQueueItem
-        );
       } else {
-        // No more items in queue
+        // No current queue item (shouldn't happen in queue mode)
+        console.log('Warning: In queue mode but no current item found');
         set({ currentlyPlaying: null, isPlaying: false });
-        console.log('Queue finished, no more items to play');
       }
     } else {
-      // Item was played directly (not from queue)
-      // Check if there's something in the user queue to play next
-      const queueStore = useQueueStore.getState();
-      const nextQueueItem = queueStore.getCurrentItem();
-
-      if (nextQueueItem) {
-        await get().playFromQueueItem(nextQueueItem, true);
-        get().play();
-        console.log('Direct play finished, starting queue:', nextQueueItem);
+      // Flow mode: continue to next chapter in Bible sequence
+      if (currentRecording) {
+        const nextChapterRecordingId = queueStore.playNextInFlowMode(
+          currentRecording.id
+        );
+        if (nextChapterRecordingId) {
+          await get().setCurrentAudio(nextChapterRecordingId);
+          get().play();
+          console.log(
+            `Flow mode: item finished, playing next chapter ${nextChapterRecordingId}`
+          );
+        } else {
+          // At end of Bible
+          set({ currentlyPlaying: null, isPlaying: false });
+          console.log('Flow mode: reached end of Bible');
+        }
       } else {
-        // No queue items, just stop
+        // No current recording
         set({ currentlyPlaying: null, isPlaying: false });
-        console.log('Direct play finished, no queue items to continue with');
+        console.log('Flow mode: no current recording to continue from');
       }
     }
   },

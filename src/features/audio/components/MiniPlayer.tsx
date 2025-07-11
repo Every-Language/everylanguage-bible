@@ -250,12 +250,7 @@ const QueueView: React.FC<QueueViewProps> = ({
   // Get audio store for playback integration
   const { playFromQueueItem } = useAudioStore();
 
-  // Initialize user queue if empty (happens on first load)
-  React.useEffect(() => {
-    if (userQueue.items.length === 0) {
-      useQueueStore.getState().initializeDefaultQueue();
-    }
-  }, [userQueue.items.length]);
+  // Don't auto-initialize queue - let app start in flow mode with empty queue
 
   // Handle item press (play item)
   const handleItemPress = React.useCallback(
@@ -781,6 +776,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     isPlaying,
     playbackSpeed,
     currentVerseDisplayData,
+    currentUIHelper,
     // Actions
     seek,
     previousVerse,
@@ -928,6 +924,46 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       }
     );
   }, [expandedMode, horizontalSlideAnimation]);
+
+  // Initialize queue when switching to queue mode if queue is empty
+  React.useEffect(() => {
+    const queueStore = useQueueStore.getState();
+
+    if (expandedMode === 'queue') {
+      // Set queue view as visible
+      queueStore.setQueueViewVisible(true);
+
+      const playMode = queueStore.getPlayMode();
+
+      // Only initialize if we're in flow mode (queue is empty)
+      if (playMode === 'flow' && currentRecording && currentChapter) {
+        const currentSegment = currentUIHelper?.getCurrentSegment(currentTime);
+        const trackInfo = {
+          recordingId: currentRecording.id,
+          bookName: currentChapter.bookName,
+          chapterNumber: currentChapter.chapterNumber,
+          currentTime: currentTime,
+          totalDuration: currentChapter.totalDuration || 600,
+          totalVerses: currentChapter.totalSegments,
+          ...(currentSegment?.segmentNumber && {
+            currentVerse: currentSegment.segmentNumber,
+          }),
+        };
+
+        queueStore.initializeQueueWithTrack(trackInfo);
+        console.log('Queue view opened: initialized queue with current track');
+      }
+    } else {
+      // Set queue view as not visible
+      queueStore.setQueueViewVisible(false);
+    }
+  }, [
+    expandedMode,
+    currentRecording,
+    currentChapter,
+    currentTime,
+    currentUIHelper,
+  ]);
 
   const horizontalGestureHandler =
     useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({

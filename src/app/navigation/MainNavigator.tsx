@@ -22,35 +22,33 @@ export const MainNavigator: React.FC = () => {
     setCurrentAudio,
     initializeBibleBooks,
   } = audioStore;
-  const { initializeDefaultQueue } = useQueueStore();
 
-  // Set up Galatians 1 as default when app starts
+  // Set up John 1 as default when app starts (flow mode with empty queue)
   useEffect(() => {
     const initializeDefaultAudio = async () => {
       // Initialize Bible books data first
       initializeBibleBooks();
 
-      // Initialize the queue with Galatians 1 and Luke 1
-      initializeDefaultQueue();
+      // Start with empty queue (flow mode) - no queue initialization
 
       // Only set default if no proper chapter is loaded (ignore mock recording)
       if (!currentChapter) {
         try {
-          // Create a Galatians 1 recording ID
-          const galatiansBook: Book = {
-            id: '48', // Book ID is the order number padded
-            name: 'Galatians',
-            chapters: 6,
+          // Create a John 1 recording ID
+          const johnBook: Book = {
+            id: '43', // Book ID is the order number padded
+            name: 'John',
+            chapters: 21,
             testament: 'new',
-            imagePath: '48_galatians.png',
-            order: 48, // Galatians is the 48th book
+            imagePath: '43_john.png',
+            order: 43, // John is the 43rd book
           };
-          const galatiansRecordingId = getRecordingId(galatiansBook, 1);
+          const johnRecordingId = getRecordingId(johnBook, 1);
 
-          // Load Galatians 1 but don't start playing
-          await setCurrentAudio(galatiansRecordingId);
+          // Load John 1 but don't start playing (flow mode)
+          await setCurrentAudio(johnRecordingId);
           console.log(
-            'Initialized with Galatians 1 - verse data should now be populated'
+            'Initialized with John 1 in flow mode - verse data should now be populated'
           );
         } catch (error) {
           console.error('Failed to initialize default audio:', error);
@@ -59,13 +57,7 @@ export const MainNavigator: React.FC = () => {
     };
 
     initializeDefaultAudio();
-  }, [
-    currentRecording,
-    currentChapter,
-    setCurrentAudio,
-    initializeBibleBooks,
-    initializeDefaultQueue,
-  ]);
+  }, [currentRecording, currentChapter, setCurrentAudio, initializeBibleBooks]);
 
   const styles = StyleSheet.create({
     container: {
@@ -83,6 +75,64 @@ export const MainNavigator: React.FC = () => {
 
   const handleChapterSelect = async (book: Book, chapter: number) => {
     try {
+      const queueStore = useQueueStore.getState();
+      const playMode = queueStore.getPlayMode();
+
+      // If in queue mode, check if we should switch to flow mode or add to queue
+      if (playMode === 'queue') {
+        const { userQueue } = queueStore;
+
+        // If only one item in queue (the currently playing one), switch to flow mode
+        if (userQueue.items.length === 1) {
+          // Remove the current item from queue and clear automatic queue to ensure flow mode
+          queueStore.removeFromUserQueue(
+            userQueue.currentIndex >= 0 ? userQueue.currentIndex : 0
+          );
+          queueStore.clearAutomaticQueue(); // Prevent getCurrentItem() from moving automatic items back
+          console.log(
+            '🔄 MODE TRANSITION: Switched from queue mode to flow mode (removed last item, playing new selection)'
+          );
+
+          // Play directly in flow mode
+          const recordingId = getRecordingId(book, chapter);
+          await setCurrentAudio(recordingId);
+          audioStore.play();
+          console.log('Selected chapter:', `${book.name} ${chapter}`);
+          return;
+        }
+
+        // Multiple items in queue, add to front as before
+        const chapterData = {
+          id: getRecordingId(book, chapter),
+          book_name: book.name,
+          chapter_number: chapter,
+          title: `${book.name} Chapter ${chapter}`,
+          audio_file_url: `https://example.com/${getRecordingId(book, chapter)}.mp3`,
+          duration_seconds: 600 + chapter * 30,
+          language: 'en',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        queueStore.addToUserQueueFront({
+          type: 'chapter',
+          data: chapterData,
+        });
+
+        console.log(
+          `Added ${book.name} Chapter ${chapter} to front of queue (queue mode)`
+        );
+
+        // Play the newly added item (now at front of queue)
+        const currentItem = queueStore.getCurrentItem();
+        if (currentItem) {
+          await audioStore.playFromQueueItem(currentItem, true);
+          audioStore.play();
+        }
+        return;
+      }
+
+      // Flow mode: play directly
       const recordingId = getRecordingId(book, chapter);
       await setCurrentAudio(recordingId);
       audioStore.play();
@@ -98,6 +148,72 @@ export const MainNavigator: React.FC = () => {
     verse: number
   ) => {
     try {
+      const queueStore = useQueueStore.getState();
+      const playMode = queueStore.getPlayMode();
+
+      // If in queue mode, check if we should switch to flow mode or add to queue
+      if (playMode === 'queue') {
+        const { userQueue } = queueStore;
+
+        // If only one item in queue (the currently playing one), switch to flow mode
+        if (userQueue.items.length === 1) {
+          // Remove the current item from queue and clear automatic queue to ensure flow mode
+          queueStore.removeFromUserQueue(
+            userQueue.currentIndex >= 0 ? userQueue.currentIndex : 0
+          );
+          queueStore.clearAutomaticQueue(); // Prevent getCurrentItem() from moving automatic items back
+          console.log(
+            '🔄 MODE TRANSITION: Switched from queue mode to flow mode (removed last item, playing new selection)'
+          );
+
+          // Play directly in flow mode
+          const recordingId = getRecordingId(book, chapter);
+          await setCurrentAudio(recordingId);
+          const versePosition = (verse - 1) * 20; // Start from verse 1 = 0 seconds
+          audioStore.seek(versePosition);
+          audioStore.play();
+          console.log(
+            `Playing ${book.name} ${chapter}:${verse} at position ${versePosition}s`
+          );
+          return;
+        }
+
+        // Multiple items in queue, add to front as before
+        const recordingId = getRecordingId(book, chapter);
+        const versePosition = (verse - 1) * 20; // Start from verse 1 = 0 seconds
+        const chapterDuration = 600 + chapter * 30; // Estimated chapter duration
+
+        const passageData = {
+          id: `${recordingId}-from-verse-${verse}`,
+          chapter_id: recordingId,
+          start_verse: verse,
+          end_verse: 30, // Assume chapter ends at verse 30 (fallback)
+          start_time_seconds: versePosition,
+          end_time_seconds: chapterDuration,
+          title: `${book.name} Chapter ${chapter} (from verse ${verse})`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        queueStore.addToUserQueueFront({
+          type: 'passage',
+          data: passageData,
+        });
+
+        console.log(
+          `Added ${book.name} Chapter ${chapter} verse ${verse} passage to front of queue (queue mode)`
+        );
+
+        // Play the newly added passage (now at front of queue)
+        const currentItem = queueStore.getCurrentItem();
+        if (currentItem) {
+          await audioStore.playFromQueueItem(currentItem, true);
+          audioStore.play();
+        }
+        return;
+      }
+
+      // Flow mode: play directly
       // Set the current audio to the chapter
       const recordingId = getRecordingId(book, chapter);
       await setCurrentAudio(recordingId);

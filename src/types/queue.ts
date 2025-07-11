@@ -54,6 +54,7 @@ export interface Queue {
 export interface QueueState {
   userQueue: Queue;
   automaticQueue: Queue;
+  recentlyPlayedQueueTracks: QueueItem[]; // Last 7 played items from user queue
   isUserQueueActive: boolean; // Whether user queue has priority
 }
 
@@ -62,13 +63,32 @@ export interface QueueActions {
   // User queue management
   addToUserQueueFront: (item: Omit<QueueItem, 'id' | 'addedAt'>) => void;
   addToUserQueueBack: (item: Omit<QueueItem, 'id' | 'addedAt'>) => void;
+  addToEmptyQueue: (
+    item: Omit<QueueItem, 'id' | 'addedAt'>,
+    currentTrackInfo: {
+      recordingId: string;
+      bookName: string;
+      chapterNumber: number;
+      currentTime: number;
+      totalDuration: number;
+      totalVerses?: number;
+      currentVerse?: number;
+    }
+  ) => void;
   removeFromUserQueue: (index: number) => void;
   reorderUserQueue: (fromIndex: number, toIndex: number) => void;
   clearUserQueue: () => void;
 
+  // Recently played queue management
+  addToRecentlyPlayed: (item: QueueItem) => void;
+  moveFromRecentlyPlayedToFront: (index: number) => void;
+  clearRecentlyPlayed: () => void;
+
   // Automatic queue management
   populateAutomaticQueue: (startingChapterId: string) => void;
   updateAutomaticQueueFromUserQueue: () => void;
+  updateAutomaticQueueIfVisible: () => void;
+  setQueueViewVisible: (visible: boolean) => void;
   clearAutomaticQueue: () => void;
   initializeDefaultQueue: () => void;
 
@@ -76,6 +96,33 @@ export interface QueueActions {
   playNext: () => Promise<boolean>;
   playPrevious: () => Promise<boolean>;
   getCurrentItem: () => QueueItem | null;
+
+  // Mode-aware navigation
+  playNextInQueueMode: () => boolean;
+  playPreviousInQueueMode: () => boolean;
+  playNextInFlowMode: (currentRecordingId: string) => string | null;
+  playPreviousInFlowMode: (currentRecordingId: string) => string | null;
+
+  // Play mode utilities
+  getPlayMode: () => 'queue' | 'flow';
+  createQueueItemFromTrackInfo: (trackInfo: {
+    recordingId: string;
+    bookName: string;
+    chapterNumber: number;
+    currentTime: number;
+    totalDuration: number;
+    totalVerses?: number;
+    currentVerse?: number;
+  }) => QueueItem;
+  initializeQueueWithTrack: (trackInfo: {
+    recordingId: string;
+    bookName: string;
+    chapterNumber: number;
+    currentTime: number;
+    totalDuration: number;
+    totalVerses?: number;
+    currentVerse?: number;
+  }) => boolean;
 
   // Queue state
   setUserQueueActive: (active: boolean) => void;

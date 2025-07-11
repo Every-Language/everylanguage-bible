@@ -5,6 +5,7 @@ import {
   QueueItem,
   Chapter,
   createQueueItem,
+  getQueueItemDisplayName,
 } from '@/types/queue';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 
@@ -159,6 +160,7 @@ function createMockChapter(chapterId: string): Chapter {
 interface QueueStoreState extends QueueState, QueueActions {
   // Additional state for internal use
   bibleBooks: Book[];
+  queueViewVisible: boolean;
 }
 
 export const useQueueStore = create<QueueStoreState>((set, get) => ({
@@ -173,8 +175,10 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
     currentIndex: -1,
     isActive: false,
   },
+  recentlyPlayedQueueTracks: [],
   isUserQueueActive: false,
   bibleBooks: [],
+  queueViewVisible: false,
 
   // Initialize default queue with Galatians 1 and Luke 1:15-55 in user queue
   initializeDefaultQueue: () => {
@@ -234,8 +238,8 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       isUserQueueActive: true,
     }));
 
-    // Update automatic queue based on the new user queue
-    get().updateAutomaticQueueFromUserQueue();
+    // Update automatic queue based on the new user queue (only if visible)
+    get().updateAutomaticQueueIfVisible();
   },
 
   addToUserQueueBack: itemData => {
@@ -253,11 +257,53 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       isUserQueueActive: true,
     }));
 
-    // Update automatic queue based on the new user queue
-    get().updateAutomaticQueueFromUserQueue();
+    // Update automatic queue based on the new user queue (only if visible)
+    get().updateAutomaticQueueIfVisible();
+  },
+
+  // Add item to empty queue, initializing with current track first
+  addToEmptyQueue: (itemData, currentTrackInfo) => {
+    const { userQueue } = get();
+
+    // Only use this function when queue is actually empty
+    if (userQueue.items.length > 0) {
+      console.warn(
+        'addToEmptyQueue called but queue is not empty. Use addToUserQueueBack instead.'
+      );
+      return get().addToUserQueueBack(itemData);
+    }
+
+    // Create current track item and new item
+    const currentTrackItem =
+      get().createQueueItemFromTrackInfo(currentTrackInfo);
+    const newItem = createQueueItem(
+      itemData.type,
+      itemData.data,
+      itemData.priority
+    );
+
+    set(() => ({
+      userQueue: {
+        items: [currentTrackItem, newItem],
+        currentIndex: 0, // Start with current track
+        isActive: true,
+      },
+      isUserQueueActive: true,
+    }));
+
+    // Update automatic queue based on the new user queue (only if visible)
+    get().updateAutomaticQueueIfVisible();
+
+    console.log('Added to empty queue - current track + new item:', {
+      current: getQueueItemDisplayName(currentTrackItem),
+      new: getQueueItemDisplayName(newItem),
+    });
   },
 
   removeFromUserQueue: (index: number) => {
+    const { userQueue } = get();
+    const wasInQueueMode = userQueue.items.length > 0;
+
     set(state => {
       const newItems = state.userQueue.items.filter((_, i) => i !== index);
       let newCurrentIndex = state.userQueue.currentIndex;
@@ -278,8 +324,16 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       };
     });
 
-    // Update automatic queue based on the new user queue
-    get().updateAutomaticQueueFromUserQueue();
+    // Check if we just transitioned from queue mode to flow mode
+    const newQueueState = get().userQueue;
+    if (wasInQueueMode && newQueueState.items.length === 0) {
+      console.log(
+        '🔄 MODE TRANSITION: Switched from queue mode to flow mode (queue emptied)'
+      );
+    }
+
+    // Update automatic queue based on the new user queue (only if visible)
+    get().updateAutomaticQueueIfVisible();
   },
 
   reorderUserQueue: (fromIndex: number, toIndex: number) => {
@@ -315,11 +369,14 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       };
     });
 
-    // Update automatic queue based on the new user queue
-    get().updateAutomaticQueueFromUserQueue();
+    // Update automatic queue based on the new user queue (only if visible)
+    get().updateAutomaticQueueIfVisible();
   },
 
   clearUserQueue: () => {
+    const { userQueue } = get();
+    const wasInQueueMode = userQueue.items.length > 0;
+
     set(() => ({
       userQueue: {
         items: [],
@@ -329,8 +386,64 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
       isUserQueueActive: false,
     }));
 
-    // Update automatic queue based on the new user queue (will clear it since user queue is empty)
-    get().updateAutomaticQueueFromUserQueue();
+    if (wasInQueueMode) {
+      console.log(
+        '🔄 MODE TRANSITION: Switched from queue mode to flow mode (queue cleared)'
+      );
+    }
+
+    // Clear automatic queue immediately since user queue is now empty
+    get().clearAutomaticQueue();
+  },
+
+  // Recently played queue management
+  addToRecentlyPlayed: (item: QueueItem) => {
+    set(state => {
+      const newRecentlyPlayed = [item, ...state.recentlyPlayedQueueTracks];
+      // Keep only the last 7 items
+      if (newRecentlyPlayed.length > 7) {
+        newRecentlyPlayed.splice(7);
+      }
+      return {
+        recentlyPlayedQueueTracks: newRecentlyPlayed,
+      };
+    });
+  },
+
+  moveFromRecentlyPlayedToFront: (index: number) => {
+    const { recentlyPlayedQueueTracks } = get();
+
+    if (index >= 0 && index < recentlyPlayedQueueTracks.length) {
+      const itemToMove = recentlyPlayedQueueTracks[index];
+
+      if (!itemToMove) return;
+
+      // Remove item from recently played
+      set(state => ({
+        recentlyPlayedQueueTracks: state.recentlyPlayedQueueTracks.filter(
+          (_, i) => i !== index
+        ),
+      }));
+
+      // Add item to front of user queue
+      get().addToUserQueueFront({
+        type: itemToMove.type,
+        data: itemToMove.data,
+        ...(itemToMove.priority !== undefined && {
+          priority: itemToMove.priority,
+        }),
+      });
+
+      console.log(
+        `Moved item from recently played to front of queue: ${getQueueItemDisplayName(itemToMove)}`
+      );
+    }
+  },
+
+  clearRecentlyPlayed: () => {
+    set(() => ({
+      recentlyPlayedQueueTracks: [],
+    }));
   },
 
   // Automatic queue management
@@ -543,6 +656,120 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
     return null;
   },
 
+  // Mode-aware navigation functions
+  playNextInQueueMode: () => {
+    const { userQueue } = get();
+
+    if (userQueue.items.length === 0) {
+      return false;
+    }
+
+    // Get current item to move to recently played
+    const currentIndex =
+      userQueue.currentIndex >= 0 ? userQueue.currentIndex : 0;
+    const currentItem = userQueue.items[currentIndex];
+
+    if (currentItem) {
+      // Move current item to recently played
+      get().addToRecentlyPlayed(currentItem);
+
+      // Remove current item from user queue
+      get().removeFromUserQueue(currentIndex);
+
+      // Current index is automatically adjusted by removeFromUserQueue
+      // The next item (if exists) is now at the same index position
+
+      console.log(
+        `Queue mode: moved item to recently played and advanced: ${getQueueItemDisplayName(currentItem)}`
+      );
+      return true;
+    }
+
+    return false;
+  },
+
+  playPreviousInQueueMode: () => {
+    const { recentlyPlayedQueueTracks } = get();
+
+    if (recentlyPlayedQueueTracks.length === 0) {
+      return false; // No recently played items to go back to
+    }
+
+    // Get the most recent item (index 0) and move it back to front of queue
+    get().moveFromRecentlyPlayedToFront(0);
+
+    console.log('Queue mode: moved item from recently played back to queue');
+    return true;
+  },
+
+  playNextInFlowMode: (currentRecordingId: string) => {
+    const { bibleBooks } = get();
+
+    // Initialize books if needed
+    if (bibleBooks.length === 0) {
+      const books = loadBibleBooks();
+      set({ bibleBooks: books });
+    }
+
+    const parsed = parseRecordingId(currentRecordingId);
+    if (!parsed) return null;
+
+    const { bookName, chapter } = parsed;
+
+    // Find current book
+    const currentBook = bibleBooks.find(book => book.name === bookName);
+    if (!currentBook) return null;
+
+    // Check if there's a next chapter in current book
+    if (chapter < currentBook.chapters) {
+      return getRecordingId(currentBook, chapter + 1);
+    }
+
+    // Find next book
+    const nextBook = bibleBooks.find(
+      book => book.order === currentBook.order + 1
+    );
+    if (nextBook) {
+      return getRecordingId(nextBook, 1);
+    }
+
+    return null; // At end of Bible
+  },
+
+  playPreviousInFlowMode: (currentRecordingId: string) => {
+    const { bibleBooks } = get();
+
+    // Initialize books if needed
+    if (bibleBooks.length === 0) {
+      const books = loadBibleBooks();
+      set({ bibleBooks: books });
+    }
+
+    const parsed = parseRecordingId(currentRecordingId);
+    if (!parsed) return null;
+
+    const { bookName, chapter } = parsed;
+
+    // Find current book
+    const currentBook = bibleBooks.find(book => book.name === bookName);
+    if (!currentBook) return null;
+
+    // Check if there's a previous chapter in current book
+    if (chapter > 1) {
+      return getRecordingId(currentBook, chapter - 1);
+    }
+
+    // Find previous book
+    const previousBook = bibleBooks.find(
+      book => book.order === currentBook.order - 1
+    );
+    if (previousBook) {
+      return getRecordingId(previousBook, previousBook.chapters);
+    }
+
+    return null; // At beginning of Bible
+  },
+
   // Queue state
   setUserQueueActive: (active: boolean) => {
     set({ isUserQueueActive: active });
@@ -557,5 +784,103 @@ export const useQueueStore = create<QueueStoreState>((set, get) => ({
     const { userQueue, automaticQueue, isUserQueueActive } = get();
     const activeQueue = isUserQueueActive ? userQueue : automaticQueue;
     return activeQueue.items.length;
+  },
+
+  // Queue view visibility management
+  setQueueViewVisible: (visible: boolean) => {
+    set({ queueViewVisible: visible });
+
+    // Update automatic queue when queue view becomes visible
+    if (visible) {
+      get().updateAutomaticQueueFromUserQueue();
+    }
+  },
+
+  updateAutomaticQueueIfVisible: () => {
+    const { queueViewVisible } = get();
+    if (queueViewVisible) {
+      get().updateAutomaticQueueFromUserQueue();
+    }
+  },
+
+  // Play mode utilities
+  getPlayMode: () => {
+    const { userQueue } = get();
+    return userQueue.items.length > 0 ? 'queue' : 'flow';
+  },
+
+  // Helper to create queue item from track information
+  createQueueItemFromTrackInfo: trackInfo => {
+    const {
+      recordingId,
+      bookName,
+      chapterNumber,
+      currentTime,
+      totalDuration,
+      totalVerses,
+      currentVerse,
+    } = trackInfo;
+
+    // Create a chapter or passage item based on current state
+    if (currentTime > 5) {
+      // 5 second threshold to avoid creating passages for very short playback
+      // If we're mid-playback, create a passage starting from current position
+      const verseNumber = currentVerse || 1;
+      const endVerse = totalVerses || 30; // Default fallback
+
+      const passage = {
+        id: `${recordingId}-from-verse-${verseNumber}`,
+        chapter_id: recordingId,
+        start_verse: verseNumber,
+        end_verse: endVerse,
+        start_time_seconds: currentTime,
+        end_time_seconds: totalDuration,
+        title: `${bookName} Chapter ${chapterNumber} (from verse ${verseNumber})`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      return createQueueItem('passage', passage);
+    } else {
+      // If at beginning, create a full chapter item
+      const chapter = {
+        id: recordingId,
+        book_name: bookName,
+        chapter_number: chapterNumber,
+        title: `${bookName} Chapter ${chapterNumber}`,
+        audio_file_url: `https://example.com/${recordingId}.mp3`,
+        duration_seconds: totalDuration,
+        language: 'en',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      return createQueueItem('chapter', chapter);
+    }
+  },
+
+  // Initialize queue with current track when transitioning to queuePlayMode
+  initializeQueueWithTrack: trackInfo => {
+    const currentTrackItem = get().createQueueItemFromTrackInfo(trackInfo);
+
+    set(() => ({
+      userQueue: {
+        items: [currentTrackItem],
+        currentIndex: 0,
+        isActive: true,
+      },
+      isUserQueueActive: true,
+    }));
+
+    // Also populate the automatic queue ("up next") with next chapters
+    get().updateAutomaticQueueFromUserQueue();
+
+    console.log('🔄 MODE TRANSITION: Switched from flow mode to queue mode');
+    console.log(
+      'Initialized queue with current track:',
+      getQueueItemDisplayName(currentTrackItem)
+    );
+    console.log('Populated "up next" with automatic queue');
+    return true;
   },
 }));
