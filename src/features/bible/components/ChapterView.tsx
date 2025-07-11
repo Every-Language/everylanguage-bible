@@ -15,6 +15,7 @@ import { type Book } from '@/shared/utils';
 import { useTheme } from '@/shared/store';
 import { PlayIcon, PlusIcon } from '@/shared/components/ui/icons/AudioIcons';
 import { TouchableOpacity } from 'react-native';
+import { useMiniPlayerHeight } from '@/shared/hooks';
 
 interface ChapterViewProps {
   onChapterSelect: (book: Book, chapter: number) => void;
@@ -108,6 +109,7 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
   const { isOpen, selectedBook, closeChapterView } = useChapterViewStore();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { collapsedHeight } = useMiniPlayerHeight();
 
   if (!isOpen || !selectedBook) {
     return null;
@@ -293,7 +295,7 @@ export const ChapterView: React.FC<ChapterViewProps> = ({
       top={insets.top + 10}
       left={10}
       right={10}
-      bottom={110} // Leave space for media player + 10px margin
+      bottom={collapsedHeight + 10} // Mini player height + 10px margin
       backgroundColor={colors.background}
       borderRadius='$4'
       borderWidth={2}

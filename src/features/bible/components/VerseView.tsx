@@ -15,6 +15,7 @@ import { type Book } from '@/shared/utils';
 import { useTheme } from '@/shared/store';
 import { PlayIcon, PlusIcon } from '@/shared/components/ui/icons/AudioIcons';
 import { TouchableOpacity } from 'react-native';
+import { useMiniPlayerHeight } from '@/shared/hooks';
 
 interface VerseViewProps {
   onVerseSelect: (book: Book, chapter: number, verse: number) => void;
@@ -111,6 +112,7 @@ export const VerseView: React.FC<VerseViewProps> = ({
     useVerseViewStore();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { collapsedHeight } = useMiniPlayerHeight();
 
   if (!isOpen || !selectedBook || !selectedChapter) {
     return null;
@@ -305,7 +307,7 @@ export const VerseView: React.FC<VerseViewProps> = ({
       top={insets.top + 10}
       left={10}
       right={10}
-      bottom={110} // Leave space for media player + 10px margin
+      bottom={collapsedHeight + 10} // Mini player height + 10px margin
       backgroundColor={colors.background}
       borderRadius='$4'
       borderWidth={2}

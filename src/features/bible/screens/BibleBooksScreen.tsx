@@ -20,6 +20,7 @@ import {
   useChapterViewStore,
   useVerseViewStore,
 } from '@/shared/store';
+import { useMiniPlayerHeight } from '@/shared/hooks';
 
 interface BibleBooksScreenProps {
   onChapterSelect: (book: Book, chapter: number) => void;
@@ -38,6 +39,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     useChapterViewStore();
   const { openVerseView } = useVerseViewStore();
   const insets = useSafeAreaInsets();
+  const { collapsedHeight } = useMiniPlayerHeight();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null);
@@ -188,7 +190,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       flex: 1,
     },
     scrollContent: {
-      paddingBottom: 100, // Extra space for mini-player
+      paddingBottom: collapsedHeight + 2, // Mini player height + 2px buffer
     },
     testamentSection: {
       marginBottom: Dimensions.spacing['2xl'],

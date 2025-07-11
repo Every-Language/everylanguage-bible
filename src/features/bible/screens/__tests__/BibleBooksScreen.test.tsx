@@ -161,6 +161,16 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 44, bottom: 34, left: 0, right: 0 }),
 }));
 
+// Mock useMiniPlayerHeight hook
+jest.mock('@/shared/hooks', () => ({
+  ...jest.requireActual('@/shared/hooks'),
+  useMiniPlayerHeight: () => ({
+    collapsedHeight: 224, // 190 + 34 (bottom insets)
+    bottomControlsHeight: 190,
+    safeAreaBottom: 34,
+  }),
+}));
+
 // Mock Animated to avoid timing issues in tests
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
