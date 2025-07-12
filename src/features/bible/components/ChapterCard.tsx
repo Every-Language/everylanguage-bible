@@ -636,7 +636,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
           alignItems='center'>
           <BookImage
             imagePath={selectedBook.imagePath}
-            size={60}
+            size={110}
             testID='book-image'
           />
 
