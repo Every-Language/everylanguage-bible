@@ -583,8 +583,8 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
           selectedKey={testamentMode}
           onSelect={(key: string) => setTestamentMode(key as TestamentMode)}
           testID='testament-toggle'
-          height={32}
-          fontSize={Fonts.size.base}
+          height={28}
+          fontSize={Fonts.size.sm}
         />
       </View>
 

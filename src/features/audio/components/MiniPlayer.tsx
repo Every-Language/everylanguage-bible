@@ -44,6 +44,7 @@ import { useAudioStore } from '@/shared/store/audioStore';
 import { useQueueStore } from '@/shared/store/queueStore';
 import { VerseDisplayData } from '@/types/audio';
 import { QueueItemComponent } from './QueueItemComponent';
+import { ToggleButtons } from '@/shared/components/ui';
 
 interface MiniPlayerProps {
   testID?: string;
@@ -882,64 +883,25 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
       {/* Text and Queue Buttons Row */}
       <View
         style={{
-          flexDirection: 'row',
-          gap: Dimensions.spacing.md,
+          marginHorizontal: 0,
         }}>
-        {/* Text Button */}
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            height: 28,
-            backgroundColor:
-              currentMode === 'text' ? colors.primary : colors.primary + '20',
-            borderRadius: Dimensions.radius.md,
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: colors.primary,
+        <ToggleButtons
+          options={[
+            { key: 'text', label: t('audio.text', 'Text') },
+            { key: 'queue', label: t('audio.queue', 'Queue') },
+          ]}
+          selectedKey={currentMode}
+          onSelect={(key: string) => {
+            if (key === 'text') {
+              onTextPress?.();
+            } else if (key === 'queue') {
+              onQueuePress?.();
+            }
           }}
-          onPress={() => {
-            onTextPress?.();
-          }}
-          testID='expanded-text-button'>
-          <Text
-            style={{
-              fontSize: Fonts.size.base,
-              fontWeight: Fonts.weight.medium,
-              color:
-                currentMode === 'text' ? colors.background : colors.primary,
-            }}>
-            {t('audio.text', 'Text')}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Queue Button */}
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            height: 28,
-            backgroundColor:
-              currentMode === 'queue' ? colors.primary : colors.primary + '20',
-            borderRadius: Dimensions.radius.md,
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: colors.primary,
-          }}
-          onPress={() => {
-            onQueuePress?.();
-          }}
-          testID='expanded-queue-button'>
-          <Text
-            style={{
-              fontSize: Fonts.size.base,
-              fontWeight: Fonts.weight.medium,
-              color:
-                currentMode === 'queue' ? colors.background : colors.primary,
-            }}>
-            {t('audio.queue', 'Queue')}
-          </Text>
-        </TouchableOpacity>
+          testID='expanded-mode-toggle'
+          height={24}
+          fontSize={Fonts.size.sm}
+        />
       </View>
 
       {/* Content Area */}
