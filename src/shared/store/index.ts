@@ -10,6 +10,9 @@ export { useChapterCardStore } from './chapterCardStore';
 // Queue store
 export { useQueueStore } from './queueStore';
 
+// Help panel store (test store for SlideUpPanel)
+export { useHelpPanelStore } from './helpPanelStore';
+
 // Future stores will be exported here:
 // export { useAuthStore } from './authStore';
 // export { useSettingsStore } from './settingsStore';

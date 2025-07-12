@@ -5,7 +5,7 @@ import { useResponsive } from '@/shared/hooks';
 import { useTranslation } from '@/shared/hooks';
 import BaseSlide from '../BaseSlide';
 import ResponsiveText from '../ResponsiveText';
-import genesisImage from '../../../../../assets/images/books/01_genesis.png';
+import genesisImage from '../../../../../assets/images/book_icons/01_genesis.png';
 
 interface AudioSampleProps {
   scrollForward?: () => void;

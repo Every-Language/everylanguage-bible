@@ -13,12 +13,20 @@ import {
   ScrollView as GestureScrollView,
 } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { OptionsPanel, ToggleButtons } from '@/shared/components/ui';
+import {
+  OptionsPanel,
+  ToggleButtons,
+  SlideUpPanel,
+} from '@/shared/components/ui';
 import { MoreIcon } from '@/shared/components/ui/icons/AudioIcons';
 import { ChapterCard } from '../components';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
-import { useTheme, useChapterCardStore } from '@/shared/store';
+import {
+  useTheme,
+  useChapterCardStore,
+  useHelpPanelStore,
+} from '@/shared/store';
 import {
   useMiniPlayerHeight,
   useHorizontalSlideAnimation,
@@ -417,6 +425,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
 }) => {
   const { colors, toggleTheme } = useTheme();
   const { openChapterCard } = useChapterCardStore();
+  const { isOpen: isHelpPanelOpen, closeHelpPanel } = useHelpPanelStore();
   const insets = useSafeAreaInsets();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
@@ -620,6 +629,72 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         onThemeToggle={toggleTheme}
         position={optionsButtonPosition}
       />
+
+      {/* Help Panel - Test SlideUpPanel */}
+      <SlideUpPanel
+        isVisible={isHelpPanelOpen}
+        onClose={closeHelpPanel}
+        title='Help & Support'
+        testID='help-panel'>
+        <View style={{ paddingVertical: Dimensions.spacing.md }}>
+          <Text
+            style={{
+              fontSize: Fonts.size.lg,
+              color: colors.text,
+              fontWeight: Fonts.weight.semibold,
+              marginBottom: Dimensions.spacing.md,
+            }}>
+            Welcome to the Bible App!
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              lineHeight: 24,
+              marginBottom: Dimensions.spacing.md,
+            }}>
+            This is a test panel to demonstrate the SlideUpPanel component. You
+            can:
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              lineHeight: 24,
+              marginBottom: Dimensions.spacing.xs,
+            }}>
+            • Drag the bar at the top to close
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              lineHeight: 24,
+              marginBottom: Dimensions.spacing.xs,
+            }}>
+            • Tap the X button to close
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              lineHeight: 24,
+              marginBottom: Dimensions.spacing.xs,
+            }}>
+            • Tap the backdrop to close
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              lineHeight: 24,
+              marginTop: Dimensions.spacing.md,
+            }}>
+            This panel demonstrates the full-screen mode with drag-to-close
+            functionality.
+          </Text>
+        </View>
+      </SlideUpPanel>
     </View>
   );
 };

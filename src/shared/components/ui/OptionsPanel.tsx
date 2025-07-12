@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Animated, View } from 'react-native';
 import { Text } from '@tamagui/core';
-import { useTheme } from '@/shared/store';
+import { useTheme, useHelpPanelStore } from '@/shared/store';
 import { useTranslation } from '@/shared/hooks';
 import { Dimensions, Fonts } from '@/shared/constants';
 
@@ -20,6 +20,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
 }) => {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
+  const { openHelpPanel } = useHelpPanelStore();
   const [fadeAnim] = React.useState(new Animated.Value(0));
   const [scaleAnim] = React.useState(new Animated.Value(0.8));
 
@@ -352,7 +353,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
             paddingVertical: Dimensions.spacing.md,
             minHeight: 48,
           }}
-          onPress={() => handleOptionPress(() => console.log('Help pressed'))}
+          onPress={() => handleOptionPress(() => openHelpPanel())}
           accessibilityLabel='Help'
           accessibilityRole='button'
           testID='options-help'>

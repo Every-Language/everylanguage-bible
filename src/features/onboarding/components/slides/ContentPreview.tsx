@@ -9,10 +9,10 @@ import {
 import React from 'react';
 import { useTheme } from '@/shared/store';
 import { useTranslation } from '@/shared/hooks';
-import genesisImage from '../../../../../assets/images/books/01_genesis.png';
-import psalmsImage from '../../../../../assets/images/books/19_psalms.png';
-import johnImage from '../../../../../assets/images/books/43_john.png';
-import romansImage from '../../../../../assets/images/books/45_romans.png';
+import genesisImage from '../../../../../assets/images/book_icons/01_genesis.png';
+import psalmsImage from '../../../../../assets/images/book_icons/19_psalms.png';
+import johnImage from '../../../../../assets/images/book_icons/43_john.png';
+import romansImage from '../../../../../assets/images/book_icons/45_romans.png';
 
 interface ContentPreviewProps {
   scrollForward?: () => void;
