@@ -1,5 +1,6 @@
 export { BookCard } from './BookCard';
 export { ThemeDemo } from './ThemeDemo';
+export { OptionsMenu } from './OptionsMenu';
 export { ProgressBar } from './ProgressBar';
 export { OptionsPanel } from './OptionsPanel';
 export { SlideUpPanel } from './SlideUpPanel';

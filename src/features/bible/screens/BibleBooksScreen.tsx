@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,7 +14,7 @@ import {
 } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import {
-  OptionsPanel,
+  OptionsMenu,
   ToggleButtons,
   SlideUpPanel,
 } from '@/shared/components/ui';
@@ -431,11 +431,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [testamentMode, setTestamentMode] = useState<TestamentMode>('old');
   const [showOptionsPanel, setShowOptionsPanel] = useState(false);
-  const [optionsButtonPosition, setOptionsButtonPosition] = useState({
-    top: 0,
-    right: 0,
-  });
-  const optionsButtonRef = useRef<View>(null);
 
   // Use the horizontal slide animation hook
   const { slideAnimation, gestureHandler, updateAnimation } =
@@ -479,18 +474,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   };
 
   const handleOptionsPress = () => {
-    if (optionsButtonRef.current) {
-      optionsButtonRef.current.measure(
-        (_x, _y, width, height, pageX, pageY) => {
-          const screenWidth = RNDimensions.get('window').width;
-          setOptionsButtonPosition({
-            top: pageY + height,
-            right: screenWidth - pageX - width,
-          });
-          setShowOptionsPanel(true);
-        }
-      );
-    }
+    setShowOptionsPanel(true);
   };
 
   const handleCloseOptions = () => {
@@ -574,7 +558,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         <View style={styles.headerRow}>
           <Text style={styles.title}>Bible</Text>
           <TouchableOpacity
-            ref={optionsButtonRef}
             style={styles.optionsButton}
             onPress={handleOptionsPress}
             accessibilityLabel='Options menu'
@@ -622,12 +605,11 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         onVerseSelect={onVerseSelect}
       />
 
-      {/* Options Panel */}
-      <OptionsPanel
+      {/* Options Menu */}
+      <OptionsMenu
         isVisible={showOptionsPanel}
         onClose={handleCloseOptions}
         onThemeToggle={toggleTheme}
-        position={optionsButtonPosition}
       />
 
       {/* Help Panel - Test SlideUpPanel */}
