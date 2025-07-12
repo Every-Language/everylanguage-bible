@@ -163,7 +163,7 @@ const TrackTextView: React.FC<TrackTextViewProps> = ({
         contentContainerStyle={{ padding: Dimensions.spacing.md }}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps='handled'
-        nestedScrollEnabled={true}
+        nestedScrollEnabled={false}
         scrollEventThrottle={16}
         bounces={true}
         onScrollBeginDrag={handleScrollBegin}
@@ -292,160 +292,216 @@ const QueueView: React.FC<QueueViewProps> = ({
     [addToUserQueueBack]
   );
 
+  // Combine all items into a single list for unified scrolling
+  const combinedItems = React.useMemo(() => {
+    const items: Array<{
+      id: string;
+      type:
+        | 'section-header'
+        | 'user-queue-item'
+        | 'auto-queue-item'
+        | 'empty-state';
+      data?: any;
+      item?: any;
+      userQueueIndex?: number;
+    }> = [];
+
+    // User Queue Section Header
+    items.push({
+      id: 'user-queue-header',
+      type: 'section-header',
+      data: { title: t('audio.userQueue', 'Your Queue') },
+    });
+
+    // User Queue Items or Empty State
+    if (userQueue.items.length > 0) {
+      userQueue.items.forEach((item, index) => {
+        items.push({
+          id: `user-${item.id}`,
+          type: 'user-queue-item',
+          item,
+          userQueueIndex: index,
+        });
+      });
+    } else {
+      items.push({
+        id: 'user-queue-empty',
+        type: 'empty-state',
+        data: {
+          message: t(
+            'audio.dragItemsHere',
+            'Drag items here to create your custom queue'
+          ),
+          isDashed: true,
+        },
+      });
+    }
+
+    // Auto Queue Section Header
+    items.push({
+      id: 'auto-queue-header',
+      type: 'section-header',
+      data: { title: t('audio.autoQueue', 'Up Next') },
+    });
+
+    // Auto Queue Items or Empty State
+    if (automaticQueue.items.length > 0) {
+      automaticQueue.items.forEach(item => {
+        items.push({
+          id: `auto-${item.id}`,
+          type: 'auto-queue-item',
+          item,
+        });
+      });
+    } else {
+      items.push({
+        id: 'auto-queue-empty',
+        type: 'empty-state',
+        data: {
+          message: t('audio.noAutoQueue', 'No upcoming items'),
+          isDashed: false,
+        },
+      });
+    }
+
+    return items;
+  }, [userQueue.items, automaticQueue.items, t]);
+
   // Handle drag and drop reordering for user queue
-  const handleUserQueueDragEnd = React.useCallback(
+  const handleCombinedDragEnd = React.useCallback(
     ({ data: _data, from, to }: any) => {
-      reorderUserQueue(from, to);
+      const draggedItem = combinedItems[from];
+      const targetItem = combinedItems[to];
+
+      // Only allow reordering within user queue items
+      if (
+        draggedItem?.type === 'user-queue-item' &&
+        targetItem?.type === 'user-queue-item'
+      ) {
+        const fromIndex = draggedItem.userQueueIndex;
+        const toIndex = targetItem.userQueueIndex;
+
+        if (fromIndex !== undefined && toIndex !== undefined) {
+          reorderUserQueue(fromIndex, toIndex);
+        }
+      }
+      // If dragging non-user queue items, do nothing (effectively prevents the drag)
     },
-    [reorderUserQueue]
+    [combinedItems, reorderUserQueue]
   );
 
   const currentItem = getCurrentItem();
 
+  const renderCombinedItem = React.useCallback(
+    ({ item: listItem, drag, isActive, getIndex }: any) => {
+      const { type, data, item, userQueueIndex } = listItem;
+
+      switch (type) {
+        case 'section-header':
+          return (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: Dimensions.spacing.sm,
+                marginTop: getIndex() > 0 ? Dimensions.spacing.lg : 0,
+                paddingHorizontal: Dimensions.spacing.sm,
+              }}>
+              <Text
+                style={{
+                  fontSize: Fonts.size.base,
+                  fontWeight: Fonts.weight.bold,
+                  color: colors.text,
+                }}>
+                {data.title}
+              </Text>
+            </View>
+          );
+
+        case 'user-queue-item':
+          return (
+            <ScaleDecorator>
+              <OpacityDecorator>
+                <QueueItemComponent
+                  item={item}
+                  isFromUserQueue={true}
+                  onPress={() => handleItemPress(item)}
+                  onRemove={() => {
+                    if (userQueueIndex !== undefined) {
+                      handleRemoveFromUserQueue(userQueueIndex);
+                    }
+                  }}
+                  drag={drag}
+                  isActive={isActive || currentItem?.id === item.id}
+                />
+              </OpacityDecorator>
+            </ScaleDecorator>
+          );
+
+        case 'auto-queue-item':
+          return (
+            <QueueItemComponent
+              item={item}
+              isFromUserQueue={false}
+              onPress={() => handleItemPress(item)}
+              onAdd={() => handleMoveToUserQueue(item)}
+              isActive={currentItem?.id === item.id}
+            />
+          );
+
+        case 'empty-state':
+          return (
+            <View
+              style={{
+                backgroundColor: data.isDashed
+                  ? colors.text + '05'
+                  : colors.background,
+                borderRadius: Dimensions.radius.md,
+                padding: Dimensions.spacing.md,
+                marginHorizontal: Dimensions.spacing.sm,
+                borderWidth: 1,
+                borderColor: data.isDashed
+                  ? colors.text + '10'
+                  : colors.text + '20',
+                borderStyle: data.isDashed ? 'dashed' : 'solid',
+              }}>
+              <Text
+                style={{
+                  fontSize: Fonts.size.sm,
+                  color: colors.text + '60',
+                  textAlign: 'center',
+                  fontStyle: 'italic',
+                }}>
+                {data.message}
+              </Text>
+            </View>
+          );
+
+        default:
+          return null;
+      }
+    },
+    [
+      colors,
+      currentItem,
+      handleItemPress,
+      handleRemoveFromUserQueue,
+      handleMoveToUserQueue,
+    ]
+  );
+
   return (
     <View style={{ flex: 1, padding: Dimensions.spacing.md }}>
-      {/* Scrollable Content */}
-      <GestureScrollView
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={true}
+      <DraggableFlatList
+        data={combinedItems}
+        onDragEnd={handleCombinedDragEnd}
+        keyExtractor={item => item.id}
+        scrollEnabled={true}
+        activationDistance={15}
+        renderItem={renderCombinedItem}
         contentContainerStyle={{ paddingBottom: Dimensions.spacing.md }}
-        nestedScrollEnabled={true}
-        scrollEventThrottle={16}
-        keyboardShouldPersistTaps='handled'
-        bounces={true}>
-        {/* User Queue Section */}
-        <View style={{ marginBottom: Dimensions.spacing.lg }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: Dimensions.spacing.sm,
-              paddingHorizontal: Dimensions.spacing.sm,
-            }}>
-            <Text
-              style={{
-                fontSize: Fonts.size.base,
-                fontWeight: Fonts.weight.bold,
-                color: colors.text,
-              }}>
-              {t('audio.userQueue', 'Your Queue')}
-            </Text>
-          </View>
-
-          {/* User Queue Items */}
-          {userQueue.items.length > 0 ? (
-            <View style={{ minHeight: 100, flex: 1 }}>
-              <DraggableFlatList
-                data={userQueue.items}
-                onDragEnd={handleUserQueueDragEnd}
-                keyExtractor={item => item.id}
-                scrollEnabled={true}
-                nestedScrollEnabled={true}
-                activationDistance={15}
-                renderItem={({ item, drag, isActive, getIndex }) => (
-                  <ScaleDecorator>
-                    <OpacityDecorator>
-                      <QueueItemComponent
-                        item={item}
-                        isFromUserQueue={true}
-                        onPress={() => handleItemPress(item)}
-                        onRemove={() => {
-                          const index = getIndex();
-                          if (index !== undefined) {
-                            handleRemoveFromUserQueue(index);
-                          }
-                        }}
-                        drag={drag}
-                        isActive={isActive || currentItem?.id === item.id}
-                      />
-                    </OpacityDecorator>
-                  </ScaleDecorator>
-                )}
-              />
-            </View>
-          ) : (
-            <View
-              style={{
-                backgroundColor: colors.text + '05',
-                borderRadius: Dimensions.radius.md,
-                padding: Dimensions.spacing.md,
-                marginHorizontal: Dimensions.spacing.sm,
-                borderWidth: 1,
-                borderColor: colors.text + '10',
-                borderStyle: 'dashed',
-              }}>
-              <Text
-                style={{
-                  fontSize: Fonts.size.sm,
-                  color: colors.text + '60',
-                  textAlign: 'center',
-                  fontStyle: 'italic',
-                }}>
-                {t(
-                  'audio.dragItemsHere',
-                  'Drag items here to create your custom queue'
-                )}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Auto-Generated Queue Section */}
-        <View>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: Dimensions.spacing.sm,
-              paddingHorizontal: Dimensions.spacing.sm,
-            }}>
-            <Text
-              style={{
-                fontSize: Fonts.size.base,
-                fontWeight: Fonts.weight.bold,
-                color: colors.text,
-              }}>
-              {t('audio.autoQueue', 'Up Next')}
-            </Text>
-          </View>
-
-          {/* Auto Queue Items */}
-          {automaticQueue.items.length > 0 ? (
-            <View>
-              {automaticQueue.items.map((item, _index) => (
-                <QueueItemComponent
-                  key={item.id}
-                  item={item}
-                  isFromUserQueue={false}
-                  onPress={() => handleItemPress(item)}
-                  onAdd={() => handleMoveToUserQueue(item)}
-                  isActive={currentItem?.id === item.id}
-                />
-              ))}
-            </View>
-          ) : (
-            <View
-              style={{
-                backgroundColor: colors.background,
-                borderRadius: Dimensions.radius.md,
-                marginHorizontal: Dimensions.spacing.sm,
-                padding: Dimensions.spacing.md,
-                borderWidth: 1,
-                borderColor: colors.text + '20',
-              }}>
-              <Text
-                style={{
-                  fontSize: Fonts.size.sm,
-                  color: colors.text + '60',
-                  textAlign: 'center',
-                  fontStyle: 'italic',
-                }}>
-                {t('audio.noAutoQueue', 'No upcoming items')}
-              </Text>
-            </View>
-          )}
-        </View>
-      </GestureScrollView>
+        showsVerticalScrollIndicator={true}
+      />
     </View>
   );
 };
