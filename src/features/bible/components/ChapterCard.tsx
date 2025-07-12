@@ -582,7 +582,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
       right={10}
       bottom={collapsedHeight + 10}
       backgroundColor={colors.background}
-      borderRadius='$4'
+      borderRadius={24}
       borderWidth={2}
       borderColor={colors.primary}
       shadowColor={colors.text}
@@ -590,7 +590,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
       shadowOpacity={0.1}
       shadowRadius={3.84}
       elevation={5}>
-      <Stack flex={1}>
+      <Stack flex={1} overflow='hidden' borderRadius={24}>
         {/* Header with close button */}
         <Stack position='absolute' top='$2' right='$2' zIndex={10}>
           <Button

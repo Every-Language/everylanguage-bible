@@ -1143,8 +1143,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       borderTopColor: colors.primary,
       borderLeftColor: colors.primary,
       borderRightColor: colors.primary,
-      borderTopLeftRadius: Dimensions.radius.xl,
-      borderTopRightRadius: Dimensions.radius.xl,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
       ...Dimensions.shadow.lg,
       zIndex: 1000,
       elevation: 1000, // Android-specific elevation

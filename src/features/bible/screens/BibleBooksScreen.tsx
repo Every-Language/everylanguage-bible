@@ -51,7 +51,7 @@ const GoToTestamentTile: React.FC<GoToTestamentTileProps> = ({
   const styles = StyleSheet.create({
     container: {
       backgroundColor: colors.secondary + '30', // Different fill color
-      borderRadius: Dimensions.radius.lg,
+      borderRadius: 24,
       padding: Dimensions.spacing.sm,
       borderWidth: 2,
       borderColor: colors.primary + '20', // Same border as regular tiles
@@ -62,11 +62,14 @@ const GoToTestamentTile: React.FC<GoToTestamentTileProps> = ({
     miniIconsContainer: {
       flex: 1,
       width: '100%',
-      flexDirection: 'row',
-      flexWrap: 'wrap',
       justifyContent: 'space-between',
-      alignContent: 'space-between',
       padding: Dimensions.spacing.sm,
+    },
+    miniIconsRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      flex: 1,
+      gap: Dimensions.spacing.xs,
     },
     miniBookImage: {
       width: '30%',
@@ -75,7 +78,7 @@ const GoToTestamentTile: React.FC<GoToTestamentTileProps> = ({
       tintColor: colors.text,
     },
     miniFallbackIcon: {
-      width: '30%',
+      width: '45%',
       aspectRatio: 1,
       borderRadius: 4,
       backgroundColor: colors.secondary + '50',
@@ -125,7 +128,12 @@ const GoToTestamentTile: React.FC<GoToTestamentTileProps> = ({
       accessibilityLabel={`Go to ${targetTestament === 'old' ? 'Old' : 'New'} Testament`}
       testID={testID}>
       <View style={styles.miniIconsContainer}>
-        {previewBooks.slice(0, 6).map(book => renderMiniBookImage(book))}
+        <View style={styles.miniIconsRow}>
+          {previewBooks.slice(0, 2).map(book => renderMiniBookImage(book))}
+        </View>
+        <View style={styles.miniIconsRow}>
+          {previewBooks.slice(2, 4).map(book => renderMiniBookImage(book))}
+        </View>
       </View>
       <Text style={styles.title} numberOfLines={2}>
         Go to {targetTestament === 'old' ? 'Old' : 'New'} Testament
@@ -147,7 +155,7 @@ const BookTile: React.FC<BookTileProps> = ({ book, onPress, testID }) => {
   const styles = StyleSheet.create({
     container: {
       backgroundColor: colors.background,
-      borderRadius: Dimensions.radius.lg,
+      borderRadius: 24,
       padding: Dimensions.spacing.sm,
       borderWidth: 2,
       borderColor: colors.primary + '20',
