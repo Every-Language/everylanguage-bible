@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { OptionsPanel } from '../OptionsPanel';
+import { TamaguiTestWrapper } from '@/shared/test-utils/tamagui-test-setup';
 
 // Mock the theme store
 const mockUseTheme = {
@@ -65,8 +66,12 @@ describe('OptionsPanel', () => {
     mockUseTheme.toggleTheme.mockClear();
   });
 
+  const renderWithTamagui = (component: React.ReactElement) => {
+    return render(<TamaguiTestWrapper>{component}</TamaguiTestWrapper>);
+  };
+
   it('renders when visible', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTamagui(
       <OptionsPanel
         isVisible={true}
         onClose={mockOnClose}
@@ -79,7 +84,7 @@ describe('OptionsPanel', () => {
   });
 
   it('does not render when not visible', () => {
-    const { queryByTestId } = render(
+    const { queryByTestId } = renderWithTamagui(
       <OptionsPanel
         isVisible={false}
         onClose={mockOnClose}
@@ -92,7 +97,7 @@ describe('OptionsPanel', () => {
   });
 
   it('calls onClose when overlay is pressed', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTamagui(
       <OptionsPanel
         isVisible={true}
         onClose={mockOnClose}
@@ -106,7 +111,7 @@ describe('OptionsPanel', () => {
   });
 
   it('calls onThemeToggle and onClose when theme option is pressed', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTamagui(
       <OptionsPanel
         isVisible={true}
         onClose={mockOnClose}
@@ -121,7 +126,7 @@ describe('OptionsPanel', () => {
   });
 
   it('renders all option buttons', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTamagui(
       <OptionsPanel
         isVisible={true}
         onClose={mockOnClose}
@@ -139,7 +144,7 @@ describe('OptionsPanel', () => {
   });
 
   it('has proper accessibility labels', () => {
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithTamagui(
       <OptionsPanel
         isVisible={true}
         onClose={mockOnClose}

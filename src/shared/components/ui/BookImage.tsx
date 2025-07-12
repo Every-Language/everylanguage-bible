@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Image, Text } from 'react-native';
 import { getBookImageSource } from '@/shared/services';
 import { Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
@@ -36,7 +36,7 @@ export const BookImage: React.FC<BookImageProps> = ({
             style,
           ]}
           resizeMode='contain'
-          testID={testID}
+          testID={testID || 'book-image'}
         />
       );
     }
@@ -56,8 +56,13 @@ export const BookImage: React.FC<BookImageProps> = ({
         },
         style,
       ]}
-      testID={testID}>
-      <Text style={{ fontSize: size * 0.5, color: colors.text }}>
+      testID={testID || 'book-image-fallback'}>
+      <Text
+        style={{
+          fontSize: size * 0.5,
+          color: colors.text,
+        }}
+        testID='book-image-emoji'>
         {fallbackEmoji}
       </Text>
     </View>

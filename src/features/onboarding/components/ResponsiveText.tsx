@@ -1,5 +1,5 @@
-import { Text, StyleSheet } from 'react-native';
 import React from 'react';
+import { Text } from 'react-native';
 import { useTheme } from '@/shared/store';
 import { useResponsive } from '@/shared/hooks';
 
@@ -38,17 +38,21 @@ const ResponsiveText: React.FC<ResponsiveTextProps> = ({
     }
   };
 
-  const styles = StyleSheet.create({
-    text: {
-      fontSize: fontSize[variant],
-      fontWeight: getFontWeight(),
-      color: color || colors.text,
-      textAlign: align,
-      opacity,
-    },
-  });
-
-  return <Text style={[styles.text, style]}>{children}</Text>;
+  return (
+    <Text
+      style={[
+        {
+          fontSize: fontSize[variant],
+          fontWeight: getFontWeight(),
+          color: color || colors.text,
+          textAlign: align,
+          opacity,
+        },
+        style,
+      ]}>
+      {children}
+    </Text>
+  );
 };
 
 export default ResponsiveText;

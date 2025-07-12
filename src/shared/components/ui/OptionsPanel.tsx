@@ -1,11 +1,6 @@
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Text,
-  Animated,
-} from 'react-native';
+import { TouchableOpacity, Animated, View } from 'react-native';
+import { Text } from '@tamagui/core';
 import { useTheme } from '@/shared/store';
 import { useTranslation } from '@/shared/hooks';
 import { Dimensions, Fonts } from '@/shared/constants';
@@ -61,56 +56,6 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
 
   if (!isVisible) return null;
 
-  const styles = StyleSheet.create({
-    overlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'transparent',
-    },
-    panel: {
-      position: 'absolute',
-      top: position.top + 8,
-      right: position.right,
-      backgroundColor: colors.background,
-      borderRadius: Dimensions.radius.lg,
-      borderWidth: 2,
-      borderColor: colors.primary,
-      shadowColor: colors.text,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 8,
-      minWidth: 200,
-      paddingVertical: Dimensions.spacing.sm,
-    },
-    optionButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: Dimensions.spacing.lg,
-      paddingVertical: Dimensions.spacing.md,
-      minHeight: 48,
-    },
-    optionIcon: {
-      width: 24,
-      marginRight: Dimensions.spacing.md,
-      fontSize: Fonts.size.lg,
-      textAlign: 'center',
-    },
-    optionText: {
-      fontSize: Fonts.size.base,
-      color: colors.text,
-      flex: 1,
-    },
-    separator: {
-      height: 1,
-      backgroundColor: colors.primary + '20',
-      marginHorizontal: Dimensions.spacing.md,
-    },
-  });
-
   const handleOptionPress = (action: () => void) => {
     action();
     onClose();
@@ -118,117 +63,316 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
 
   return (
     <TouchableOpacity
-      style={styles.overlay}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'transparent',
+      }}
       activeOpacity={1}
       onPress={onClose}
       testID='options-panel-overlay'>
       <Animated.View
-        style={[
-          styles.panel,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}>
+        style={{
+          position: 'absolute',
+          top: position.top + 8,
+          right: position.right,
+          backgroundColor: colors.background,
+          borderRadius: Dimensions.radius.lg,
+          borderWidth: 2,
+          borderColor: colors.primary,
+          shadowColor: colors.text,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 8,
+          minWidth: 200,
+          paddingVertical: Dimensions.spacing.sm,
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+        }}>
         {/* Theme Toggle */}
         <TouchableOpacity
-          style={styles.optionButton}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: Dimensions.spacing.lg,
+            paddingVertical: Dimensions.spacing.md,
+            minHeight: 48,
+          }}
           onPress={() => handleOptionPress(onThemeToggle)}
           accessibilityLabel={
             isDark ? t('theme.switchToLight') : t('theme.switchToDark')
           }
           accessibilityRole='button'
           testID='options-theme-toggle'>
-          <Text style={styles.optionIcon}>{isDark ? '☀️' : '🌙'}</Text>
-          <Text style={styles.optionText}>
+          <Text
+            style={{
+              width: 24,
+              marginRight: Dimensions.spacing.md,
+              fontSize: Fonts.size.lg,
+              textAlign: 'center',
+            }}>
+            {isDark ? '☀️' : '🌙'}
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              flex: 1,
+            }}>
             {isDark ? 'Light Mode' : 'Dark Mode'}
           </Text>
         </TouchableOpacity>
 
-        <View style={styles.separator} />
+        <View
+          style={{
+            height: 1,
+            backgroundColor: colors.primary + '20',
+            marginHorizontal: Dimensions.spacing.md,
+          }}
+        />
 
         {/* Search */}
         <TouchableOpacity
-          style={styles.optionButton}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: Dimensions.spacing.lg,
+            paddingVertical: Dimensions.spacing.md,
+            minHeight: 48,
+          }}
           onPress={onClose}
           accessibilityLabel='Search'
           accessibilityRole='button'
           testID='options-search'>
-          <Text style={styles.optionIcon}>🔍</Text>
-          <Text style={styles.optionText}>Search</Text>
+          <Text
+            style={{
+              width: 24,
+              marginRight: Dimensions.spacing.md,
+              fontSize: Fonts.size.lg,
+              textAlign: 'center',
+            }}>
+            🔍
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              flex: 1,
+            }}>
+            Search
+          </Text>
         </TouchableOpacity>
 
-        <View style={styles.separator} />
+        <View
+          style={{
+            height: 1,
+            backgroundColor: colors.primary + '20',
+            marginHorizontal: Dimensions.spacing.md,
+          }}
+        />
 
         {/* Profile */}
         <TouchableOpacity
-          style={styles.optionButton}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: Dimensions.spacing.lg,
+            paddingVertical: Dimensions.spacing.md,
+            minHeight: 48,
+          }}
           onPress={() =>
             handleOptionPress(() => console.log('Profile pressed'))
           }
           accessibilityLabel='Profile'
           accessibilityRole='button'
           testID='options-profile'>
-          <Text style={styles.optionIcon}>👤</Text>
-          <Text style={styles.optionText}>Profile</Text>
+          <Text
+            style={{
+              width: 24,
+              marginRight: Dimensions.spacing.md,
+              fontSize: Fonts.size.lg,
+              textAlign: 'center',
+            }}>
+            👤
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              flex: 1,
+            }}>
+            Profile
+          </Text>
         </TouchableOpacity>
 
-        <View style={styles.separator} />
+        <View
+          style={{
+            height: 1,
+            backgroundColor: colors.primary + '20',
+            marginHorizontal: Dimensions.spacing.md,
+          }}
+        />
 
         {/* Language */}
         <TouchableOpacity
-          style={styles.optionButton}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: Dimensions.spacing.lg,
+            paddingVertical: Dimensions.spacing.md,
+            minHeight: 48,
+          }}
           onPress={() =>
             handleOptionPress(() => console.log('Language pressed'))
           }
           accessibilityLabel='Language'
           accessibilityRole='button'
           testID='options-language'>
-          <Text style={styles.optionIcon}>🌐</Text>
-          <Text style={styles.optionText}>Language</Text>
+          <Text
+            style={{
+              width: 24,
+              marginRight: Dimensions.spacing.md,
+              fontSize: Fonts.size.lg,
+              textAlign: 'center',
+            }}>
+            🌐
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              flex: 1,
+            }}>
+            Language
+          </Text>
         </TouchableOpacity>
 
-        <View style={styles.separator} />
+        <View
+          style={{
+            height: 1,
+            backgroundColor: colors.primary + '20',
+            marginHorizontal: Dimensions.spacing.md,
+          }}
+        />
 
         {/* Calculator */}
         <TouchableOpacity
-          style={styles.optionButton}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: Dimensions.spacing.lg,
+            paddingVertical: Dimensions.spacing.md,
+            minHeight: 48,
+          }}
           onPress={() =>
             handleOptionPress(() => console.log('Calculator pressed'))
           }
           accessibilityLabel='Calculator'
           accessibilityRole='button'
           testID='options-calculator'>
-          <Text style={styles.optionIcon}>🧮</Text>
-          <Text style={styles.optionText}>Calculator</Text>
+          <Text
+            style={{
+              width: 24,
+              marginRight: Dimensions.spacing.md,
+              fontSize: Fonts.size.lg,
+              textAlign: 'center',
+            }}>
+            🧮
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              flex: 1,
+            }}>
+            Calculator
+          </Text>
         </TouchableOpacity>
 
-        <View style={styles.separator} />
+        <View
+          style={{
+            height: 1,
+            backgroundColor: colors.primary + '20',
+            marginHorizontal: Dimensions.spacing.md,
+          }}
+        />
 
         {/* Settings */}
         <TouchableOpacity
-          style={styles.optionButton}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: Dimensions.spacing.lg,
+            paddingVertical: Dimensions.spacing.md,
+            minHeight: 48,
+          }}
           onPress={() =>
             handleOptionPress(() => console.log('Settings pressed'))
           }
           accessibilityLabel='Settings'
           accessibilityRole='button'
           testID='options-settings'>
-          <Text style={styles.optionIcon}>⚙️</Text>
-          <Text style={styles.optionText}>Settings</Text>
+          <Text
+            style={{
+              width: 24,
+              marginRight: Dimensions.spacing.md,
+              fontSize: Fonts.size.lg,
+              textAlign: 'center',
+            }}>
+            ⚙️
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              flex: 1,
+            }}>
+            Settings
+          </Text>
         </TouchableOpacity>
 
-        <View style={styles.separator} />
+        <View
+          style={{
+            height: 1,
+            backgroundColor: colors.primary + '20',
+            marginHorizontal: Dimensions.spacing.md,
+          }}
+        />
 
         {/* Help */}
         <TouchableOpacity
-          style={styles.optionButton}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: Dimensions.spacing.lg,
+            paddingVertical: Dimensions.spacing.md,
+            minHeight: 48,
+          }}
           onPress={() => handleOptionPress(() => console.log('Help pressed'))}
           accessibilityLabel='Help'
           accessibilityRole='button'
           testID='options-help'>
-          <Text style={styles.optionIcon}>❓</Text>
-          <Text style={styles.optionText}>Help</Text>
+          <Text
+            style={{
+              width: 24,
+              marginRight: Dimensions.spacing.md,
+              fontSize: Fonts.size.lg,
+              textAlign: 'center',
+            }}>
+            ❓
+          </Text>
+          <Text
+            style={{
+              fontSize: Fonts.size.base,
+              color: colors.text,
+              flex: 1,
+            }}>
+            Help
+          </Text>
         </TouchableOpacity>
       </Animated.View>
     </TouchableOpacity>

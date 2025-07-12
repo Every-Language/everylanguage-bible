@@ -1,5 +1,7 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View, Image } from 'react-native';
+import { Image, View, TouchableOpacity } from 'react-native';
+import { Text } from '@tamagui/core';
+import { Card } from '@tamagui/card';
 import { useTheme } from '@/shared/store';
 import { getBookImageSource } from '@/shared/services';
 
@@ -23,58 +25,6 @@ export const BookCard: React.FC<BookCardProps> = ({
 }) => {
   const { colors } = useTheme();
 
-  const styles = StyleSheet.create({
-    container: {
-      backgroundColor: colors.background,
-      borderRadius: 16,
-      padding: 12,
-      marginHorizontal: 4,
-      marginVertical: 4,
-      minHeight: 110,
-      flex: 1,
-      borderWidth: 2,
-      borderColor: isSelected ? colors.primary : colors.primary + '20',
-      alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 3.84,
-      elevation: 5,
-    },
-    imageContainer: {
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    bookImage: {
-      width: 60,
-      height: 60,
-      borderRadius: 8,
-      tintColor: colors.text,
-    },
-    fallbackIcon: {
-      width: 60,
-      height: 60,
-      borderRadius: 8,
-      backgroundColor: colors.secondary + '30',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    fallbackEmoji: {
-      fontSize: 24,
-      color: colors.text,
-    },
-    textContainer: {
-      alignItems: 'center',
-    },
-    title: {
-      fontSize: 14,
-      fontWeight: '600',
-      textAlign: 'center',
-      color: colors.text,
-      lineHeight: 18,
-    },
-  });
-
   const renderBookImage = () => {
     let imageSource = bookImage;
 
@@ -87,33 +37,66 @@ export const BookCard: React.FC<BookCardProps> = ({
       return (
         <Image
           source={imageSource}
-          style={styles.bookImage}
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: 8,
+            tintColor: colors.text,
+          }}
           resizeMode='contain'
         />
       );
     }
 
     return (
-      <View style={styles.fallbackIcon}>
-        <Text style={styles.fallbackEmoji}>📖</Text>
+      <View
+        style={{
+          width: 60,
+          height: 60,
+          borderRadius: 8,
+          backgroundColor: colors.secondary + '30',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+        <Text fontSize='$6' color='$color'>
+          📖
+        </Text>
       </View>
     );
   };
 
   return (
     <TouchableOpacity
-      style={styles.container}
+      testID={`book-card-${bookId || bookName.toLowerCase().replace(/\s+/g, '-')}`}
       onPress={onPress}
       onLongPress={onLongPress}
       accessibilityRole='button'
       accessibilityLabel={`${bookName} book`}
-      testID={`book-card-${bookId || bookName.toLowerCase().replace(/\s+/g, '-')}`}>
-      <View style={styles.imageContainer}>{renderBookImage()}</View>
-      <View style={styles.textContainer}>
-        <Text style={styles.title} numberOfLines={2}>
-          {bookName}
-        </Text>
-      </View>
+      activeOpacity={0.8}>
+      <Card
+        size='$4'
+        marginHorizontal='$1'
+        marginVertical='$1'
+        padding='$3'
+        backgroundColor='$background'
+        borderColor={isSelected ? '$primary' : '$secondary'}
+        borderWidth={2}
+        minHeight={110}
+        flex={1}>
+        <View style={{ alignItems: 'center', marginBottom: 12 }}>
+          {renderBookImage()}
+        </View>
+        <View style={{ alignItems: 'center' }}>
+          <Text
+            fontSize='$3'
+            fontWeight='600'
+            color='$color'
+            lineHeight={18}
+            numberOfLines={2}>
+            {bookName}
+          </Text>
+        </View>
+      </Card>
     </TouchableOpacity>
   );
 };

@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import React from 'react';
 import { useTheme } from '@/shared/store';
 import { useResponsive } from '@/shared/hooks';
@@ -17,33 +17,32 @@ const BaseSlide: React.FC<BaseSlideProps> = ({
   const { colors } = useTheme();
   const { padding, spacing } = useResponsive();
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-      paddingHorizontal: padding.horizontal,
-      paddingVertical: padding.vertical,
-    },
-    content: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingVertical: spacing.lg,
-    },
-  });
+  const containerStyle = {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingHorizontal: padding.horizontal,
+    paddingVertical: padding.vertical,
+  };
+
+  const contentStyles = {
+    flex: 1,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    paddingVertical: spacing.lg,
+  };
 
   if (!scrollEnabled) {
     return (
-      <View style={styles.container}>
-        <View style={[styles.content, contentStyle]}>{children}</View>
+      <View style={containerStyle}>
+        <View style={[contentStyles, contentStyle]}>{children}</View>
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, contentStyle]}
+      style={containerStyle}
+      contentContainerStyle={[contentStyles, contentStyle]}
       showsVerticalScrollIndicator={false}>
       {children}
     </ScrollView>

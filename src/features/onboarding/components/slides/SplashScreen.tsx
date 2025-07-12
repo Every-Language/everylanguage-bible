@@ -1,4 +1,4 @@
-import { View, StyleSheet, Image, Animated, Dimensions } from 'react-native';
+import { View, Image, Animated, Dimensions } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/shared/store';
 import { useResponsive, useTranslation } from '@/shared/hooks';
@@ -48,58 +48,59 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
     };
   }, [fadeAnim, progressAnim]);
 
-  const styles = StyleSheet.create({
-    logo: {
-      width: componentSize.logo,
-      height: componentSize.logo,
-      marginBottom: spacing.xl,
-    },
-    progressContainer: {
-      width: progressBarWidth,
-      height: 14,
-      backgroundColor: colors.secondary,
-      borderRadius: 5,
-      overflow: 'hidden',
-      marginTop: spacing.lg,
-      marginBottom: spacing.md,
-      alignSelf: 'center',
-      borderWidth: 2,
-      borderColor: colors.primary,
-      shadowColor: colors.text,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    progressBar: {
-      height: '100%',
-      backgroundColor: colors.primary,
-      borderRadius: 5,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.3,
-      shadowRadius: 2,
-      elevation: 2,
-    },
-    progressText: {
-      position: 'absolute',
-      right: 8,
-      top: 0,
-      height: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+  const logoStyle = {
+    width: componentSize.logo,
+    height: componentSize.logo,
+    marginBottom: spacing.xl,
+  };
 
-    content: {
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-  });
+  const progressContainerStyle = {
+    width: progressBarWidth,
+    height: 14,
+    backgroundColor: colors.secondary,
+    borderRadius: 5,
+    overflow: 'hidden' as const,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+    alignSelf: 'center' as const,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  };
+
+  const progressBarStyle = {
+    height: '100%' as const,
+    backgroundColor: colors.primary,
+    borderRadius: 5,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  };
+
+  const progressTextStyle = {
+    position: 'absolute' as const,
+    right: 8,
+    top: 0,
+    height: '100%' as const,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  };
+
+  const contentStyle = {
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  };
 
   return (
     <BaseSlide scrollEnabled={false}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        <Image source={genesisImage} style={styles.logo} resizeMode='contain' />
+      <Animated.View style={[contentStyle, { opacity: fadeAnim }]}>
+        <Image source={genesisImage} style={logoStyle} resizeMode='contain' />
         <ResponsiveText
           variant='3xl'
           weight='bold'
@@ -115,10 +116,10 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
           {t('onboarding.splash.subtitle')}
         </ResponsiveText>
 
-        <View style={styles.progressContainer}>
+        <View style={progressContainerStyle}>
           <Animated.View
             style={[
-              styles.progressBar,
+              progressBarStyle,
               {
                 width: progressAnim.interpolate({
                   inputRange: [0, 1],
@@ -127,7 +128,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
               },
             ]}
           />
-          <View style={styles.progressText}>
+          <View style={progressTextStyle}>
             <ResponsiveText
               variant='xs'
               color={colors.background}
