@@ -65,6 +65,7 @@ const AudioSample: React.FC<AudioSampleProps> = ({
       height: 50,
       borderRadius: 8,
       marginRight: spacing.md,
+      tintColor: colors.text,
     },
     audioInfo: {
       flex: 1,

@@ -154,7 +154,7 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
       gap: Dimensions.spacing.sm,
     },
     optionCard: {
-      backgroundColor: '#CCBB99',
+      backgroundColor: '#AC8F57',
       borderRadius: Dimensions.radius.md,
       paddingHorizontal: Dimensions.spacing.lg,
       paddingVertical: Dimensions.spacing.md,

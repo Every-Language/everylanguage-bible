@@ -23,7 +23,7 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
   drag,
   isActive = false,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   // Format duration for display
   const formatDuration = (seconds: number): string => {
@@ -193,7 +193,7 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
     removeButton: {
       padding: Dimensions.spacing.sm, // Made larger (was xs)
       borderRadius: Dimensions.radius.sm,
-      backgroundColor: colors.secondary + '20',
+      backgroundColor: isDark ? '#070707' : '#D8D2C6',
       minWidth: 32, // Same size as plus buttons
       minHeight: 32, // Same size as plus buttons
       justifyContent: 'center',

@@ -299,11 +299,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       width: 12, // Smaller bead
       height: 12,
       borderRadius: 6,
-      backgroundColor: isDragging
-        ? colors.primary
-        : isDark
-          ? '#FFFFFF'
-          : '#333333',
+      backgroundColor: isDark ? '#FFFFFF' : '#333333', // Same color as progress track
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.3,
@@ -325,7 +321,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       left: 0,
       right: 0,
       fontSize: Fonts.size.xs, // Smaller font size
-      color: colors.primary,
+      color: isDark ? '#FFFFFF' : '#333333', // Same color as progress track
       fontWeight: '600',
       textAlign: 'center',
       // Removed background, padding, and border for clean look

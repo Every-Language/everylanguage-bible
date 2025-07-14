@@ -14,8 +14,13 @@ const mockUseTheme = {
   isDark: false,
 };
 
+const mockUseCalculatorMode = {
+  enterCalculatorMode: jest.fn(),
+};
+
 jest.mock('@/shared/store', () => ({
   useTheme: () => mockUseTheme,
+  useCalculatorMode: () => mockUseCalculatorMode,
 }));
 
 describe('OptionsMenu', () => {

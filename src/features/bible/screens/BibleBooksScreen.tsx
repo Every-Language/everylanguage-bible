@@ -56,13 +56,15 @@ const GoToTestamentTile: React.FC<GoToTestamentTileProps> = ({
   onPress,
   testID,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const styles = StyleSheet.create({
     container: {
       backgroundColor:
         targetTestament === 'new'
-          ? '#ECE6DA'
+          ? isDark
+            ? '#AC8F57'
+            : '#ECE6DA'
           : colors.chapterTileBackground || colors.background,
       borderRadius: 24,
       padding: Dimensions.spacing.sm,

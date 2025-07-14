@@ -45,7 +45,7 @@ export const SlideUpPanel: React.FC<SlideUpPanelProps> = ({
   showCloseButton = true,
   backdrop = true,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const screenHeight = RNDimensions.get('window').height;
 
@@ -175,15 +175,9 @@ export const SlideUpPanel: React.FC<SlideUpPanelProps> = ({
       bottom: 0,
       left: 0,
       right: 0,
-      backgroundColor: colors.background,
+      backgroundColor: isDark ? '#282827' : '#ECE6DA',
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
-      borderTopWidth: 2,
-      borderLeftWidth: 2,
-      borderRightWidth: 2,
-      borderTopColor: colors.primary,
-      borderLeftColor: colors.primary,
-      borderRightColor: colors.primary,
       ...Dimensions.shadow.lg,
       zIndex: 1001,
       paddingBottom: insets.bottom,
@@ -222,9 +216,7 @@ export const SlideUpPanel: React.FC<SlideUpPanelProps> = ({
       width: 25,
       height: 25,
       borderRadius: 12.5,
-      backgroundColor: colors.background,
-      borderWidth: 1,
-      borderColor: colors.primary,
+      backgroundColor: isDark ? '#070707' : '#D8D2C6',
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 10,

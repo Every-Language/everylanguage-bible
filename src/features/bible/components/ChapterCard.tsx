@@ -12,7 +12,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Stack, Text as TamaguiText } from '@tamagui/core';
 import { Card } from '@tamagui/card';
-import { Button } from '@tamagui/button';
 import { type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
 import {
@@ -500,7 +499,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
   onChapterSelect,
   onVerseSelect,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { collapsedHeight } = useMiniPlayerHeight();
@@ -621,41 +620,44 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
         style={{ zIndex: 1000 }}>
         <Stack flex={1} overflow='hidden' borderRadius={24}>
           {/* Header with close button */}
-          <Stack position='absolute' top='$2' right='$2' zIndex={10}>
-            <Button
-              width={25}
-              height={25}
-              borderRadius={12.5}
-              backgroundColor={colors.background}
-              borderWidth={1}
-              borderColor={colors.primary}
-              padding={0}
+          <View
+            style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              zIndex: 10,
+            }}>
+            <TouchableOpacity
+              style={{
+                width: 25,
+                height: 25,
+                borderRadius: 12.5,
+                backgroundColor: isDark ? '#070707' : '#D8D2C6',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
               onPress={closeChapterCard}
-              pressStyle={{ scale: 0.9 }}
               testID='close-button'>
-              <Stack
-                width='100%'
-                height='100%'
-                alignItems='center'
-                justifyContent='center'
-                position='relative'>
-                <Stack
-                  position='absolute'
-                  width={10}
-                  height={1}
-                  backgroundColor={colors.text}
-                  transform={[{ rotate: '45deg' }]}
-                />
-                <Stack
-                  position='absolute'
-                  width={10}
-                  height={1}
-                  backgroundColor={colors.text}
-                  transform={[{ rotate: '-45deg' }]}
-                />
-              </Stack>
-            </Button>
-          </Stack>
+              <View
+                style={{
+                  position: 'absolute',
+                  width: 10,
+                  height: 1,
+                  backgroundColor: colors.text,
+                  transform: [{ rotate: '45deg' }],
+                }}
+              />
+              <View
+                style={{
+                  position: 'absolute',
+                  width: 10,
+                  height: 1,
+                  backgroundColor: colors.text,
+                  transform: [{ rotate: '-45deg' }],
+                }}
+              />
+            </TouchableOpacity>
+          </View>
 
           {/* Book info section */}
           <Stack
