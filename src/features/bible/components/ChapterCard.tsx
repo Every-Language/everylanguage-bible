@@ -133,7 +133,7 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
                   width: 36,
                   height: 36,
                   borderRadius: 18,
-                  backgroundColor: colors.primary,
+                  backgroundColor: colors.navigationSelected,
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}>
@@ -147,7 +147,7 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
                   width: 36,
                   height: 36,
                   borderRadius: 18,
-                  backgroundColor: colors.primary,
+                  backgroundColor: colors.navigationSelected,
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}>
@@ -186,8 +186,6 @@ const VerseItem: React.FC<VerseItemProps> = ({
       marginHorizontal='$2'
       padding='$2'
       backgroundColor={colors.background}
-      borderColor={colors.primary + '20'}
-      borderWidth={1}
       testID={testID}
       onPress={onPlay}
       pressStyle={{ scale: 0.98 }}>
@@ -218,7 +216,7 @@ const VerseItem: React.FC<VerseItemProps> = ({
               width: 36,
               height: 36,
               borderRadius: 18,
-              backgroundColor: colors.primary,
+              backgroundColor: colors.navigationSelected,
               justifyContent: 'center',
               alignItems: 'center',
             }}>
@@ -232,7 +230,7 @@ const VerseItem: React.FC<VerseItemProps> = ({
               width: 36,
               height: 36,
               borderRadius: 18,
-              backgroundColor: colors.primary,
+              backgroundColor: colors.navigationSelected,
               justifyContent: 'center',
               alignItems: 'center',
             }}>
