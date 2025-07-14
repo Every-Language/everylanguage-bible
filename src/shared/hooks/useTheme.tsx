@@ -1,18 +1,3 @@
-import { useThemeContext } from '@/app/providers/ThemeProvider';
-import { Theme, ThemeColors } from '@/shared/constants/theme';
-
-export type { Theme, ThemeColors };
-
-export const useTheme = () => {
-  const { theme, isDark, colors, setTheme, toggleTheme, isSystemTheme } =
-    useThemeContext();
-
-  return {
-    theme,
-    isDark,
-    colors,
-    setTheme,
-    toggleTheme,
-    isSystemTheme,
-  };
-};
+// Re-export from the new Tamagui theme hook for backward compatibility
+export { useTheme } from './useTamaguiTheme';
+export type { Theme, ThemeColors } from '@/shared/constants/theme';

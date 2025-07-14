@@ -38,6 +38,13 @@
     "@react-navigation/stack": "^7.3.6",
     "@sentry/react-native": "~6.14.0",
     "@supabase/supabase-js": "^2.50.0",
+    "@tamagui/animations-react-native": "^1.132.6",
+    "@tamagui/core": "^1.132.6",
+    "@tamagui/font-inter": "^1.132.6",
+    "@tamagui/helpers": "^1.132.6",
+    "@tamagui/react-native-media-driver": "^1.132.6",
+    "@tamagui/shorthands": "^1.132.6",
+    "@tamagui/themes": "^1.132.6",
     "@tanstack/react-query": "^5.80.10",
     "expo": "53.0.19",
     "expo-audio": "~0.4.8",
@@ -72,6 +79,10 @@
   },
   "devDependencies": {
     "@babel/core": "^7.27.4",
+    "@babel/plugin-syntax-import-meta": "^7.10.4",
+    "@tamagui/babel-plugin": "^1.132.6",
+    "@tamagui/config": "^1.132.6",
+    "@tamagui/metro-plugin": "^1.132.6",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.2.0",
     "@types/jest": "^29.5.14",
@@ -93,6 +104,7 @@
     "lint-staged": "^16.1.2",
     "prettier": "^3.5.3",
     "react-test-renderer": "^19.0.0",
+    "tamagui": "^1.132.6",
     "typescript": "^5.8.3"
   },
   "lint-staged": {

@@ -1,4 +1,6 @@
 import React from 'react';
+import { TamaguiProvider as BaseTamaguiProvider } from 'tamagui';
+import config from '../../../tamagui.config';
 import { ThemeProvider } from './ThemeProvider';
 
 interface AppProviderProps {
@@ -6,7 +8,11 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  return <ThemeProvider>{children}</ThemeProvider>;
+  return (
+    <BaseTamaguiProvider config={config}>
+      <ThemeProvider>{children}</ThemeProvider>
+    </BaseTamaguiProvider>
+  );
 };
 
 // Keep the old name for backward compatibility during migration
