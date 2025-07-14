@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import { BaseMenu } from './BaseMenu';
 import { CodeEntryModal } from './CodeEntryModal';
+import { LoginMenu } from './LoginMenu';
 import { BaseMenuConfig } from '@/types/menu';
 import { useCalculatorMode } from '@/shared/store';
 
 // Import utility icons
-import searchIcon from '../../../../assets/images/utility_icons/search.png';
 import profileIcon from '../../../../assets/images/utility_icons/profile.png';
 import languageIcon from '../../../../assets/images/utility_icons/language.png';
 import calculatorIcon from '../../../../assets/images/utility_icons/calculator.png';
@@ -18,7 +18,7 @@ interface OptionsMenuProps {
   onClose: () => void;
   onThemeToggle: () => void;
   onNavigateToSubMenu?: (
-    subMenuType: 'profile' | 'language' | 'settings' | 'help'
+    subMenuType: 'login' | 'profile' | 'language' | 'settings' | 'help'
   ) => void;
 }
 
@@ -30,10 +30,18 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
 }) => {
   const { enterCalculatorMode } = useCalculatorMode();
   const [isCodeEntryVisible, setIsCodeEntryVisible] = useState(false);
+  const [isLoginMenuVisible, setIsLoginMenuVisible] = useState(false);
 
+  //we will edit this to only have one of {login/profile} at the same time once we set up auth
   const handleSubMenuNavigation = (
-    subMenuType: 'profile' | 'language' | 'settings' | 'help'
+    subMenuType: 'login' | 'profile' | 'language' | 'settings' | 'help'
   ) => {
+    if (subMenuType === 'login') {
+      setIsLoginMenuVisible(true);
+      onClose();
+      return;
+    }
+
     if (onNavigateToSubMenu) {
       onNavigateToSubMenu(subMenuType);
     } else {
@@ -87,10 +95,10 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
     testID: 'options-menu',
     options: [
       {
-        key: 'search',
-        icon: searchIcon,
-        label: 'Search',
-        onPress: () => console.log('Search pressed'),
+        key: 'login',
+        icon: profileIcon,
+        label: 'Login',
+        onPress: () => handleSubMenuNavigation('login'),
       },
       {
         key: 'profile',
@@ -133,6 +141,11 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
         isVisible={isCodeEntryVisible}
         onClose={() => setIsCodeEntryVisible(false)}
         onSuccess={handleCodeEntrySuccess}
+      />
+
+      <LoginMenu
+        isVisible={isLoginMenuVisible}
+        onClose={() => setIsLoginMenuVisible(false)}
       />
     </>
   );

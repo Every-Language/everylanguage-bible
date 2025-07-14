@@ -7,6 +7,7 @@ export { OptionsPanel } from './OptionsPanel';
 export { SlideUpPanel } from './SlideUpPanel';
 export { ToggleButtons } from './ToggleButtons';
 export { BaseMenu } from './BaseMenu';
+export { LoginMenu } from './LoginMenu';
 export { ProfileMenu } from './ProfileMenu';
 export { LanguageMenu } from './LanguageMenu';
 export { SettingsMenu } from './SettingsMenu';
