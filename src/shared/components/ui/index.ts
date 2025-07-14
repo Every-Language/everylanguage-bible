@@ -6,4 +6,5 @@ export { OptionsPanel } from './OptionsPanel';
 export { SlideUpPanel } from './SlideUpPanel';
 export { ToggleButtons } from './ToggleButtons';
 export { BookImage } from './BookImage';
+export { CodeEntryModal } from './CodeEntryModal';
 export * from './icons/AudioIcons';

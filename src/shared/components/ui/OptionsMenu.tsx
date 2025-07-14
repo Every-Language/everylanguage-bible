@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -6,8 +6,10 @@ import {
   Text,
   Image,
   Alert,
+  Platform,
 } from 'react-native';
 import { SlideUpPanel } from './SlideUpPanel';
+import { CodeEntryModal } from './CodeEntryModal';
 import { useTheme, useCalculatorMode } from '@/shared/store';
 import { Dimensions, Fonts } from '@/shared/constants';
 
@@ -32,6 +34,7 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
 }) => {
   const { colors } = useTheme();
   const { enterCalculatorMode } = useCalculatorMode();
+  const [isCodeEntryVisible, setIsCodeEntryVisible] = useState(false);
 
   const handleOptionPress = (action: () => void) => {
     action();
@@ -39,56 +42,67 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
   };
 
   const handleCalculatorPress = () => {
-    Alert.prompt(
-      'Enter 4-Digit Code',
-      'Are you sure you want to enter a calculator mode? You will not be able to get back into the app if you forget your code.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'OK',
-          onPress: code => {
-            if (code && code.length === 4 && /^\d{4}$/.test(code)) {
-              // First code entered, now ask for confirmation
-              Alert.prompt(
-                'Confirm Code',
-                'Please enter the same 4-digit code again to confirm:',
-                [
-                  {
-                    text: 'Cancel',
-                    style: 'cancel',
-                  },
-                  {
-                    text: 'OK',
-                    onPress: confirmCode => {
-                      if (confirmCode === code) {
-                        enterCalculatorMode(code);
-                        console.log('Calculator mode activated');
-                      } else {
-                        Alert.alert(
-                          'Code Mismatch',
-                          'The codes do not match. Please try again.'
-                        );
-                      }
-                    },
-                  },
-                ],
-                'plain-text',
-                '',
-                'numeric'
-              );
-            } else {
-              Alert.alert('Invalid Code', 'Please enter exactly 4 digits.');
-            }
+    if (Platform.OS === 'ios') {
+      // iOS: Use native Alert.prompt
+      Alert.prompt(
+        'Enter 4-Digit Code',
+        'Are you sure you want to enter a calculator mode? You will not be able to get back into the app if you forget your code.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
           },
-        },
-      ],
-      'plain-text',
-      '',
-      'numeric'
-    );
+          {
+            text: 'OK',
+            onPress: code => {
+              if (code && code.length === 4 && /^\d{4}$/.test(code)) {
+                // First code entered, now ask for confirmation
+                Alert.prompt(
+                  'Confirm Code',
+                  'Please enter the same 4-digit code again to confirm:',
+                  [
+                    {
+                      text: 'Cancel',
+                      style: 'cancel',
+                    },
+                    {
+                      text: 'OK',
+                      onPress: confirmCode => {
+                        if (confirmCode === code) {
+                          enterCalculatorMode(code);
+                          console.log('Calculator mode activated');
+                        } else {
+                          Alert.alert(
+                            'Code Mismatch',
+                            'The codes do not match. Please try again.'
+                          );
+                        }
+                      },
+                    },
+                  ],
+                  'plain-text',
+                  '',
+                  'numeric'
+                );
+              } else {
+                Alert.alert('Invalid Code', 'Please enter exactly 4 digits.');
+              }
+            },
+          },
+        ],
+        'plain-text',
+        '',
+        'numeric'
+      );
+    } else {
+      // Android: Use custom modal
+      setIsCodeEntryVisible(true);
+    }
+  };
+
+  const handleCodeEntrySuccess = (code: string) => {
+    enterCalculatorMode(code);
+    console.log('Calculator mode activated');
   };
 
   const menuOptions = [
@@ -167,34 +181,42 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
   });
 
   return (
-    <SlideUpPanel
-      isVisible={isVisible}
-      onClose={onClose}
-      title='Options'
-      fullScreen={false}
-      testID='options-menu'>
-      <View style={styles.container}>
-        <View style={styles.cardsContainer}>
-          {menuOptions.map(option => (
-            <TouchableOpacity
-              key={option.key}
-              style={styles.optionCard}
-              onPress={() => handleOptionPress(option.onPress)}
-              accessibilityLabel={option.label}
-              accessibilityRole='button'
-              testID={`options-menu-${option.key}`}>
-              <View style={styles.iconContainer}>
-                <Image
-                  source={option.icon}
-                  style={styles.icon}
-                  resizeMode='contain'
-                />
-              </View>
-              <Text style={styles.label}>{option.label}</Text>
-            </TouchableOpacity>
-          ))}
+    <>
+      <SlideUpPanel
+        isVisible={isVisible}
+        onClose={onClose}
+        title='Options'
+        fullScreen={false}
+        testID='options-menu'>
+        <View style={styles.container}>
+          <View style={styles.cardsContainer}>
+            {menuOptions.map(option => (
+              <TouchableOpacity
+                key={option.key}
+                style={styles.optionCard}
+                onPress={() => handleOptionPress(option.onPress)}
+                accessibilityLabel={option.label}
+                accessibilityRole='button'
+                testID={`options-menu-${option.key}`}>
+                <View style={styles.iconContainer}>
+                  <Image
+                    source={option.icon}
+                    style={styles.icon}
+                    resizeMode='contain'
+                  />
+                </View>
+                <Text style={styles.label}>{option.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
-    </SlideUpPanel>
+      </SlideUpPanel>
+
+      <CodeEntryModal
+        isVisible={isCodeEntryVisible}
+        onClose={() => setIsCodeEntryVisible(false)}
+        onSuccess={handleCodeEntrySuccess}
+      />
+    </>
   );
 };
