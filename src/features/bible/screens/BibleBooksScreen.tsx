@@ -497,20 +497,36 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     header: {
       paddingTop: insets.top + Dimensions.spacing.md,
       paddingHorizontal: Dimensions.spacing.xl,
-      paddingBottom: Dimensions.spacing.sm,
+      //paddingBottom: Dimensions.spacing.xs,
+      backgroundColor: colors.background + '00', // 50% opacity (80 = 128/255)
+      //borderBottomWidth: 1,
+      //borderBottomColor: colors.secondary + '20', // Very subtle border
     },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: Dimensions.spacing.md,
+      marginBottom: Dimensions.spacing.sm,
       position: 'relative',
+    },
+    headerToggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      //paddingHorizontal: Dimensions.spacing.xs,
+      marginBottom: Dimensions.spacing.sm,
     },
     title: {
       fontSize: Fonts.size['3xl'],
       fontWeight: Fonts.weight.bold,
       color: colors.text,
       textAlign: 'center',
+    },
+    titleButton: {
+      // No background color - transparent button
+      paddingHorizontal: Dimensions.spacing.sm,
+      paddingVertical: Dimensions.spacing.xs,
+      borderRadius: Dimensions.radius.sm,
     },
     optionsButton: {
       position: 'absolute',
@@ -531,10 +547,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       borderRadius: 16,
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    toggleContainer: {
-      paddingHorizontal: Dimensions.spacing.md,
-      marginBottom: Dimensions.spacing.sm,
     },
     loadingContainer: {
       flex: 1,
@@ -572,7 +584,18 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Bible</Text>
+          <TouchableOpacity
+            style={styles.titleButton}
+            onPress={() => {
+              // Handle Bible title press - could be used for navigation or other actions
+              console.log('Bible title pressed');
+            }}
+            accessibilityRole='button'
+            accessibilityLabel='Bible title'
+            testID='bible-title-button'
+            activeOpacity={0.7}>
+            <Text style={styles.title}>Bible</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.searchButton}
             onPress={handleSearchPress}
@@ -593,18 +616,18 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
             <MoreIcon size={16} color='#FFFFFF' />
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Toggle Buttons */}
-      <View style={styles.toggleContainer}>
-        <ToggleButtons
-          options={toggleOptions}
-          selectedKey={testamentMode}
-          onSelect={(key: string) => setTestamentMode(key as TestamentMode)}
-          testID='testament-toggle'
-          height={28}
-          fontSize={Fonts.size.sm}
-        />
+        {/* Toggle Buttons in Header */}
+        <View style={styles.headerToggleRow}>
+          <ToggleButtons
+            options={toggleOptions}
+            selectedKey={testamentMode}
+            onSelect={(key: string) => setTestamentMode(key as TestamentMode)}
+            testID='testament-toggle'
+            height={28}
+            fontSize={Fonts.size.sm}
+          />
+        </View>
       </View>
 
       {/* Content Area with Swipe Support */}

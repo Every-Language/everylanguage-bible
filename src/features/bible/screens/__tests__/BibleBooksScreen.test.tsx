@@ -457,4 +457,23 @@ describe('BibleBooksScreen', () => {
       expect(optionsButton.props.accessibilityRole).toBe('button');
     });
   });
+
+  it('renders Bible title as a button', async () => {
+    const { getByTestId } = renderWithProvider(
+      <BibleBooksScreen
+        onChapterSelect={mockOnChapterSelect}
+        onVerseSelect={mockOnVerseSelect}
+      />
+    );
+
+    await waitFor(() => {
+      const bibleTitleButton = getByTestId('bible-title-button');
+      expect(bibleTitleButton).toBeTruthy();
+
+      // Test that the button can be pressed
+      fireEvent.press(bibleTitleButton);
+      // The button should not crash when pressed
+      expect(bibleTitleButton).toBeTruthy();
+    });
+  });
 });
