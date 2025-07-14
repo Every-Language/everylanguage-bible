@@ -1,2 +1,0 @@
-// Config exports - placeholder
-export {};

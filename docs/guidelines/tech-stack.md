@@ -53,7 +53,7 @@ This document outlines the complete technology stack and best practices for the 
   - Implement secure token refresh mechanisms
   - Support social login providers where culturally appropriate
 
-### PowerSync + Supabase PostgreSQL
+### Supabase PostgreSQL
 
 - **Purpose**: Real-time offline-first sync between local SQLite and cloud PostgreSQL
 - **Best Practices**:

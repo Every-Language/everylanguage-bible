@@ -1,2 +1,0 @@
-// Navigation exports - placeholder
-export {};

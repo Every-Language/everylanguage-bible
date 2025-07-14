@@ -4,8 +4,10 @@
     "slug": "el-bible",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.everylanguage.elbible"
@@ -18,7 +20,9 @@
       "expo-router",
       "expo-font",
       "expo-localization",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-audio",
+      "expo-sqlite"
     ],
     "scheme": "el-bible",
     "newArchEnabled": true,
