@@ -115,16 +115,16 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
     container: {
       flexDirection: 'row',
       backgroundColor: isActive
-        ? colors.primary + '20'
+        ? colors.navigationSelected + '20'
         : isFromUserQueue
-          ? colors.primary + '10'
-          : colors.background,
+          ? colors.navigationSelected + '20'
+          : colors.primary + '10',
       borderRadius: Dimensions.radius.md,
       padding: Dimensions.spacing.sm,
       marginVertical: Dimensions.spacing.xs,
       marginHorizontal: Dimensions.spacing.sm,
-      borderWidth: isActive ? 2 : 1,
-      borderColor: isActive ? colors.primary : colors.text + '15',
+      borderWidth: isActive ? 2 : 0,
+      borderColor: isActive ? colors.navigationSelected : colors.text + '15',
       alignItems: 'center',
     },
     queueTypeIndicator: {
@@ -150,8 +150,8 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
       marginTop: 2,
     },
     rightSection: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
       marginLeft: Dimensions.spacing.sm,
     },
     userQueueRightSection: {
@@ -212,9 +212,6 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
       minHeight: 32,
       justifyContent: 'center',
       alignItems: 'center',
-      position: 'absolute',
-      top: Dimensions.spacing.sm,
-      right: Dimensions.spacing.sm,
     },
     addButtonText: {
       fontSize: Fonts.size.sm,
@@ -317,24 +314,23 @@ export const QueueItemComponent: React.FC<QueueItemComponentProps> = ({
           )}
         </View>
       ) : (
-        // Non-user queue: duration positioned to avoid plus button
+        // Non-user queue: duration and add button
         <View style={styles.rightSection}>
           {details.duration > 0 && (
-            <Text style={[styles.duration, { marginRight: 40 }]}>
+            <Text style={styles.duration}>
               {formatDuration(details.duration)}
             </Text>
           )}
-        </View>
-      )}
 
-      {/* Add Button for Non-User Queue Items - positioned on the item */}
-      {!isFromUserQueue && onAdd && (
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={onAdd}
-          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
+          {onAdd && (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={onAdd}
+              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
+              <Text style={styles.addButtonText}>+</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
     </TouchableOpacity>
   );
