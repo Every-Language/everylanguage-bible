@@ -1,8 +1,9 @@
 import React from 'react';
 import { create } from 'zustand';
-import { useColorScheme } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type Theme = 'light' | 'dark';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export interface ThemeColors {
   background: string;
@@ -21,6 +22,7 @@ export interface ThemeColors {
 interface ThemeState {
   // Current theme
   theme: Theme;
+  themeMode: ThemeMode; // New: tracks user preference (light/dark/system)
   isDark: boolean;
   colors: ThemeColors;
 
@@ -30,7 +32,8 @@ interface ThemeState {
   // Actions
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
-  setSystemTheme: (theme: Theme) => void; // New action for system theme updates
+  setThemeMode: (mode: ThemeMode) => void; // New: set user preference
+  setSystemTheme: (theme: Theme) => void; // For system theme updates
   initializeFromSystem: () => void;
   reset: () => void;
 }
@@ -67,9 +70,13 @@ const getColorsForTheme = (theme: Theme): ThemeColors => {
   return theme === 'dark' ? darkColors : lightColors;
 };
 
+const THEME_MODE_KEY = '@theme_mode';
+const MANUAL_THEME_KEY = '@manual_theme';
+
 export const useThemeStore = create<ThemeState>((set, get) => ({
   // Initial state
   theme: 'light',
+  themeMode: 'system', // Default to system theme
   isDark: false,
   colors: lightColors,
   isManuallySet: false,
@@ -82,10 +89,15 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
     set({
       theme: newTheme,
+      themeMode: newTheme, // Set mode to the selected theme
       isDark: newTheme === 'dark',
       colors: newColors,
       isManuallySet: true, // Mark as manually set
     });
+
+    // Save to AsyncStorage
+    AsyncStorage.setItem(THEME_MODE_KEY, newTheme);
+    AsyncStorage.setItem(MANUAL_THEME_KEY, 'true');
   },
 
   setTheme: (newTheme: Theme) => {
@@ -93,60 +105,97 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
     set({
       theme: newTheme,
+      themeMode: newTheme, // Set mode to the selected theme
       isDark: newTheme === 'dark',
       colors: newColors,
       isManuallySet: true, // Mark as manually set
     });
+
+    // Save to AsyncStorage
+    AsyncStorage.setItem(THEME_MODE_KEY, newTheme);
+    AsyncStorage.setItem(MANUAL_THEME_KEY, 'true');
+  },
+
+  setThemeMode: (newMode: ThemeMode) => {
+    const newColors = getColorsForTheme(
+      newMode === 'system' ? get().theme : newMode
+    );
+    const isManual = newMode !== 'system';
+
+    set({
+      themeMode: newMode,
+      theme: newMode === 'system' ? get().theme : newMode,
+      isDark: (newMode === 'system' ? get().theme : newMode) === 'dark',
+      colors: newColors,
+      isManuallySet: isManual,
+    });
+
+    // Save to AsyncStorage
+    AsyncStorage.setItem(THEME_MODE_KEY, newMode);
+    AsyncStorage.setItem(MANUAL_THEME_KEY, isManual.toString());
   },
 
   setSystemTheme: (newTheme: Theme) => {
-    const newColors = getColorsForTheme(newTheme);
+    const { themeMode } = get();
 
-    set({
-      theme: newTheme,
-      isDark: newTheme === 'dark',
-      colors: newColors,
-      // Don't mark as manually set - this is system driven
-    });
+    // Only update if we're in system mode
+    if (themeMode === 'system') {
+      const newColors = getColorsForTheme(newTheme);
+
+      set({
+        theme: newTheme,
+        isDark: newTheme === 'dark',
+        colors: newColors,
+        // Don't mark as manually set - this is system driven
+      });
+    }
   },
 
-  initializeFromSystem: () => {
-    // This should be called once on app startup
-    // Note: useColorScheme() hook should be called from a component
-    // We'll handle system theme detection in the App component
+  initializeFromSystem: async () => {
+    try {
+      const savedThemeMode = await AsyncStorage.getItem(THEME_MODE_KEY);
+      const savedManualFlag = await AsyncStorage.getItem(MANUAL_THEME_KEY);
+
+      if (savedThemeMode) {
+        const isManual = savedManualFlag === 'true';
+        const mode = savedThemeMode as ThemeMode;
+
+        set({
+          themeMode: mode,
+          isManuallySet: isManual,
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to load theme preferences from storage:', error);
+    }
   },
 
   reset: () => {
     set({
       theme: 'light',
+      themeMode: 'system',
       isDark: false,
       colors: lightColors,
       isManuallySet: false,
     });
+
+    // Clear AsyncStorage
+    AsyncStorage.removeItem(THEME_MODE_KEY);
+    AsyncStorage.removeItem(MANUAL_THEME_KEY);
   },
 }));
 
 // Helper hook that combines system theme detection with store
 export const useTheme = () => {
   const store = useThemeStore();
-  const systemColorScheme = useColorScheme();
 
-  // Initialize theme from system on first use and listen for system changes
+  // Initialize from storage on first mount ONLY
   React.useEffect(() => {
-    // If no manual theme has been set and system theme is available
-    if (!store.isManuallySet && systemColorScheme) {
-      // Only update if different from current theme
-      if (store.theme !== systemColorScheme) {
-        store.setSystemTheme(systemColorScheme);
-      }
-    }
-  }, [
-    store,
-    systemColorScheme,
-    store.isManuallySet,
-    store.theme,
-    store.setSystemTheme,
-  ]);
+    store.initializeFromSystem();
+  }, []); // Empty dependency array - only run once
+
+  // NO automatic system theme monitoring here!
+  // System theme will only be checked when user toggles "Use System Theme"
 
   return store;
 };

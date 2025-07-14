@@ -16,7 +16,6 @@ import helpIcon from '../../../../assets/images/utility_icons/help.png';
 interface OptionsMenuProps {
   isVisible: boolean;
   onClose: () => void;
-  onThemeToggle: () => void;
   onNavigateToSubMenu?: (
     subMenuType: 'login' | 'profile' | 'language' | 'settings' | 'help'
   ) => void;
@@ -25,7 +24,6 @@ interface OptionsMenuProps {
 export const OptionsMenu: React.FC<OptionsMenuProps> = ({
   isVisible,
   onClose,
-  onThemeToggle: _onThemeToggle,
   onNavigateToSubMenu,
 }) => {
   const { enterCalculatorMode } = useCalculatorMode();

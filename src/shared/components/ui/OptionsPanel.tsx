@@ -8,17 +8,15 @@ import { Dimensions, Fonts } from '@/shared/constants';
 interface OptionsPanelProps {
   isVisible: boolean;
   onClose: () => void;
-  onThemeToggle: () => void;
   position: { top: number; right: number };
 }
 
 export const OptionsPanel: React.FC<OptionsPanelProps> = ({
   isVisible,
   onClose,
-  onThemeToggle,
   position,
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
   const { t } = useTranslation();
   const { openHelpPanel } = useHelpPanelStore();
   const [fadeAnim] = React.useState(new Animated.Value(0));
@@ -103,7 +101,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
             paddingVertical: Dimensions.spacing.md,
             minHeight: 48,
           }}
-          onPress={() => handleOptionPress(onThemeToggle)}
+          onPress={() => handleOptionPress(toggleTheme)}
           accessibilityLabel={
             isDark ? t('theme.switchToLight') : t('theme.switchToDark')
           }

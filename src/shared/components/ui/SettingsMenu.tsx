@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Switch } from 'react-native';
+import { useColorScheme } from 'react-native';
 import { BaseMenu } from './BaseMenu';
 import { BaseMenuConfig } from '@/types/menu';
-import { useTheme } from '@/shared/store';
+import { useTheme, useThemeStore } from '@/shared/store';
 import { Dimensions, Fonts } from '@/shared/constants';
 
 // Import utility icons
@@ -11,18 +12,39 @@ import settingsIcon from '../../../../assets/images/utility_icons/settings.png';
 interface SettingsMenuProps {
   isVisible: boolean;
   onClose: () => void;
-  onThemeToggle: () => void;
 }
 
 export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   isVisible,
   onClose,
-  onThemeToggle,
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, themeMode, setThemeMode, toggleTheme } = useTheme();
+  const systemColorScheme = useColorScheme(); // Only used when user toggles
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
   const [offlineDownloads, setOfflineDownloads] = useState(true);
+
+  const isSystemMode = themeMode === 'system';
+
+  const handleSystemThemeToggle = () => {
+    if (isSystemMode) {
+      // Switching from system to manual - use current theme
+      setThemeMode(isDark ? 'dark' : 'light');
+    } else {
+      // Switching from manual to system - check system theme NOW
+      setThemeMode('system');
+      // If system theme is available, apply it immediately
+      if (systemColorScheme) {
+        useThemeStore.getState().setSystemTheme(systemColorScheme);
+      }
+    }
+  };
+
+  const handleManualThemeToggle = () => {
+    if (!isSystemMode) {
+      toggleTheme();
+    }
+  };
 
   const toggleSetting = (
     setting: string,
@@ -35,6 +57,14 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   };
 
   const styles = StyleSheet.create({
+    // Theme section styles
+    sectionHeader: {
+      fontSize: Fonts.size.lg,
+      fontWeight: Fonts.weight.bold,
+      color: colors.text,
+      marginBottom: Dimensions.spacing.md,
+      marginTop: Dimensions.spacing.lg,
+    },
     themeCard: {
       backgroundColor: isDark ? '#414141' : '#EAE9E7',
       borderRadius: Dimensions.radius.md,
@@ -46,48 +76,105 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      marginBottom: Dimensions.spacing.md,
+    },
+    themeRowLast: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
     },
     themeText: {
       fontSize: Fonts.size.base,
       color: colors.text,
       fontWeight: Fonts.weight.medium,
     },
-    themeButton: {
+    themeTextDisabled: {
+      fontSize: Fonts.size.base,
+      color: colors.text + '60', // 60% opacity for disabled state
+      fontWeight: Fonts.weight.medium,
+    },
+    lightDarkContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.primary + '15',
+      backgroundColor: isSystemMode
+        ? colors.primary + '10'
+        : colors.primary + '15',
+      borderRadius: 50, // Very rounded/circular
       paddingHorizontal: Dimensions.spacing.md,
       paddingVertical: Dimensions.spacing.sm,
-      borderRadius: Dimensions.radius.sm,
     },
-    themeIcon: {
-      fontSize: Fonts.size.lg,
-      marginRight: Dimensions.spacing.xs,
-    },
-    themeButtonText: {
+    lightDarkText: {
       fontSize: Fonts.size.sm,
-      color: colors.primary,
+      color: isSystemMode ? colors.text + '60' : colors.primary,
       fontWeight: Fonts.weight.medium,
+      marginHorizontal: Dimensions.spacing.sm,
     },
   });
 
   const themeSection = (
-    <View style={styles.themeCard}>
-      <View style={styles.themeRow}>
-        <Text style={styles.themeText}>Theme</Text>
-        <TouchableOpacity
-          style={styles.themeButton}
-          onPress={onThemeToggle}
-          accessibilityLabel={
-            isDark ? 'Switch to light mode' : 'Switch to dark mode'
-          }
-          accessibilityRole='button'
-          testID='settings-theme-toggle'>
-          <Text style={styles.themeIcon}>{isDark ? '☀️' : '🌙'}</Text>
-          <Text style={styles.themeButtonText}>
-            {isDark ? 'Light Mode' : 'Dark Mode'}
+    <View>
+      {/* Appearance Section Header */}
+      <Text style={styles.sectionHeader}>Appearance</Text>
+
+      {/* Theme Controls */}
+      <View style={styles.themeCard}>
+        {/* Use System Theme Toggle */}
+        <View style={styles.themeRow}>
+          <Text style={styles.themeText}>Use System Theme</Text>
+          <Switch
+            value={isSystemMode}
+            onValueChange={handleSystemThemeToggle}
+            trackColor={{
+              false: colors.secondary + '30',
+              true: colors.primary + '80',
+            }}
+            thumbColor='#FFFFFF' // White thumb to match other settings
+            ios_backgroundColor={colors.secondary + '30'}
+            accessibilityLabel='Toggle system theme'
+          />
+        </View>
+
+        {/* Light/Dark Manual Toggle */}
+        <View style={styles.themeRowLast}>
+          <Text
+            style={isSystemMode ? styles.themeTextDisabled : styles.themeText}>
+            Theme
           </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.lightDarkContainer}
+            onPress={handleManualThemeToggle}
+            disabled={isSystemMode}
+            accessibilityLabel={
+              isSystemMode
+                ? 'Theme selection disabled - using system theme'
+                : isDark
+                  ? 'Switch to light mode'
+                  : 'Switch to dark mode'
+            }
+            accessibilityRole='button'
+            testID='settings-theme-toggle'>
+            <Text style={styles.lightDarkText}>Light</Text>
+            <Switch
+              value={isDark}
+              onValueChange={handleManualThemeToggle}
+              disabled={isSystemMode}
+              trackColor={{
+                false: isSystemMode
+                  ? colors.secondary + '20'
+                  : colors.secondary + '30',
+                true: isSystemMode
+                  ? colors.primary + '40'
+                  : colors.primary + '80',
+              }}
+              thumbColor='#FFFFFF' // White thumb to match other settings
+              ios_backgroundColor={colors.secondary + '30'}
+              accessibilityLabel={
+                isSystemMode ? 'Theme toggle disabled' : 'Toggle theme'
+              }
+            />
+            <Text style={styles.lightDarkText}>Dark</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -97,10 +184,6 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
     fullScreen: true,
     testID: 'settings-menu',
     sections: [
-      {
-        title: 'Appearance',
-        options: [], // Empty because we use custom theme section
-      },
       {
         title: 'App Settings',
         options: [

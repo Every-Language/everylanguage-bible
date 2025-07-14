@@ -431,7 +431,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
   onVerseSelect,
 }) => {
-  const { colors, toggleTheme } = useTheme();
+  const { colors } = useTheme();
   const { openChapterCard } = useChapterCardStore();
   const { isOpen: isHelpPanelOpen, closeHelpPanel } = useHelpPanelStore();
   const insets = useSafeAreaInsets();
@@ -674,7 +674,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       <OptionsMenu
         isVisible={showOptionsPanel}
         onClose={handleCloseOptions}
-        onThemeToggle={toggleTheme}
         onNavigateToSubMenu={handleOpenSubMenu}
       />
 
@@ -694,7 +693,6 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       <SettingsMenu
         isVisible={activeSubMenu === 'settings'}
         onClose={handleCloseSubMenu}
-        onThemeToggle={toggleTheme}
       />
 
       {/* Help Menu */}
