@@ -70,7 +70,7 @@ const TrackTextView: React.FC<TrackTextViewProps> = ({
   onVersePress,
   onSeek,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useTranslation();
   const scrollViewRef = React.useRef<ScrollView>(null);
   const versePositions = React.useRef<Map<number, number>>(new Map());
@@ -178,13 +178,13 @@ const TrackTextView: React.FC<TrackTextViewProps> = ({
                 marginBottom: Dimensions.spacing.md,
                 padding: Dimensions.spacing.sm,
                 backgroundColor: verse.isCurrentVerse
-                  ? colors.primary + '20'
+                  ? isDark
+                    ? '#3a3a3a'
+                    : '#d4cec3'
                   : 'transparent',
                 borderRadius: Dimensions.radius.md,
-                borderWidth: verse.isCurrentVerse ? 2 : 0,
-                borderColor: verse.isCurrentVerse
-                  ? colors.primary
-                  : 'transparent',
+                borderWidth: 0,
+                borderColor: 'transparent',
               }}
               onPress={() => handleVersePress(verse.verseNumber)}
               activeOpacity={0.7}
@@ -198,7 +198,7 @@ const TrackTextView: React.FC<TrackTextViewProps> = ({
                     fontSize: Fonts.size.sm,
                     fontWeight: Fonts.weight.bold,
                     color: verse.isCurrentVerse
-                      ? colors.primary
+                      ? colors.text
                       : colors.text + '80',
                   }}>
                   Verse {verse.verseNumber}
