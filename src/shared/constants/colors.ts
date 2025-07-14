@@ -63,4 +63,13 @@ export const Colors = {
     warning: '#FF9800',
     error: '#F44336',
   },
+
+  // Accent and glassy colors
+  accent1: '#92BEC3', // light blue-green
+  accent2: '#AD915A', // gold/brown
+  accent3: '#282827', // dark gray (for contrast)
+  accent4: '#E3F2FD', // very light blue (for highlights)
+  glass1: 'rgba(146, 190, 195, 0.7)', // glassy blue-green
+  glass2: 'rgba(38, 72, 84, 0.7)', // glassy dark blue-green
+  glass3: 'rgba(237, 229, 217, 0.7)', // glassy cream
 } as const;
