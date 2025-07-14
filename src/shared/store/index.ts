@@ -13,6 +13,9 @@ export { useQueueStore } from './queueStore';
 // Help panel store (test store for SlideUpPanel)
 export { useHelpPanelStore } from './helpPanelStore';
 
+// Calculator store
+export { useCalculatorStore, useCalculatorMode } from './calculatorStore';
+
 // Future stores will be exported here:
 // export { useAuthStore } from './authStore';
 // export { useSettingsStore } from './settingsStore';

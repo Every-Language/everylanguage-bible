@@ -6,13 +6,25 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MainNavigator } from '@/app/navigation/MainNavigator';
 import { TamaguiProvider } from '@/app/providers';
-import { useTheme } from '@/shared/store';
+import { useTheme, useCalculatorMode } from '@/shared/store';
 import '@/shared/services/i18n';
 import OnBoardingScreen from '@/features/onboarding/screens/OnBoardingScreen';
+import { CalculatorScreen } from '@/features/calculator/screens/CalculatorScreen';
 import { RootStackParamList } from './types/onboarding';
 
 const AppContent: React.FC = () => {
   const { isDark } = useTheme();
+  const { isCalculatorMode } = useCalculatorMode();
+
+  // If calculator mode is active, show only the calculator screen
+  if (isCalculatorMode) {
+    return (
+      <>
+        <CalculatorScreen />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+      </>
+    );
+  }
 
   return (
     <>

@@ -1,7 +1,14 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Text, Image } from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Text,
+  Image,
+  Alert,
+} from 'react-native';
 import { SlideUpPanel } from './SlideUpPanel';
-import { useTheme } from '@/shared/store';
+import { useTheme, useCalculatorMode } from '@/shared/store';
 import { Dimensions, Fonts } from '@/shared/constants';
 
 // Import utility icons
@@ -21,13 +28,67 @@ interface OptionsMenuProps {
 export const OptionsMenu: React.FC<OptionsMenuProps> = ({
   isVisible,
   onClose,
-  onThemeToggle,
+  onThemeToggle: _onThemeToggle,
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
+  const { enterCalculatorMode } = useCalculatorMode();
 
   const handleOptionPress = (action: () => void) => {
     action();
     onClose();
+  };
+
+  const handleCalculatorPress = () => {
+    Alert.prompt(
+      'Enter 4-Digit Code',
+      'Are you sure you want to enter a calculator mode? You will not be able to get back into the app if you forget your code.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'OK',
+          onPress: code => {
+            if (code && code.length === 4 && /^\d{4}$/.test(code)) {
+              // First code entered, now ask for confirmation
+              Alert.prompt(
+                'Confirm Code',
+                'Please enter the same 4-digit code again to confirm:',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
+                  },
+                  {
+                    text: 'OK',
+                    onPress: confirmCode => {
+                      if (confirmCode === code) {
+                        enterCalculatorMode(code);
+                        console.log('Calculator mode activated');
+                      } else {
+                        Alert.alert(
+                          'Code Mismatch',
+                          'The codes do not match. Please try again.'
+                        );
+                      }
+                    },
+                  },
+                ],
+                'plain-text',
+                '',
+                'numeric'
+              );
+            } else {
+              Alert.alert('Invalid Code', 'Please enter exactly 4 digits.');
+            }
+          },
+        },
+      ],
+      'plain-text',
+      '',
+      'numeric'
+    );
   };
 
   const menuOptions = [
@@ -53,7 +114,7 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
       key: 'calculator',
       icon: calculatorIcon,
       label: 'Calculator',
-      onPress: () => console.log('Calculator pressed'),
+      onPress: handleCalculatorPress,
     },
     {
       key: 'settings',
@@ -83,18 +144,18 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
       paddingVertical: Dimensions.spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
-      minHeight: 56,
+      minHeight: 40,
     },
     iconContainer: {
-      width: 32,
-      height: 32,
+      width: 20,
+      height: 20,
       marginRight: Dimensions.spacing.md,
       justifyContent: 'center',
       alignItems: 'center',
     },
     icon: {
-      width: 24,
-      height: 24,
+      width: 18,
+      height: 18,
       tintColor: colors.text,
     },
     label: {
@@ -102,28 +163,6 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
       color: colors.text,
       flex: 1,
       fontWeight: Fonts.weight.medium,
-    },
-    themeToggleContainer: {
-      marginTop: Dimensions.spacing.md,
-      paddingTop: Dimensions.spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.primary + '20',
-    },
-    themeToggleButton: {
-      backgroundColor: '#CCBB99',
-      borderRadius: Dimensions.radius.md,
-      paddingHorizontal: Dimensions.spacing.lg,
-      paddingVertical: Dimensions.spacing.md,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 48,
-    },
-    themeToggleText: {
-      fontSize: Fonts.size.base,
-      color: colors.text,
-      fontWeight: Fonts.weight.medium,
-      marginLeft: Dimensions.spacing.sm,
     },
   });
 
@@ -154,25 +193,6 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
               <Text style={styles.label}>{option.label}</Text>
             </TouchableOpacity>
           ))}
-        </View>
-
-        {/* Theme Toggle Button */}
-        <View style={styles.themeToggleContainer}>
-          <TouchableOpacity
-            style={styles.themeToggleButton}
-            onPress={() => handleOptionPress(onThemeToggle)}
-            accessibilityLabel={
-              isDark ? 'Switch to light mode' : 'Switch to dark mode'
-            }
-            accessibilityRole='button'
-            testID='options-menu-theme-toggle'>
-            <Text style={{ fontSize: Fonts.size.lg }}>
-              {isDark ? '☀️' : '🌙'}
-            </Text>
-            <Text style={styles.themeToggleText}>
-              {isDark ? 'Light Mode' : 'Dark Mode'}
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
     </SlideUpPanel>
