@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Image,
-  ScrollView,
-} from 'react-native';
-import { SlideUpPanel } from './SlideUpPanel';
+import { View, StyleSheet, Text, TouchableOpacity, Image } from 'react-native';
+import { BaseMenu } from './BaseMenu';
+import { BaseMenuConfig } from '@/types/menu';
 import { useTheme } from '@/shared/store';
 import { Dimensions, Fonts } from '@/shared/constants';
 
@@ -54,41 +48,34 @@ export const LanguageMenu: React.FC<LanguageMenuProps> = ({
   };
 
   const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      paddingVertical: Dimensions.spacing.md,
-    },
     headerSection: {
-      paddingVertical: Dimensions.spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.secondary + '20',
+      paddingVertical: Dimensions.spacing.md,
       marginBottom: Dimensions.spacing.lg,
     },
     headerText: {
-      fontSize: Fonts.size.lg,
-      color: colors.text,
+      fontSize: Fonts.size.base,
+      color: colors.secondary,
+      lineHeight: 22,
       textAlign: 'center',
-      lineHeight: 24,
     },
     currentLanguageSection: {
-      backgroundColor: colors.secondary + '10',
+      backgroundColor: isDark ? '#414141' : '#EAE9E7',
       borderRadius: Dimensions.radius.md,
-      padding: Dimensions.spacing.md,
-      marginBottom: Dimensions.spacing.lg,
+      paddingHorizontal: Dimensions.spacing.lg,
+      paddingVertical: Dimensions.spacing.lg,
+      marginBottom: Dimensions.spacing.xl,
     },
     currentLanguageLabel: {
       fontSize: Fonts.size.sm,
       color: colors.secondary,
-      fontWeight: Fonts.weight.medium,
       marginBottom: Dimensions.spacing.xs,
+      textAlign: 'center',
     },
     currentLanguageName: {
       fontSize: Fonts.size.lg,
       color: colors.text,
-      fontWeight: Fonts.weight.semibold,
-    },
-    languagesContainer: {
-      gap: Dimensions.spacing.xs,
+      fontWeight: Fonts.weight.bold,
+      textAlign: 'center',
     },
     languageCard: {
       backgroundColor: isDark ? '#414141' : '#EAE9E7',
@@ -97,13 +84,14 @@ export const LanguageMenu: React.FC<LanguageMenuProps> = ({
       paddingVertical: Dimensions.spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
-      minHeight: 55,
+      marginBottom: Dimensions.spacing.sm,
+      minHeight: 60,
       borderWidth: 2,
       borderColor: 'transparent',
     },
-    languageCardSelected: {
-      borderColor: colors.text,
-      backgroundColor: colors.primary + '20',
+    selectedLanguageCard: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '10',
     },
     iconContainer: {
       width: 24,
@@ -150,70 +138,70 @@ export const LanguageMenu: React.FC<LanguageMenuProps> = ({
     lang => lang.code === selectedLanguage
   );
 
-  return (
-    <SlideUpPanel
-      isVisible={isVisible}
-      onClose={onClose}
-      title='Language'
-      fullScreen={true}
-      testID='language-menu'>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.headerSection}>
-          <Text style={styles.headerText}>
-            Choose your preferred language for the app interface and Bible
-            content.
+  const headerContent = (
+    <View>
+      <View style={styles.headerSection}>
+        <Text style={styles.headerText}>
+          Choose your preferred language for the app interface and Bible
+          content.
+        </Text>
+      </View>
+
+      {currentLanguage && (
+        <View style={styles.currentLanguageSection}>
+          <Text style={styles.currentLanguageLabel}>Current Language</Text>
+          <Text style={styles.currentLanguageName}>
+            {currentLanguage.nativeName} ({currentLanguage.name})
           </Text>
         </View>
+      )}
+    </View>
+  );
 
-        {/* Current Language */}
-        {currentLanguage && (
-          <View style={styles.currentLanguageSection}>
-            <Text style={styles.currentLanguageLabel}>Current Language</Text>
-            <Text style={styles.currentLanguageName}>
-              {currentLanguage.nativeName} ({currentLanguage.name})
-            </Text>
-          </View>
-        )}
-
-        {/* Available Languages */}
-        <View style={styles.languagesContainer}>
-          {languages.map(language => {
-            const isSelected = language.code === selectedLanguage;
-            return (
-              <TouchableOpacity
-                key={language.code}
-                style={[
-                  styles.languageCard,
-                  isSelected && styles.languageCardSelected,
-                ]}
-                onPress={() => handleLanguageSelect(language.code)}
-                accessibilityLabel={`Select ${language.name} language`}
-                accessibilityRole='button'
-                testID={`language-menu-${language.code}`}>
-                <View style={styles.iconContainer}>
-                  <Image
-                    source={languageIcon}
-                    style={styles.icon}
-                    resizeMode='contain'
-                  />
-                </View>
-                <View style={styles.languageInfo}>
-                  <Text style={styles.languageName}>{language.name}</Text>
-                  <Text style={styles.languageNativeName}>
-                    {language.nativeName}
-                  </Text>
-                </View>
-                {isSelected && (
-                  <View style={styles.selectedIndicator}>
-                    <View style={styles.selectedDot} />
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+  const customLanguageOptions = languages.map(language => (
+    <TouchableOpacity
+      key={language.code}
+      style={[
+        styles.languageCard,
+        selectedLanguage === language.code && styles.selectedLanguageCard,
+      ]}
+      onPress={() => handleLanguageSelect(language.code)}
+      accessibilityLabel={`Select ${language.name}`}
+      accessibilityRole='button'
+      testID={`language-menu-${language.code}`}>
+      <View style={styles.iconContainer}>
+        <Image source={languageIcon} style={styles.icon} resizeMode='contain' />
+      </View>
+      <View style={styles.languageInfo}>
+        <Text style={styles.languageName}>{language.name}</Text>
+        <Text style={styles.languageNativeName}>{language.nativeName}</Text>
+      </View>
+      {selectedLanguage === language.code && (
+        <View style={styles.selectedIndicator}>
+          <View style={styles.selectedDot} />
         </View>
-      </ScrollView>
-    </SlideUpPanel>
+      )}
+    </TouchableOpacity>
+  ));
+
+  const config: BaseMenuConfig = {
+    title: 'Language',
+    fullScreen: true,
+    testID: 'language-menu',
+    options: [], // We use custom content for language selection
+  };
+
+  return (
+    <BaseMenu
+      isVisible={isVisible}
+      onClose={onClose}
+      config={config}
+      customContent={
+        <View>
+          {headerContent}
+          {customLanguageOptions}
+        </View>
+      }
+    />
   );
 };
