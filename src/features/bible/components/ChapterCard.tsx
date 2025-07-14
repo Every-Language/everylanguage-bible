@@ -621,8 +621,8 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
           <View
             style={{
               position: 'absolute',
-              top: 8,
-              right: 8,
+              top: 12,
+              right: 12,
               zIndex: 10,
             }}>
             <TouchableOpacity
