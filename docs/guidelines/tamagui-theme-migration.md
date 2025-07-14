@@ -6,30 +6,22 @@ This document outlines the approach to consolidate the Bible App's theme system 
 
 ## Current State Analysis
 
-The app currently has **three separate theme systems**:
+The app currently has **two theme systems** (one new, one legacy):
 
-1. **Tamagui Theme System** (`tamagui.config.ts`) ✅
-   - ✅ Properly configured with comprehensive light/dark themes
-   - ✅ Enhanced with all necessary color tokens and variants
-   - ✅ Uses Tamagui's built-in theme system
-   - ❌ Not actively used for theme switching
+1. **New Unified Tamagui Theme System** ✅
+   - ✅ **Tamagui Theme System** (`tamagui.config.ts`) - Properly configured with comprehensive light/dark themes
+   - ✅ **Unified Theme Provider** (`src/app/providers/ThemeProvider.tsx`) - Complete theme management with system integration
+   - ✅ **Enhanced Tamagui Hook** (`src/shared/hooks/useTamaguiTheme.ts`) - Full theme switching functionality
+   - ✅ **Updated App Provider** (`src/app/providers/TamaguiProvider.tsx`) - Uses new ThemeProvider
+   - ✅ **Updated Hook Exports** (`src/shared/hooks/useTheme.tsx`) - Re-exports from Tamagui hook
+   - ✅ **Updated Tests** - All theme tests pass with new system
 
-2. **Custom Zustand Theme Store** (`src/shared/store/themeStore.ts`) ❌
+2. **Legacy Zustand Theme Store** (`src/shared/store/themeStore.ts`) ❌
+   - ❌ Still exists and is being used by ~50+ components
    - ❌ Duplicates color definitions from Tamagui config
    - ❌ Custom theme management logic
-   - ❌ Currently used throughout the app via `useTheme()` hook
-   - ❌ Handles system theme detection manually
-
-3. **Placeholder Tamagui Hook** (`src/shared/hooks/useTamaguiTheme.ts`) ❌
-   - ❌ Incomplete implementation
-   - ❌ Hardcoded theme values
-   - ❌ No theme switching functionality
-   - ❌ Not integrated with Tamagui provider
-
-4. **Basic Tamagui Provider** (`src/app/providers/TamaguiProvider.tsx`) ❌
-   - ❌ No theme switching capability
-   - ❌ Hardcoded to 'light' theme
-   - ❌ No system theme integration
+   - ❌ Causes TypeScript errors when components try to use Tamagui components
+   - ❌ Needs to be removed and all components updated
 
 ## Migration Strategy
 
@@ -281,13 +273,13 @@ jest.mock('@/shared/hooks', () => ({
 ## Implementation Order
 
 1. ✅ Phase 1: Enhanced Tamagui Configuration
-2. 🔄 Phase 2:
+2. ✅ Phase 2: Create Unified Theme Provider
 
-3. 🔄 Phase 3: Update App Provider Structure
-4. 🔄 Phase 4: Implement Unified Theme Hook
-5. 🔄 Phase 5: Update Import Paths
+3. ✅ Phase 3: Update App Provider Structure
+4. ✅ Phase 4: Implement Unified Theme Hook
+5. ✅ Phase 5: Update Import Paths
 6. 🔄 Phase 6: Remove Legacy Code
-7. 🔄 Phase 7: Update Tests
+7. ✅ Phase 7: Update Tests
 
 ## Testing Strategy
 
@@ -465,21 +457,49 @@ If issues arise during migration:
 - ✅ Phase 3: Update App Provider Structure
 - ✅ Phase 4: Implement Unified Theme Hook
 - ✅ Phase 5: Update Import Paths
-- ✅ Phase 6: Remove Legacy Code
 - ✅ Phase 7: Update Tests
 
 **In Progress:**
 
-- 🔄 Phase 8: Integration Testing
+- 🔄 Phase 6: Remove Legacy Code (Critical - ~50+ files need updating)
 
 **Remaining:**
 
+- ⏳ Phase 6: Remove Legacy Code (Critical)
 - ⏳ Phase 8: Integration Testing
 - ⏳ Phase 9: Documentation & Cleanup
 
-**Estimated Effort:** 2-3 days for full migration
-**Risk Level:** Medium (significant file changes required)
-**Dependencies:** Each phase depends on previous phase completion
+**Current Status:**
+
+- ✅ New theme system is fully implemented and tested
+- ❌ Legacy theme store still exists and is used by ~50+ components
+- ❌ TypeScript errors due to components using old theme system with Tamagui components
+- 🔄 Need to update all component imports and remove legacy store
+
+**Estimated Effort:** 1-2 days to complete migration
+**Risk Level:** Medium (many file changes required)
+**Dependencies:** Phase 6 must be completed before Phase 8
+
+## Current Blocking Issues
+
+### TypeScript Errors
+
+The app currently has 31 TypeScript errors due to components using the legacy theme system with Tamagui components:
+
+1. **Color Type Mismatches**: Components passing string colors to Tamagui components that expect theme tokens
+2. **Style Property Conflicts**: Components using React Native style properties that don't exist on Tamagui components
+3. **Import Conflicts**: Components importing from both old and new theme systems
+
+### Components Needing Updates
+
+Approximately 50+ components need to be updated to use the new theme system:
+
+- **UI Components** (~15 files): `src/shared/components/ui/`
+- **Onboarding Components** (~10 files): `src/features/onboarding/components/`
+- **Bible Components** (~5 files): `src/features/bible/components/`
+- **Audio Components** (~5 files): `src/features/audio/components/`
+- **Navigation Components** (~3 files): `src/app/navigation/`
+- **Other Feature Components** (~15 files): Various feature directories
 
 ## Key Changes from Previous Version
 
