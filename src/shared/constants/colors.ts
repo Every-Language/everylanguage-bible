@@ -63,4 +63,16 @@ export const Colors = {
     warning: '#FF9800',
     error: '#F44336',
   },
+
+  // New theme colors for Bible books screen and chapter tiles
+  theme: {
+    bibleBooksBackground: {
+      light: '#F9F7F4',
+      dark: '#070707',
+    },
+    chapterTileBackground: {
+      light: '#EAE9E7',
+      dark: '#414141',
+    },
+  },
 } as const;

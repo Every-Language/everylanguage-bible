@@ -9,6 +9,13 @@ export interface ThemeColors {
   text: string;
   primary: string;
   secondary: string;
+  bibleBooksBackground: string;
+  chapterTileBackground: string;
+  // Navigation button colors
+  navigationSelected: string;
+  navigationUnselected: string;
+  navigationSelectedText: string;
+  navigationUnselectedText: string;
 }
 
 interface ThemeState {
@@ -29,17 +36,31 @@ interface ThemeState {
 }
 
 const lightColors: ThemeColors = {
-  background: '#EBE5D9', // primaryLight - warm cream/beige
+  background: '#D8D2C6', // Slightly darker than chapterTileBackground for chapter items
   text: '#070707', // secondaryDark - almost black
   primary: '#264854', // primaryAccent - dark blue-green
   secondary: '#AD915A', // secondaryAccent - warm brown/tan
+  bibleBooksBackground: '#F9F7F4', // Light mode Bible books screen background
+  chapterTileBackground: '#EAE9E7', // Light mode chapter tile background
+  // Navigation button colors
+  navigationSelected: '#AC8F57', // Selected navigation button
+  navigationUnselected: '#ECE6DA', // Unselected navigation button
+  navigationSelectedText: '#F9F7F4', // Selected navigation text (light mode)
+  navigationUnselectedText: '#AC8F57', // Unselected navigation text (light mode)
 };
 
 const darkColors: ThemeColors = {
-  background: '#282827', // primaryDark - very dark gray
+  background: '#414141', // Dark mode chapter items
   text: '#EBE5D9', // primaryLight - warm cream (for contrast)
   primary: '#92BEC3', // secondaryLight - light blue-green
   secondary: '#AD915A', // secondaryAccent - warm brown/tan (consistent)
+  bibleBooksBackground: '#070707', // Dark mode Bible books screen background
+  chapterTileBackground: '#282827', // Dark mode chapter card background
+  // Navigation button colors
+  navigationSelected: '#AC8F57', // Selected navigation button
+  navigationUnselected: '#282827', // Unselected navigation button (dark mode)
+  navigationSelectedText: '#070707', // Selected navigation text (dark mode)
+  navigationUnselectedText: '#FFFFFF', // Unselected navigation text (dark mode)
 };
 
 const getColorsForTheme = (theme: Theme): ThemeColors => {

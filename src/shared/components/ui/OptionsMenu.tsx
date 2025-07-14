@@ -11,6 +11,7 @@ import {
 import { SlideUpPanel } from './SlideUpPanel';
 import { CodeEntryModal } from './CodeEntryModal';
 import { useTheme, useCalculatorMode } from '@/shared/store';
+import { useTranslation } from '@/shared/hooks';
 import { Dimensions, Fonts } from '@/shared/constants';
 
 // Import utility icons
@@ -32,7 +33,8 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
   onClose,
   onThemeToggle: _onThemeToggle,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const { enterCalculatorMode } = useCalculatorMode();
   const [isCodeEntryVisible, setIsCodeEntryVisible] = useState(false);
 
@@ -133,8 +135,8 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
     {
       key: 'settings',
       icon: settingsIcon,
-      label: 'Settings',
-      onPress: () => console.log('Settings pressed'),
+      label: isDark ? t('theme.switchToLight') : t('theme.switchToDark'),
+      onPress: () => _onThemeToggle(),
     },
     {
       key: 'help',

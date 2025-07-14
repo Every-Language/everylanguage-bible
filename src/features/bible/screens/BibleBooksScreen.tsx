@@ -58,11 +58,9 @@ const GoToTestamentTile: React.FC<GoToTestamentTileProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: colors.secondary + '30', // Different fill color
+      backgroundColor: colors.chapterTileBackground || colors.background,
       borderRadius: 24,
       padding: Dimensions.spacing.sm,
-      borderWidth: 2,
-      borderColor: colors.primary + '20', // Same border as regular tiles
       alignItems: 'center',
       justifyContent: 'space-between',
       aspectRatio: 1, // Square tiles
@@ -162,11 +160,9 @@ const BookTile: React.FC<BookTileProps> = ({ book, onPress, testID }) => {
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: colors.background,
+      backgroundColor: colors.chapterTileBackground || colors.background,
       borderRadius: 24,
       padding: Dimensions.spacing.sm,
-      borderWidth: 2,
-      borderColor: colors.primary + '20',
       alignItems: 'center',
       justifyContent: 'center',
       aspectRatio: 1, // Square tiles
@@ -484,7 +480,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: colors.bibleBooksBackground || colors.background,
     },
     header: {
       paddingTop: insets.top + Dimensions.spacing.md,
@@ -524,7 +520,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.background,
+      backgroundColor: colors.bibleBooksBackground || colors.background,
     },
     loadingText: {
       marginTop: Dimensions.spacing.md,

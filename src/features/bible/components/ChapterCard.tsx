@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   PanGestureHandler,
@@ -83,36 +83,50 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
       activeOffsetX={[-10, 10]}
       failOffsetY={[-20, 20]}>
       <Animated.View>
-        <Card
-          size='$4'
-          marginVertical='$1'
-          marginHorizontal='$2'
-          padding='$2'
-          backgroundColor={colors.background}
-          borderColor={colors.primary + '20'}
-          borderWidth={1}
-          testID={testID}
+        <TouchableOpacity
+          style={{
+            marginVertical: 4,
+            marginHorizontal: 8,
+            padding: 8,
+            backgroundColor: colors.background,
+            borderRadius: 8,
+          }}
           onPress={onSwipeToVerse}
-          pressStyle={{ scale: 0.98 }}>
-          <Stack
-            flexDirection='row'
-            alignItems='center'
-            justifyContent='space-between'
-            flex={1}>
-            <Stack flexDirection='column' flex={1} gap='$1'>
-              <TamaguiText fontSize='$4' fontWeight='600' color={colors.text}>
+          testID={testID}
+          activeOpacity={0.98}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flex: 1,
+            }}>
+            <View style={{ flexDirection: 'column', flex: 1, gap: 4 }}>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: colors.text,
+                }}>
                 Chapter {chapterNumber}
-              </TamaguiText>
-              <TamaguiText
-                fontSize='$3'
-                fontWeight='400'
-                color={colors.text + '80'}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '400',
+                  color: colors.text + '80',
+                }}
                 numberOfLines={1}>
                 {verseCount} verses
-              </TamaguiText>
-            </Stack>
+              </Text>
+            </View>
 
-            <Stack flexDirection='row' alignItems='center' gap='$2'>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}>
               {/* Add to Queue Button */}
               <TouchableOpacity
                 onPress={onAddToQueue}
@@ -140,9 +154,9 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
                 }}>
                 <PlayIcon size={20} color={colors.background} />
               </TouchableOpacity>
-            </Stack>
-          </Stack>
-        </Card>
+            </View>
+          </View>
+        </TouchableOpacity>
       </Animated.View>
     </PanGestureHandler>
   );
@@ -575,138 +589,154 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
   ];
 
   return (
-    <Card
-      position='absolute'
-      top={insets.top + 10}
-      left={10}
-      right={10}
-      bottom={collapsedHeight + 10}
-      backgroundColor={colors.background}
-      borderRadius={24}
-      borderWidth={2}
-      borderColor={colors.primary}
-      shadowColor={colors.text}
-      shadowOffset={{ width: 0, height: 2 }}
-      shadowOpacity={0.1}
-      shadowRadius={3.84}
-      elevation={5}>
-      <Stack flex={1} overflow='hidden' borderRadius={24}>
-        {/* Header with close button */}
-        <Stack position='absolute' top='$2' right='$2' zIndex={10}>
-          <Button
-            width={25}
-            height={25}
-            borderRadius={12.5}
-            backgroundColor={colors.background}
-            borderWidth={1}
-            borderColor={colors.primary}
-            padding={0}
-            onPress={closeChapterCard}
-            pressStyle={{ scale: 0.9 }}
-            testID='close-button'>
-            <Stack
-              width='100%'
-              height='100%'
-              alignItems='center'
-              justifyContent='center'
-              position='relative'>
-              <Stack
-                position='absolute'
-                width={10}
-                height={1}
-                backgroundColor={colors.text}
-                transform={[{ rotate: '45deg' }]}
-              />
-              <Stack
-                position='absolute'
-                width={10}
-                height={1}
-                backgroundColor={colors.text}
-                transform={[{ rotate: '-45deg' }]}
-              />
-            </Stack>
-          </Button>
-        </Stack>
+    <>
+      {/* Semi-transparent overlay background */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 999,
+        }}
+        onTouchEnd={closeChapterCard}
+      />
 
-        {/* Book info section */}
-        <Stack
-          paddingHorizontal='$3'
-          paddingTop='$3'
-          paddingBottom='$2'
-          alignItems='center'>
-          <BookImage
-            imagePath={selectedBook.imagePath}
-            size={110}
-            testID='book-image'
-          />
-
-          <Stack
-            flexDirection='row'
-            alignItems='center'
-            justifyContent='space-between'
-            marginTop='$2'
-            width='100%'
-            paddingHorizontal='$2'>
-            <Stack flex={1}>
-              <TamaguiText
-                fontSize='$5'
-                fontWeight='bold'
-                color={colors.text}
-                textAlign='center'>
-                {getTitle()}
-              </TamaguiText>
-            </Stack>
+      {/* Chapter Card */}
+      <Card
+        position='absolute'
+        top={insets.top + 10}
+        left={10}
+        right={10}
+        bottom={collapsedHeight + 10}
+        backgroundColor={colors.chapterTileBackground}
+        borderRadius={24}
+        shadowColor={colors.text}
+        shadowOffset={{ width: 0, height: 2 }}
+        shadowOpacity={0.1}
+        shadowRadius={3.84}
+        elevation={5}
+        style={{ zIndex: 1000 }}>
+        <Stack flex={1} overflow='hidden' borderRadius={24}>
+          {/* Header with close button */}
+          <Stack position='absolute' top='$2' right='$2' zIndex={10}>
+            <Button
+              width={25}
+              height={25}
+              borderRadius={12.5}
+              backgroundColor={colors.background}
+              borderWidth={1}
+              borderColor={colors.primary}
+              padding={0}
+              onPress={closeChapterCard}
+              pressStyle={{ scale: 0.9 }}
+              testID='close-button'>
+              <Stack
+                width='100%'
+                height='100%'
+                alignItems='center'
+                justifyContent='center'
+                position='relative'>
+                <Stack
+                  position='absolute'
+                  width={10}
+                  height={1}
+                  backgroundColor={colors.text}
+                  transform={[{ rotate: '45deg' }]}
+                />
+                <Stack
+                  position='absolute'
+                  width={10}
+                  height={1}
+                  backgroundColor={colors.text}
+                  transform={[{ rotate: '-45deg' }]}
+                />
+              </Stack>
+            </Button>
           </Stack>
 
-          <TamaguiText
-            fontSize='$3'
-            color={colors.secondary}
-            marginTop='$1'
-            textAlign='center'>
-            {getSubtitle()}
-          </TamaguiText>
+          {/* Book info section */}
+          <Stack
+            paddingHorizontal='$3'
+            paddingTop='$3'
+            paddingBottom='$2'
+            alignItems='center'>
+            <BookImage
+              imagePath={selectedBook.imagePath}
+              size={110}
+              testID='book-image'
+            />
+
+            <Stack
+              flexDirection='row'
+              alignItems='center'
+              justifyContent='space-between'
+              marginTop='$2'
+              width='100%'
+              paddingHorizontal='$2'>
+              <Stack flex={1}>
+                <TamaguiText
+                  fontSize='$5'
+                  fontWeight='bold'
+                  color={colors.text}
+                  textAlign='center'>
+                  {getTitle()}
+                </TamaguiText>
+              </Stack>
+            </Stack>
+
+            <TamaguiText
+              fontSize='$3'
+              color={colors.secondary}
+              marginTop='$1'
+              textAlign='center'>
+              {getSubtitle()}
+            </TamaguiText>
+          </Stack>
+
+          {/* Toggle Buttons */}
+          <View
+            style={{
+              paddingHorizontal: Dimensions.spacing.md,
+              marginBottom: Dimensions.spacing.sm,
+            }}>
+            <ToggleButtons
+              options={toggleOptions}
+              selectedKey={viewMode}
+              onSelect={setViewMode}
+              testID='chapter-verse-toggle'
+              height={24}
+              fontSize={Fonts.size.sm}
+            />
+          </View>
+
+          {/* Content Area */}
+          <View style={{ flex: 1 }}>
+            <PanGestureHandler
+              onGestureEvent={gestureHandler}
+              simultaneousHandlers={[]}
+              shouldCancelWhenOutside={false}
+              enableTrackpadTwoFingerGesture={false}
+              activeOffsetX={[-20, 20]}
+              failOffsetY={[-20, 20]}>
+              <Animated.View style={{ flex: 1 }}>
+                <ContentSwitcher
+                  viewMode={viewMode}
+                  book={selectedBook}
+                  chapter={selectedChapter}
+                  onChapterSelect={onChapterSelect}
+                  onVerseSelect={onVerseSelect}
+                  onSwipeToVerse={handleSwipeToVerse}
+                  onSwipeToChapters={handleSwipeToChapters}
+                  slideAnimation={slideAnimation}
+                />
+              </Animated.View>
+            </PanGestureHandler>
+          </View>
         </Stack>
-
-        {/* Toggle Buttons */}
-        <View
-          style={{
-            paddingHorizontal: Dimensions.spacing.md,
-            marginBottom: Dimensions.spacing.sm,
-          }}>
-          <ToggleButtons
-            options={toggleOptions}
-            selectedKey={viewMode}
-            onSelect={setViewMode}
-            testID='chapter-verse-toggle'
-            height={24}
-            fontSize={Fonts.size.sm}
-          />
-        </View>
-
-        {/* Content Area */}
-        <View style={{ flex: 1 }}>
-          <PanGestureHandler
-            onGestureEvent={gestureHandler}
-            simultaneousHandlers={[]}
-            shouldCancelWhenOutside={false}
-            enableTrackpadTwoFingerGesture={false}
-            activeOffsetX={[-20, 20]}
-            failOffsetY={[-20, 20]}>
-            <Animated.View style={{ flex: 1 }}>
-              <ContentSwitcher
-                viewMode={viewMode}
-                book={selectedBook}
-                chapter={selectedChapter}
-                onChapterSelect={onChapterSelect}
-                onVerseSelect={onVerseSelect}
-                onSwipeToVerse={handleSwipeToVerse}
-                onSwipeToChapters={handleSwipeToChapters}
-                slideAnimation={slideAnimation}
-              />
-            </Animated.View>
-          </PanGestureHandler>
-        </View>
-      </Stack>
-    </Card>
+      </Card>
+    </>
   );
 };

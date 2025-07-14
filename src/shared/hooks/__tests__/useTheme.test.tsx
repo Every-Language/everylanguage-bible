@@ -45,6 +45,12 @@ describe('useTheme Hook - Zustand Implementation', () => {
         text: '#070707',
         primary: '#264854',
         secondary: '#AD915A',
+        bibleBooksBackground: '#F9F7F4',
+        chapterTileBackground: '#EAE9E7',
+        navigationSelected: '#AC8F57',
+        navigationUnselected: '#ECE6DA',
+        navigationSelectedText: '#F9F7F4',
+        navigationUnselectedText: '#AC8F57',
       });
     });
   });

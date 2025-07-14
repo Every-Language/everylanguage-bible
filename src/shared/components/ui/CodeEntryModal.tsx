@@ -163,8 +163,6 @@ const styles = StyleSheet.create({
   },
   modalBox: {
     backgroundColor: '#F9F7F4',
-    borderWidth: 1,
-    borderColor: '#AD915A',
     borderRadius: 24,
     width: 240,
     paddingVertical: 16,

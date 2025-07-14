@@ -8,6 +8,14 @@ const lightTheme = {
   color: '#070707', // secondaryDark - almost black
   primary: '#264854', // primaryAccent - dark blue-green
   secondary: '#AD915A', // secondaryAccent - warm brown/tan
+  // New colors for Bible books screen and chapter tiles
+  bibleBooksBackground: '#F9F7F4', // Light mode Bible books screen background
+  chapterTileBackground: '#EAE9E7', // Light mode chapter tile background
+  // Navigation button colors
+  navigationSelected: '#AC8F57', // Selected navigation button
+  navigationUnselected: '#ECE6DA', // Unselected navigation button
+  navigationSelectedText: '#F9F7F4', // Selected navigation text (light mode)
+  navigationUnselectedText: '#AC8F57', // Unselected navigation text (light mode)
 };
 
 const darkTheme = {
@@ -16,6 +24,14 @@ const darkTheme = {
   color: '#EBE5D9', // primaryLight - warm cream (for contrast)
   primary: '#92BEC3', // secondaryLight - light blue-green
   secondary: '#AD915A', // secondaryAccent - warm brown/tan (consistent)
+  // New colors for Bible books screen and chapter tiles
+  bibleBooksBackground: '#070707', // Dark mode Bible books screen background
+  chapterTileBackground: '#414141', // Dark mode chapter tile background
+  // Navigation button colors
+  navigationSelected: '#AC8F57', // Selected navigation button
+  navigationUnselected: '#282827', // Unselected navigation button (dark mode)
+  navigationSelectedText: '#070707', // Selected navigation text (dark mode)
+  navigationUnselectedText: '#FFFFFF', // Unselected navigation text (dark mode)
 };
 
 export const config = createTamagui({

@@ -71,10 +71,9 @@ describe('OptionsMenu', () => {
     expect(getByTestId('options-menu-calculator')).toBeTruthy();
     expect(getByTestId('options-menu-settings')).toBeTruthy();
     expect(getByTestId('options-menu-help')).toBeTruthy();
-    expect(getByTestId('options-menu-theme-toggle')).toBeTruthy();
   });
 
-  it('calls onThemeToggle and onClose when theme toggle is pressed', () => {
+  it('calls onThemeToggle and onClose when settings (theme toggle) is pressed', () => {
     const { getByTestId } = renderWithTamagui(
       <OptionsMenu
         isVisible={true}
@@ -83,7 +82,7 @@ describe('OptionsMenu', () => {
       />
     );
 
-    fireEvent.press(getByTestId('options-menu-theme-toggle'));
+    fireEvent.press(getByTestId('options-menu-settings'));
     expect(mockOnThemeToggle).toHaveBeenCalledTimes(1);
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });

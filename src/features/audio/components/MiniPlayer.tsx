@@ -1300,12 +1300,6 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   const styles = StyleSheet.create({
     container: {
       backgroundColor: colors.background,
-      borderTopWidth: 2,
-      borderLeftWidth: 2,
-      borderRightWidth: 2,
-      borderTopColor: colors.primary,
-      borderLeftColor: colors.primary,
-      borderRightColor: colors.primary,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       ...Dimensions.shadow.lg,
