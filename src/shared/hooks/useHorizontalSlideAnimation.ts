@@ -7,30 +7,30 @@ import {
 } from 'react-native-reanimated';
 import { PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 
-interface UseHorizontalSlideAnimationProps {
-  onModeChange: (newMode: string) => void;
-  modes: string[];
-  currentMode: string;
+interface UseHorizontalSlideAnimationProps<T extends string> {
+  onModeChange: (newMode: T) => void;
+  modes: T[];
+  currentMode: T;
   sensitivity?: number;
   velocityThreshold?: number;
   positionThreshold?: number;
 }
 
-export const useHorizontalSlideAnimation = ({
+export const useHorizontalSlideAnimation = <T extends string>({
   onModeChange,
   modes,
   currentMode,
   sensitivity = 200,
   velocityThreshold = 500,
   positionThreshold = 0.3,
-}: UseHorizontalSlideAnimationProps) => {
+}: UseHorizontalSlideAnimationProps<T>) => {
   const slideAnimation = useSharedValue(0);
 
   // Get current mode index
   const currentModeIndex = modes.indexOf(currentMode);
 
   // Update animation when mode changes externally
-  const updateAnimation = (mode: string) => {
+  const updateAnimation = (mode: T) => {
     const modeIndex = modes.indexOf(mode);
     slideAnimation.value = withTiming(modeIndex, {
       duration: 300,

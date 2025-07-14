@@ -1,7 +1,7 @@
 import React from 'react';
-import { TouchableOpacity, Animated, View } from 'react-native';
-import { Text } from '@tamagui/core';
-import { useTheme, useHelpPanelStore } from '@/shared/store';
+import { TouchableOpacity, Animated, View, Text } from 'react-native';
+import { useTheme } from '@/shared/hooks';
+import { useHelpPanelStore } from '@/shared/store';
 import { useTranslation } from '@/shared/hooks';
 import { Dimensions, Fonts } from '@/shared/constants';
 
@@ -84,7 +84,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
           borderRadius: Dimensions.radius.lg,
           borderWidth: 2,
           borderColor: colors.primary,
-          shadowColor: colors.text,
+          shadowColor: colors.textPrimary,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.15,
           shadowRadius: 8,
@@ -121,7 +121,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
           <Text
             style={{
               fontSize: Fonts.size.base,
-              color: colors.text,
+              color: colors.textPrimary,
               flex: 1,
             }}>
             {isDark ? 'Light Mode' : 'Dark Mode'}
@@ -161,7 +161,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
           <Text
             style={{
               fontSize: Fonts.size.base,
-              color: colors.text,
+              color: colors.textPrimary,
               flex: 1,
             }}>
             Search
@@ -203,7 +203,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
           <Text
             style={{
               fontSize: Fonts.size.base,
-              color: colors.text,
+              color: colors.textPrimary,
               flex: 1,
             }}>
             Profile
@@ -245,7 +245,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
           <Text
             style={{
               fontSize: Fonts.size.base,
-              color: colors.text,
+              color: colors.textPrimary,
               flex: 1,
             }}>
             Language
@@ -287,7 +287,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
           <Text
             style={{
               fontSize: Fonts.size.base,
-              color: colors.text,
+              color: colors.textPrimary,
               flex: 1,
             }}>
             Calculator
@@ -329,7 +329,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
           <Text
             style={{
               fontSize: Fonts.size.base,
-              color: colors.text,
+              color: colors.textPrimary,
               flex: 1,
             }}>
             Settings
@@ -369,7 +369,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
           <Text
             style={{
               fontSize: Fonts.size.base,
-              color: colors.text,
+              color: colors.textPrimary,
               flex: 1,
             }}>
             Help

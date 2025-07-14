@@ -6,4 +6,7 @@
 // Providers will be added here as features are developed
 export {};
 
-export { TamaguiProvider } from './TamaguiProvider';
+export { ThemeProvider } from './ThemeProvider';
+export { useThemeContext } from './ThemeProvider';
+
+export { TamaguiProvider, AppProvider } from './TamaguiProvider';

@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MainNavigator } from '@/app/navigation/MainNavigator';
-import { TamaguiProvider } from '@/app/providers';
+import { AppProvider } from '@/app/providers';
 import { useTheme, useCalculatorMode } from '@/shared/store';
 import '@/shared/services/i18n';
 import OnBoardingScreen from '@/features/onboarding/screens/OnBoardingScreen';
@@ -39,7 +39,7 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <TamaguiProvider>
+      <AppProvider>
         <SafeAreaProvider>
           <NavigationContainer>
             <Stack.Navigator initialRouteName='Onboarding'>
@@ -59,7 +59,7 @@ export default function App() {
             </Stack.Navigator>
           </NavigationContainer>
         </SafeAreaProvider>
-      </TamaguiProvider>
+      </AppProvider>
     </GestureHandlerRootView>
   );
 }

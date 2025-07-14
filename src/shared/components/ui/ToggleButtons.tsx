@@ -3,29 +3,29 @@ import { TouchableOpacity, View, Text } from 'react-native';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
 
-interface ToggleOption {
-  key: string;
+interface ToggleOption<T extends string> {
+  key: T;
   label: string;
   disabled?: boolean;
 }
 
-interface ToggleButtonsProps {
-  options: ToggleOption[];
-  selectedKey: string;
-  onSelect: (key: string) => void;
+interface ToggleButtonsProps<T extends string> {
+  options: ToggleOption<T>[];
+  selectedKey: T;
+  onSelect: (key: T) => void;
   testID?: string;
   height?: number;
   fontSize?: number;
 }
 
-export const ToggleButtons: React.FC<ToggleButtonsProps> = ({
+export const ToggleButtons = <T extends string>({
   options,
   selectedKey,
   onSelect,
   testID,
   height = 28,
   fontSize = Fonts.size.base,
-}) => {
+}: ToggleButtonsProps<T>) => {
   const { colors } = useTheme();
 
   return (

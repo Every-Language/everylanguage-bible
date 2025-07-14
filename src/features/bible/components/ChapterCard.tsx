@@ -1,6 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, TouchableOpacity, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  View,
+  TouchableOpacity,
+  ScrollView,
+  Text,
+  StyleSheet,
+} from 'react-native';
 import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
@@ -10,21 +15,18 @@ import Animated, {
   useAnimatedGestureHandler,
   runOnJS,
 } from 'react-native-reanimated';
-import { Stack, Text as TamaguiText } from '@tamagui/core';
-import { Card } from '@tamagui/card';
-import { Button } from '@tamagui/button';
 import { type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
 import {
-  useTheme,
   useChapterCardStore,
   useQueueStore,
   useAudioStore,
 } from '@/shared/store';
+import type { ViewMode } from '@/shared/store/chapterCardStore';
 import {
+  useTheme,
   useTranslation,
   useHorizontalSlideAnimation,
-  useMiniPlayerHeight,
 } from '@/shared/hooks';
 import { ToggleButtons, BookImage } from '@/shared/components/ui';
 import { PlayIcon, PlusIcon } from '@/shared/components/ui/icons/AudioIcons';
@@ -83,66 +85,60 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
       activeOffsetX={[-10, 10]}
       failOffsetY={[-20, 20]}>
       <Animated.View>
-        <Card
-          size='$4'
-          marginVertical='$1'
-          marginHorizontal='$2'
-          padding='$2'
-          backgroundColor={colors.background}
-          borderColor={colors.primary + '20'}
-          borderWidth={1}
+        <TouchableOpacity
+          style={[
+            styles.card,
+            {
+              backgroundColor: colors.background,
+              borderColor: colors.primary + '20',
+            },
+          ]}
           testID={testID}
           onPress={onSwipeToVerse}
-          pressStyle={{ scale: 0.98 }}>
-          <Stack
-            flexDirection='row'
-            alignItems='center'
-            justifyContent='space-between'
-            flex={1}>
-            <Stack flexDirection='column' flex={1} gap='$1'>
-              <TamaguiText fontSize='$4' fontWeight='600' color={colors.text}>
+          activeOpacity={0.98}>
+          <View style={styles.cardContent}>
+            <View style={styles.textContainer}>
+              <Text
+                style={[styles.chapterNumber, { color: colors.textPrimary }]}>
                 Chapter {chapterNumber}
-              </TamaguiText>
-              <TamaguiText
-                fontSize='$3'
-                fontWeight='400'
-                color={colors.text + '80'}
+              </Text>
+              <Text
+                style={[
+                  styles.verseCount,
+                  { color: colors.textPrimary + '80' },
+                ]}
                 numberOfLines={1}>
                 {verseCount} verses
-              </TamaguiText>
-            </Stack>
+              </Text>
+            </View>
 
-            <Stack flexDirection='row' alignItems='center' gap='$2'>
+            <View style={styles.buttonContainer}>
               {/* Add to Queue Button */}
               <TouchableOpacity
                 onPress={onAddToQueue}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor: colors.primary,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: colors.primary,
+                  },
+                ]}>
                 <PlusIcon size={18} color={colors.background} />
               </TouchableOpacity>
 
               {/* Play Button */}
               <TouchableOpacity
                 onPress={onPlay}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor: colors.primary,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: colors.primary,
+                  },
+                ]}>
                 <PlayIcon size={20} color={colors.background} />
               </TouchableOpacity>
-            </Stack>
-          </Stack>
-        </Card>
+            </View>
+          </View>
+        </TouchableOpacity>
       </Animated.View>
     </PanGestureHandler>
   );
@@ -167,67 +163,57 @@ const VerseItem: React.FC<VerseItemProps> = ({
   const { colors } = useTheme();
 
   return (
-    <Card
-      size='$4'
-      marginVertical='$1'
-      marginHorizontal='$2'
-      padding='$2'
-      backgroundColor={colors.background}
-      borderColor={colors.primary + '20'}
-      borderWidth={1}
+    <TouchableOpacity
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.background,
+          borderColor: colors.primary + '20',
+        },
+      ]}
       testID={testID}
       onPress={onPlay}
-      pressStyle={{ scale: 0.98 }}>
-      <Stack
-        flexDirection='row'
-        alignItems='center'
-        justifyContent='space-between'
-        flex={1}>
-        <Stack flexDirection='column' flex={1} gap='$1'>
-          <TamaguiText fontSize='$4' fontWeight='600' color={colors.text}>
+      activeOpacity={0.98}>
+      <View style={styles.cardContent}>
+        <View style={styles.textContainer}>
+          <Text style={[styles.verseNumber, { color: colors.textPrimary }]}>
             Verse {verseNumber}
-          </TamaguiText>
-          <TamaguiText
-            fontSize='$3'
-            fontWeight='400'
-            color={colors.text}
+          </Text>
+          <Text
+            style={[styles.verseText, { color: colors.textPrimary }]}
             numberOfLines={2}
             ellipsizeMode='tail'>
             {verseText}
-          </TamaguiText>
-        </Stack>
+          </Text>
+        </View>
 
-        <Stack flexDirection='row' alignItems='center' gap='$2'>
+        <View style={styles.buttonContainer}>
           {/* Add to Queue Button */}
           <TouchableOpacity
             onPress={onAddToQueue}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
+            style={[
+              styles.button,
+              {
+                backgroundColor: colors.primary,
+              },
+            ]}>
             <PlusIcon size={18} color={colors.background} />
           </TouchableOpacity>
 
           {/* Play Button */}
           <TouchableOpacity
             onPress={onPlay}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
+            style={[
+              styles.button,
+              {
+                backgroundColor: colors.primary,
+              },
+            ]}>
             <PlayIcon size={20} color={colors.background} />
           </TouchableOpacity>
-        </Stack>
-      </Stack>
-    </Card>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 };
 
@@ -337,7 +323,7 @@ const ChapterListView: React.FC<ChapterListViewProps> = ({
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        <Stack paddingBottom='$4'>
+        <View style={styles.chapterListContainer}>
           {chapters.map(chapterNumber => (
             <ChapterItem
               key={chapterNumber}
@@ -349,7 +335,7 @@ const ChapterListView: React.FC<ChapterListViewProps> = ({
               testID={`chapter-tile-${chapterNumber}`}
             />
           ))}
-        </Stack>
+        </View>
       </ScrollView>
     </View>
   );
@@ -406,7 +392,7 @@ const VerseListView: React.FC<VerseListViewProps> = ({
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        <Stack paddingBottom='$4'>
+        <View style={styles.verseListContainer}>
           {verses.map(verseNumber => (
             <VerseItem
               key={verseNumber}
@@ -417,7 +403,7 @@ const VerseListView: React.FC<VerseListViewProps> = ({
               testID={`verse-tile-${verseNumber}`}
             />
           ))}
-        </Stack>
+        </View>
       </ScrollView>
     </View>
   );
@@ -488,8 +474,6 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
-  const { collapsedHeight } = useMiniPlayerHeight();
 
   const {
     isOpen,
@@ -503,7 +487,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
 
   // Use the reusable horizontal slide animation hook
   const { slideAnimation, gestureHandler, updateAnimation } =
-    useHorizontalSlideAnimation({
+    useHorizontalSlideAnimation<ViewMode>({
       onModeChange: setViewMode,
       modes: ['chapters', 'verses'],
       currentMode: viewMode,
@@ -565,7 +549,11 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
   };
 
   // Toggle button options
-  const toggleOptions = [
+  const toggleOptions: Array<{
+    key: ViewMode;
+    label: string;
+    disabled?: boolean;
+  }> = [
     { key: 'chapters', label: t('bible.chapters', 'Chapters') },
     {
       key: 'verses',
@@ -575,97 +563,62 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
   ];
 
   return (
-    <Card
-      position='absolute'
-      top={insets.top + 10}
-      left={10}
-      right={10}
-      bottom={collapsedHeight + 10}
-      backgroundColor={colors.background}
-      borderRadius={24}
-      borderWidth={2}
-      borderColor={colors.primary}
-      shadowColor={colors.text}
-      shadowOffset={{ width: 0, height: 2 }}
-      shadowOpacity={0.1}
-      shadowRadius={3.84}
-      elevation={5}>
-      <Stack flex={1} overflow='hidden' borderRadius={24}>
+    <View
+      style={[
+        styles.mainCard,
+        {
+          backgroundColor: colors.background,
+          borderColor: colors.primary,
+          borderWidth: 2,
+          shadowColor: colors.textPrimary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3.84,
+          elevation: 5,
+        },
+      ]}>
+      <View style={styles.cardContent}>
         {/* Header with close button */}
-        <Stack position='absolute' top='$2' right='$2' zIndex={10}>
-          <Button
-            width={25}
-            height={25}
-            borderRadius={12.5}
-            backgroundColor={colors.background}
-            borderWidth={1}
-            borderColor={colors.primary}
-            padding={0}
+        <View style={styles.header}>
+          <TouchableOpacity
             onPress={closeChapterCard}
-            pressStyle={{ scale: 0.9 }}
+            style={[styles.closeButton, { borderColor: colors.primary }]}
             testID='close-button'>
-            <Stack
-              width='100%'
-              height='100%'
-              alignItems='center'
-              justifyContent='center'
-              position='relative'>
-              <Stack
-                position='absolute'
-                width={10}
-                height={1}
-                backgroundColor={colors.text}
-                transform={[{ rotate: '45deg' }]}
+            <View style={styles.closeButtonIcon}>
+              <View
+                style={[
+                  styles.closeLine,
+                  { backgroundColor: colors.textPrimary },
+                ]}
               />
-              <Stack
-                position='absolute'
-                width={10}
-                height={1}
-                backgroundColor={colors.text}
-                transform={[{ rotate: '-45deg' }]}
+              <View
+                style={[
+                  styles.closeLine,
+                  { backgroundColor: colors.textPrimary },
+                ]}
               />
-            </Stack>
-          </Button>
-        </Stack>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* Book info section */}
-        <Stack
-          paddingHorizontal='$3'
-          paddingTop='$3'
-          paddingBottom='$2'
-          alignItems='center'>
+        <View style={styles.bookInfoSection}>
           <BookImage
             imagePath={selectedBook.imagePath}
             size={110}
             testID='book-image'
           />
 
-          <Stack
-            flexDirection='row'
-            alignItems='center'
-            justifyContent='space-between'
-            marginTop='$2'
-            width='100%'
-            paddingHorizontal='$2'>
-            <Stack flex={1}>
-              <TamaguiText
-                fontSize='$5'
-                fontWeight='bold'
-                color={colors.text}
-                textAlign='center'>
-                {getTitle()}
-              </TamaguiText>
-            </Stack>
-          </Stack>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>
+              {getTitle()}
+            </Text>
+          </View>
 
-          <TamaguiText
-            fontSize='$3'
-            color={colors.secondary}
-            marginTop='$1'
-            textAlign='center'>
+          <Text style={[styles.subtitle, { color: colors.secondary }]}>
             {getSubtitle()}
-          </TamaguiText>
-        </Stack>
+          </Text>
+        </View>
 
         {/* Toggle Buttons */}
         <View
@@ -673,7 +626,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
             paddingHorizontal: Dimensions.spacing.md,
             marginBottom: Dimensions.spacing.sm,
           }}>
-          <ToggleButtons
+          <ToggleButtons<ViewMode>
             options={toggleOptions}
             selectedKey={viewMode}
             onSelect={setViewMode}
@@ -706,7 +659,120 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
             </Animated.View>
           </PanGestureHandler>
         </View>
-      </Stack>
-    </Card>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  mainCard: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 10,
+    bottom: 10,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  card: {
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    flex: 1,
+  },
+  cardContent: {
+    flex: 1,
+    padding: Dimensions.spacing.md,
+  },
+  header: {
+    position: 'absolute',
+    top: Dimensions.spacing.sm,
+    right: Dimensions.spacing.sm,
+    zIndex: 10,
+  },
+  closeButton: {
+    width: 25,
+    height: 25,
+    borderRadius: 12.5,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    padding: 0,
+  },
+  closeButtonIcon: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  closeLine: {
+    position: 'absolute',
+    width: 10,
+    height: 1,
+    backgroundColor: 'transparent',
+    transform: [{ rotate: '45deg' }],
+  },
+  bookInfoSection: {
+    alignItems: 'center',
+    marginTop: Dimensions.spacing.sm,
+    width: '100%',
+    paddingHorizontal: Dimensions.spacing.sm,
+  },
+  titleContainer: {
+    marginTop: Dimensions.spacing.sm,
+    width: '100%',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: Fonts.size.lg,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  subtitle: {
+    marginTop: Dimensions.spacing.xs,
+    textAlign: 'center',
+  },
+  chapterListContainer: {
+    flex: 1,
+  },
+  verseListContainer: {
+    flex: 1,
+  },
+  button: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: Dimensions.spacing.sm,
+    width: '100%',
+    paddingHorizontal: Dimensions.spacing.sm,
+  },
+  textContainer: {
+    flex: 1,
+    marginBottom: Dimensions.spacing.xs,
+  },
+  chapterNumber: {
+    fontSize: Fonts.size.base,
+    fontWeight: '600',
+  },
+  verseCount: {
+    fontSize: Fonts.size.sm,
+    fontWeight: '400',
+  },
+  verseText: {
+    fontSize: Fonts.size.sm,
+    fontWeight: '400',
+  },
+  verseNumber: {
+    fontSize: Fonts.size.base,
+    fontWeight: '600',
+  },
+});

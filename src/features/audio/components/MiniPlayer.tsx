@@ -885,13 +885,13 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
         style={{
           marginHorizontal: 0,
         }}>
-        <ToggleButtons
+        <ToggleButtons<ContentMode>
           options={[
             { key: 'text', label: t('audio.text', 'Text') },
             { key: 'queue', label: t('audio.queue', 'Queue') },
           ]}
           selectedKey={currentMode}
-          onSelect={(key: string) => {
+          onSelect={(key: ContentMode) => {
             if (key === 'text') {
               onTextPress?.();
             } else if (key === 'queue') {

@@ -1,13 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
-import { TamaguiProvider } from '@tamagui/core';
-import { config } from '../../../tamagui.config';
-
-export type Theme = 'light' | 'dark';
+import { Theme, ThemeColors, getThemeColors } from '@/shared/constants/theme';
 
 interface ThemeContextType {
   theme: Theme;
   isDark: boolean;
+  colors: ThemeColors;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   isSystemTheme: boolean;
@@ -39,20 +37,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     setTheme(newTheme);
   };
 
+  const colors = getThemeColors(currentTheme);
+
   const value: ThemeContextType = {
     theme: currentTheme,
     isDark: currentTheme === 'dark',
+    colors,
     setTheme,
     toggleTheme,
     isSystemTheme,
   };
 
   return (
-    <ThemeContext.Provider value={value}>
-      <TamaguiProvider config={config} defaultTheme={currentTheme}>
-        {children}
-      </TamaguiProvider>
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 };
 

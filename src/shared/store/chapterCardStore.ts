@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { type Book } from '@/shared/utils';
 
-type ViewMode = 'chapters' | 'verses';
+export type ViewMode = 'chapters' | 'verses';
 
 interface ChapterCardState {
   isOpen: boolean;

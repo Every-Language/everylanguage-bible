@@ -1,10 +1,9 @@
 import React from 'react';
-import { TamaguiProvider } from '@tamagui/core';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { config } from '../../../tamagui.config';
+import { ThemeProvider } from '@/app/providers/ThemeProvider';
 
-// Test wrapper component that provides Tamagui context
-export const TamaguiTestWrapper: React.FC<{ children: React.ReactNode }> = ({
+// Test wrapper component that provides theme context
+export const ThemeTestWrapper: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   return (
@@ -13,7 +12,10 @@ export const TamaguiTestWrapper: React.FC<{ children: React.ReactNode }> = ({
         frame: { x: 0, y: 0, width: 375, height: 812 },
         insets: { top: 44, left: 0, right: 0, bottom: 34 },
       }}>
-      <TamaguiProvider config={config}>{children}</TamaguiProvider>
+      <ThemeProvider>{children}</ThemeProvider>
     </SafeAreaProvider>
   );
 };
+
+// Keep the old name for backward compatibility during migration
+export const TamaguiTestWrapper = ThemeTestWrapper;

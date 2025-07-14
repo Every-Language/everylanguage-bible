@@ -434,9 +434,8 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
 
   // Use the horizontal slide animation hook
   const { slideAnimation, gestureHandler, updateAnimation } =
-    useHorizontalSlideAnimation({
-      onModeChange: (newMode: string) =>
-        setTestamentMode(newMode as TestamentMode),
+    useHorizontalSlideAnimation<TestamentMode>({
+      onModeChange: setTestamentMode,
       modes: ['old', 'new'],
       currentMode: testamentMode,
     });
@@ -547,7 +546,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   const newTestamentBooks = books.filter(book => book.testament === 'new');
 
   // Toggle button options
-  const toggleOptions = [
+  const toggleOptions: Array<{ key: TestamentMode; label: string }> = [
     { key: 'old', label: 'Old Testament' },
     { key: 'new', label: 'New Testament' },
   ];
@@ -570,10 +569,10 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
 
       {/* Toggle Buttons */}
       <View style={styles.toggleContainer}>
-        <ToggleButtons
+        <ToggleButtons<TestamentMode>
           options={toggleOptions}
           selectedKey={testamentMode}
-          onSelect={(key: string) => setTestamentMode(key as TestamentMode)}
+          onSelect={setTestamentMode}
           testID='testament-toggle'
           height={28}
           fontSize={Fonts.size.sm}

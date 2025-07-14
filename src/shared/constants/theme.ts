@@ -1,9 +1,61 @@
-import { defaultConfig } from '@tamagui/config/v4';
-import { createTamagui } from '@tamagui/core';
+export type Theme = 'light' | 'dark';
 
-// Enhanced light theme with all necessary color tokens
-const lightTheme = {
-  ...defaultConfig.themes.light,
+export interface ThemeColors {
+  // Core colors
+  background: string;
+  color: string;
+  primary: string;
+  secondary: string;
+
+  // Text colors
+  textPrimary: string;
+  textSecondary: string;
+  textTertiary: string;
+  textInverse: string;
+
+  // Background variants
+  backgroundSecondary: string;
+  backgroundTertiary: string;
+  backgroundOverlay: string;
+
+  // Border colors
+  borderLight: string;
+  borderMedium: string;
+  borderDark: string;
+
+  // Interactive states
+  interactiveActive: string;
+  interactiveInactive: string;
+  interactivePressed: string;
+  interactiveDisabled: string;
+
+  // Chapter grid
+  chapterBackground: string;
+  chapterText: string;
+  chapterBorder: string;
+
+  // Audio player
+  audioBackground: string;
+  audioBorder: string;
+  audioShadow: string;
+
+  // Feedback colors
+  feedbackLoading: string;
+  feedbackSuccess: string;
+  feedbackWarning: string;
+  feedbackError: string;
+
+  // Accent and glassy colors
+  accent1: string;
+  accent2: string;
+  accent3: string;
+  accent4: string;
+  glass1: string;
+  glass2: string;
+  glass3: string;
+}
+
+export const lightTheme: ThemeColors = {
   // Core colors
   background: '#EBE5D9', // primaryLight - warm cream/beige
   color: '#070707', // secondaryDark - almost black
@@ -58,9 +110,7 @@ const lightTheme = {
   glass3: 'rgba(237, 229, 217, 0.7)', // glassy cream
 };
 
-// Enhanced dark theme with all necessary color tokens
-const darkTheme = {
-  ...defaultConfig.themes.dark,
+export const darkTheme: ThemeColors = {
   // Core colors
   background: '#282827', // primaryDark - very dark gray
   color: '#EBE5D9', // primaryLight - warm cream (for contrast)
@@ -115,23 +165,6 @@ const darkTheme = {
   glass3: 'rgba(40, 40, 39, 0.7)', // glassy dark gray
 };
 
-export const config = createTamagui({
-  ...defaultConfig,
-  themes: {
-    ...defaultConfig.themes,
-    light: lightTheme,
-    dark: darkTheme,
-  },
-  settings: {
-    ...defaultConfig.settings,
-    styleCompat: 'react-native', // Recommended for React Native compatibility
-  },
-});
-
-export type AppConfig = typeof config;
-
-declare module '@tamagui/core' {
-  interface TamaguiCustomConfig extends AppConfig {}
-}
-
-export default config;
+export const getThemeColors = (theme: Theme): ThemeColors => {
+  return theme === 'dark' ? darkTheme : lightTheme;
+};

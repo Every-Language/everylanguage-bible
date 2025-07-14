@@ -1,8 +1,6 @@
 import React from 'react';
-import { Image, View, TouchableOpacity } from 'react-native';
-import { Text } from '@tamagui/core';
-import { Card } from '@tamagui/card';
-import { useTheme } from '@/shared/store';
+import { Image, View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { useTheme } from '@/shared/hooks';
 import { getBookImageSource } from '@/shared/services';
 
 interface BookCardProps {
@@ -37,12 +35,7 @@ export const BookCard: React.FC<BookCardProps> = ({
       return (
         <Image
           source={imageSource}
-          style={{
-            width: 60,
-            height: 60,
-            borderRadius: 8,
-            tintColor: colors.text,
-          }}
+          style={[styles.bookImage, { tintColor: colors.textPrimary }]}
           resizeMode='contain'
         />
       );
@@ -50,15 +43,11 @@ export const BookCard: React.FC<BookCardProps> = ({
 
     return (
       <View
-        style={{
-          width: 60,
-          height: 60,
-          borderRadius: 8,
-          backgroundColor: colors.secondary + '30',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
-        <Text fontSize='$6' color='$color'>
+        style={[
+          styles.placeholderImage,
+          { backgroundColor: colors.secondary + '30' },
+        ]}>
+        <Text style={[styles.placeholderText, { color: colors.textPrimary }]}>
           📖
         </Text>
       </View>
@@ -72,31 +61,62 @@ export const BookCard: React.FC<BookCardProps> = ({
       onLongPress={onLongPress}
       accessibilityRole='button'
       accessibilityLabel={`${bookName} book`}
-      activeOpacity={0.8}>
-      <Card
-        size='$4'
-        marginHorizontal='$1'
-        marginVertical='$1'
-        padding='$3'
-        backgroundColor='$background'
-        borderColor={isSelected ? '$primary' : '$secondary'}
-        borderWidth={2}
-        minHeight={110}
-        flex={1}>
-        <View style={{ alignItems: 'center', marginBottom: 12 }}>
-          {renderBookImage()}
-        </View>
-        <View style={{ alignItems: 'center' }}>
-          <Text
-            fontSize='$3'
-            fontWeight='600'
-            color='$color'
-            lineHeight={18}
-            numberOfLines={2}>
-            {bookName}
-          </Text>
-        </View>
-      </Card>
+      activeOpacity={0.8}
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.background,
+          borderColor: isSelected ? colors.primary : colors.secondary,
+        },
+      ]}>
+      <View style={styles.imageContainer}>{renderBookImage()}</View>
+      <View style={styles.textContainer}>
+        <Text
+          style={[styles.bookTitle, { color: colors.textPrimary }]}
+          numberOfLines={2}>
+          {bookName}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 };
+
+const styles = StyleSheet.create({
+  card: {
+    marginHorizontal: 4,
+    marginVertical: 4,
+    padding: 12,
+    borderWidth: 2,
+    borderRadius: 8,
+    minHeight: 110,
+    flex: 1,
+  },
+  imageContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  bookImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  placeholderImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    fontSize: 24,
+  },
+  textContainer: {
+    alignItems: 'center',
+  },
+  bookTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+});
