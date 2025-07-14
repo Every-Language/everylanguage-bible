@@ -593,7 +593,7 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
   currentMode = 'text',
   slideAnimation,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useTranslation();
 
   // Get data from audio store
@@ -825,7 +825,7 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
         paddingHorizontal: Dimensions.spacing.md,
         paddingTop: Dimensions.spacing.md,
         paddingBottom: Dimensions.spacing.xs,
-        backgroundColor: colors.background,
+        backgroundColor: isDark ? '#282827' : '#ECE6DA',
       }}
       testID='expanded-media-content'
       onStartShouldSetResponder={() => true}
@@ -926,7 +926,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   onExpand: _onExpand,
   onClose: _onClose,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -1299,7 +1299,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: colors.background,
+      backgroundColor: isDark ? '#282827' : '#ECE6DA',
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       ...Dimensions.shadow.lg,
@@ -1323,14 +1323,14 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     },
     middleArea: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: isDark ? '#282827' : '#ECE6DA',
       // This area can be used for additional content when expanded
     },
     bottomControlsContainer: {
       paddingHorizontal: Dimensions.spacing.md,
       paddingTop: 2, // Minimal spacing for very tight layout
       paddingBottom: Dimensions.spacing.md + insets.bottom, // Add safe area padding back
-      backgroundColor: colors.background,
+      backgroundColor: isDark ? '#282827' : '#ECE6DA',
     },
     topRow: {
       flexDirection: 'row',
@@ -1484,11 +1484,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 onPress={playPrevious}
                 style={[
                   styles.circularButton,
-                  { backgroundColor: colors.primary + '20' },
+                  { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
                 ]}
                 testID='mini-player-previous-chapter'
                 accessibilityLabel={t('audio.previousChapter')}>
-                <PreviousChapterIcon size={20} color={colors.primary} />
+                <PreviousChapterIcon size={20} color='#AC8F57' />
               </TouchableOpacity>
 
               {/* Previous Verse - ‹ */}
@@ -1496,11 +1496,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 onPress={previousVerse}
                 style={[
                   styles.circularButton,
-                  { backgroundColor: colors.primary + '20' },
+                  { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
                 ]}
                 testID='mini-player-previous-verse'
                 accessibilityLabel={t('audio.previousVerse')}>
-                <PreviousVerseIcon size={20} color={colors.primary} />
+                <PreviousVerseIcon size={20} color='#AC8F57' />
               </TouchableOpacity>
 
               {/* Play/Pause - Center button */}
@@ -1509,16 +1509,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 style={[
                   styles.circularButton,
                   styles.primaryButton,
-                  { backgroundColor: colors.primary },
+                  { backgroundColor: '#AC8F57' },
                 ]}
                 testID='mini-player-play-pause'
                 accessibilityLabel={
                   isPlaying ? t('audio.pause') : t('audio.play')
                 }>
                 {isPlaying ? (
-                  <PauseIcon size={28} color={colors.background} />
+                  <PauseIcon size={28} color='#FFFFFF' />
                 ) : (
-                  <PlayIcon size={28} color={colors.background} />
+                  <PlayIcon size={28} color='#FFFFFF' />
                 )}
               </TouchableOpacity>
 
@@ -1527,11 +1527,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 onPress={nextVerse}
                 style={[
                   styles.circularButton,
-                  { backgroundColor: colors.primary + '20' },
+                  { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
                 ]}
                 testID='mini-player-next-verse'
                 accessibilityLabel={t('audio.nextVerse')}>
-                <NextVerseIcon size={20} color={colors.primary} />
+                <NextVerseIcon size={20} color='#AC8F57' />
               </TouchableOpacity>
 
               {/* Next Chapter - » */}
@@ -1539,11 +1539,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 onPress={onItemFinished}
                 style={[
                   styles.circularButton,
-                  { backgroundColor: colors.primary + '20' },
+                  { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
                 ]}
                 testID='mini-player-next-chapter'
                 accessibilityLabel={t('audio.nextChapter')}>
-                <NextChapterIcon size={20} color={colors.primary} />
+                <NextChapterIcon size={20} color='#AC8F57' />
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -1583,11 +1583,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               onPress={playPrevious}
               style={[
                 styles.circularButton,
-                { backgroundColor: colors.primary + '20' },
+                { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
               ]}
               testID='mini-player-previous-chapter'
               accessibilityLabel={t('audio.previousChapter')}>
-              <PreviousChapterIcon size={20} color={colors.primary} />
+              <PreviousChapterIcon size={20} color='#AC8F57' />
             </TouchableOpacity>
 
             {/* Previous Verse - ‹ */}
@@ -1595,11 +1595,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               onPress={previousVerse}
               style={[
                 styles.circularButton,
-                { backgroundColor: colors.primary + '20' },
+                { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
               ]}
               testID='mini-player-previous-verse'
               accessibilityLabel={t('audio.previousVerse')}>
-              <PreviousVerseIcon size={20} color={colors.primary} />
+              <PreviousVerseIcon size={20} color='#AC8F57' />
             </TouchableOpacity>
 
             {/* Play/Pause - Center button */}
@@ -1608,16 +1608,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               style={[
                 styles.circularButton,
                 styles.primaryButton,
-                { backgroundColor: colors.primary },
+                { backgroundColor: '#AC8F57' },
               ]}
               testID='mini-player-play-pause'
               accessibilityLabel={
                 isPlaying ? t('audio.pause') : t('audio.play')
               }>
               {isPlaying ? (
-                <PauseIcon size={28} color={colors.background} />
+                <PauseIcon size={28} color='#FFFFFF' />
               ) : (
-                <PlayIcon size={28} color={colors.background} />
+                <PlayIcon size={28} color='#FFFFFF' />
               )}
             </TouchableOpacity>
 
@@ -1626,11 +1626,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               onPress={nextVerse}
               style={[
                 styles.circularButton,
-                { backgroundColor: colors.primary + '20' },
+                { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
               ]}
               testID='mini-player-next-verse'
               accessibilityLabel={t('audio.nextVerse')}>
-              <NextVerseIcon size={20} color={colors.primary} />
+              <NextVerseIcon size={20} color='#AC8F57' />
             </TouchableOpacity>
 
             {/* Next Chapter - » */}
@@ -1638,11 +1638,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               onPress={onItemFinished}
               style={[
                 styles.circularButton,
-                { backgroundColor: colors.primary + '20' },
+                { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
               ]}
               testID='mini-player-next-chapter'
               accessibilityLabel={t('audio.nextChapter')}>
-              <NextChapterIcon size={20} color={colors.primary} />
+              <NextChapterIcon size={20} color='#AC8F57' />
             </TouchableOpacity>
           </View>
         </View>

@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Dimensions as RNDimensions,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -19,6 +20,7 @@ import {
   SlideUpPanel,
 } from '@/shared/components/ui';
 import { MoreIcon } from '@/shared/components/ui/icons/AudioIcons';
+import searchIcon from '../../../../assets/images/utility_icons/search.png';
 import { ChapterCard } from '../components';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
@@ -58,7 +60,10 @@ const GoToTestamentTile: React.FC<GoToTestamentTileProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: colors.chapterTileBackground || colors.background,
+      backgroundColor:
+        targetTestament === 'new'
+          ? '#ECE6DA'
+          : colors.chapterTileBackground || colors.background,
       borderRadius: 24,
       padding: Dimensions.spacing.sm,
       alignItems: 'center',
@@ -477,6 +482,11 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     setShowOptionsPanel(false);
   };
 
+  const handleSearchPress = () => {
+    console.log('Search pressed');
+    // TODO: Implement search functionality
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -503,12 +513,20 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     optionsButton: {
       position: 'absolute',
       right: 0,
-      backgroundColor: colors.primary,
-      paddingHorizontal: Dimensions.spacing.md,
-      paddingVertical: Dimensions.spacing.sm,
-      borderRadius: Dimensions.radius.lg,
-      minWidth: 44,
-      minHeight: 44,
+      backgroundColor: '#AC8F57',
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    searchButton: {
+      position: 'absolute',
+      right: 40,
+      backgroundColor: '#AC8F57',
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -554,12 +572,23 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         <View style={styles.headerRow}>
           <Text style={styles.title}>Bible</Text>
           <TouchableOpacity
+            style={styles.searchButton}
+            onPress={handleSearchPress}
+            accessibilityLabel='Search'
+            accessibilityRole='button'
+            testID='search-button'>
+            <Image
+              source={searchIcon}
+              style={{ width: 16, height: 16, tintColor: '#FFFFFF' }}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.optionsButton}
             onPress={handleOptionsPress}
             accessibilityLabel='Options menu'
             accessibilityRole='button'
             testID='options-button'>
-            <MoreIcon size={18} color={colors.background} />
+            <MoreIcon size={16} color='#FFFFFF' />
           </TouchableOpacity>
         </View>
       </View>
