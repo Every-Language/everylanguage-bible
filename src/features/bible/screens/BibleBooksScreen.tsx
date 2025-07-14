@@ -283,7 +283,7 @@ const TestamentView: React.FC<TestamentViewProps> = ({
     title: {
       fontSize: Fonts.size['2xl'],
       fontWeight: Fonts.weight.bold,
-      color: colors.primary,
+      color: colors.chapterTileBackground || colors.background,
       textAlign: 'center',
       marginBottom: Dimensions.spacing.lg,
       marginTop: Dimensions.spacing.md,
