@@ -1,6 +1,5 @@
 import React from 'react';
-import { TamaguiProvider as TamaguiProviderOrig } from '@tamagui/core';
-import { config } from '../../../tamagui.config';
+import { ThemeProvider } from './ThemeProvider';
 
 interface TamaguiProviderProps {
   children: React.ReactNode;
@@ -9,9 +8,5 @@ interface TamaguiProviderProps {
 export const TamaguiProvider: React.FC<TamaguiProviderProps> = ({
   children,
 }) => {
-  return (
-    <TamaguiProviderOrig config={config} defaultTheme='light'>
-      {children}
-    </TamaguiProviderOrig>
-  );
+  return <ThemeProvider>{children}</ThemeProvider>;
 };

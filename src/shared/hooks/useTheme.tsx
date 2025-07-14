@@ -1,7 +1,7 @@
-// Re-export theme functionality from store
+// Re-export from Tamagui theme hook instead of Zustand store
 export {
   useTheme,
-  useThemeStore,
+  useThemeToggle,
   type Theme,
   type ThemeColors,
-} from '../store/themeStore';
+} from './useTamaguiTheme';
