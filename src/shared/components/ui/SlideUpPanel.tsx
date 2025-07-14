@@ -175,7 +175,7 @@ export const SlideUpPanel: React.FC<SlideUpPanelProps> = ({
       bottom: 0,
       left: 0,
       right: 0,
-      backgroundColor: isDark ? '#282827' : '#ECE6DA',
+      backgroundColor: isDark ? '#282827' : '#F9F7F4',
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       ...Dimensions.shadow.lg,

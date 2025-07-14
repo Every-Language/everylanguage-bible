@@ -11,7 +11,6 @@ import {
 import { SlideUpPanel } from './SlideUpPanel';
 import { CodeEntryModal } from './CodeEntryModal';
 import { useTheme, useCalculatorMode } from '@/shared/store';
-import { useTranslation } from '@/shared/hooks';
 import { Dimensions, Fonts } from '@/shared/constants';
 
 // Import utility icons
@@ -26,21 +25,35 @@ interface OptionsMenuProps {
   isVisible: boolean;
   onClose: () => void;
   onThemeToggle: () => void;
+  onNavigateToSubMenu?: (
+    subMenuType: 'profile' | 'language' | 'settings' | 'help'
+  ) => void;
 }
 
 export const OptionsMenu: React.FC<OptionsMenuProps> = ({
   isVisible,
   onClose,
   onThemeToggle: _onThemeToggle,
+  onNavigateToSubMenu,
 }) => {
   const { colors, isDark } = useTheme();
-  const { t } = useTranslation();
   const { enterCalculatorMode } = useCalculatorMode();
   const [isCodeEntryVisible, setIsCodeEntryVisible] = useState(false);
 
   const handleOptionPress = (action: () => void) => {
     action();
     onClose();
+  };
+
+  const handleSubMenuNavigation = (
+    subMenuType: 'profile' | 'language' | 'settings' | 'help'
+  ) => {
+    if (onNavigateToSubMenu) {
+      onNavigateToSubMenu(subMenuType);
+    } else {
+      console.log(`${subMenuType} pressed`);
+      onClose();
+    }
   };
 
   const handleCalculatorPress = () => {
@@ -118,13 +131,13 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
       key: 'profile',
       icon: profileIcon,
       label: 'Profile',
-      onPress: () => console.log('Profile pressed'),
+      onPress: () => handleSubMenuNavigation('profile'),
     },
     {
       key: 'language',
       icon: languageIcon,
       label: 'Language',
-      onPress: () => console.log('Language pressed'),
+      onPress: () => handleSubMenuNavigation('language'),
     },
     {
       key: 'calculator',
@@ -135,14 +148,14 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
     {
       key: 'settings',
       icon: settingsIcon,
-      label: isDark ? t('theme.switchToLight') : t('theme.switchToDark'),
-      onPress: () => _onThemeToggle(),
+      label: 'Settings',
+      onPress: () => handleSubMenuNavigation('settings'),
     },
     {
       key: 'help',
       icon: helpIcon,
       label: 'Help',
-      onPress: () => console.log('Help pressed'),
+      onPress: () => handleSubMenuNavigation('help'),
     },
   ];
 
@@ -154,7 +167,7 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
       gap: Dimensions.spacing.sm,
     },
     optionCard: {
-      backgroundColor: '#AC8F57',
+      backgroundColor: isDark ? '#414141' : '#EAE9E7',
       borderRadius: Dimensions.radius.md,
       paddingHorizontal: Dimensions.spacing.lg,
       paddingVertical: Dimensions.spacing.md,

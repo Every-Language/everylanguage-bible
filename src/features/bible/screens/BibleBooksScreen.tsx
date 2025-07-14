@@ -18,6 +18,10 @@ import {
   OptionsMenu,
   ToggleButtons,
   SlideUpPanel,
+  ProfileMenu,
+  LanguageMenu,
+  SettingsMenu,
+  HelpMenu,
 } from '@/shared/components/ui';
 import { MoreIcon } from '@/shared/components/ui/icons/AudioIcons';
 import searchIcon from '../../../../assets/images/utility_icons/search.png';
@@ -41,6 +45,7 @@ interface BibleBooksScreenProps {
 }
 
 type TestamentMode = 'old' | 'new';
+type SubMenuType = 'profile' | 'language' | 'settings' | 'help' | null;
 
 // Go to Testament Tile Component
 interface GoToTestamentTileProps {
@@ -434,6 +439,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [testamentMode, setTestamentMode] = useState<TestamentMode>('old');
   const [showOptionsPanel, setShowOptionsPanel] = useState(false);
+  const [activeSubMenu, setActiveSubMenu] = useState<SubMenuType>(null);
 
   // Use the horizontal slide animation hook
   const { slideAnimation, gestureHandler, updateAnimation } =
@@ -482,6 +488,15 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
 
   const handleCloseOptions = () => {
     setShowOptionsPanel(false);
+  };
+
+  const handleOpenSubMenu = (subMenuType: SubMenuType) => {
+    setShowOptionsPanel(false);
+    setActiveSubMenu(subMenuType);
+  };
+
+  const handleCloseSubMenu = () => {
+    setActiveSubMenu(null);
   };
 
   const handleSearchPress = () => {
@@ -660,6 +675,32 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
         isVisible={showOptionsPanel}
         onClose={handleCloseOptions}
         onThemeToggle={toggleTheme}
+        onNavigateToSubMenu={handleOpenSubMenu}
+      />
+
+      {/* Profile Menu */}
+      <ProfileMenu
+        isVisible={activeSubMenu === 'profile'}
+        onClose={handleCloseSubMenu}
+      />
+
+      {/* Language Menu */}
+      <LanguageMenu
+        isVisible={activeSubMenu === 'language'}
+        onClose={handleCloseSubMenu}
+      />
+
+      {/* Settings Menu */}
+      <SettingsMenu
+        isVisible={activeSubMenu === 'settings'}
+        onClose={handleCloseSubMenu}
+        onThemeToggle={toggleTheme}
+      />
+
+      {/* Help Menu */}
+      <HelpMenu
+        isVisible={activeSubMenu === 'help'}
+        onClose={handleCloseSubMenu}
       />
 
       {/* Help Panel - Test SlideUpPanel */}
