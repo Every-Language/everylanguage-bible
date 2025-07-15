@@ -84,6 +84,16 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
         </View>
       </View>
 
+      {/* Time Display under seekbar */}
+      <View style={styles.timeDisplayContainer}>
+        <Text style={[styles.timeText, { color: theme.colors.textSecondary }]}>
+          {formatTime(state.currentTrack.currentTime)}
+        </Text>
+        <Text style={[styles.timeText, { color: theme.colors.textSecondary }]}>
+          {formatTime(state.currentTrack.duration)}
+        </Text>
+      </View>
+
       {/* Main Controls */}
       <View
         style={[
@@ -117,9 +127,11 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
           <TouchableOpacity
             style={styles.controlButton}
             onPress={handleSkipBack}>
-            <Text style={[styles.controlText, { color: theme.colors.text }]}>
-              -10
-            </Text>
+            <MaterialIcons
+              name='keyboard-arrow-left'
+              size={compact ? 24 : 32}
+              color={theme.colors.text}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -138,9 +150,11 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
           <TouchableOpacity
             style={styles.controlButton}
             onPress={handleSkipForward}>
-            <Text style={[styles.controlText, { color: theme.colors.text }]}>
-              +10
-            </Text>
+            <MaterialIcons
+              name='keyboard-arrow-right'
+              size={compact ? 24 : 32}
+              color={theme.colors.text}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -154,31 +168,12 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
           </TouchableOpacity>
         </View>
 
-        {/* Time and Speed */}
+        {/* Speed Display */}
         {!compact && (
-          <View style={styles.timeInfo}>
-            <Text
-              style={[styles.timeText, { color: theme.colors.textSecondary }]}>
-              {formatTime(state.currentTrack.currentTime)}
-            </Text>
+          <View style={styles.speedInfo}>
             <Text
               style={[styles.speedText, { color: theme.colors.textSecondary }]}>
               {getSpeedDisplay()}
-            </Text>
-            <Text
-              style={[styles.timeText, { color: theme.colors.textSecondary }]}>
-              {formatTime(state.currentTrack.duration)}
-            </Text>
-          </View>
-        )}
-
-        {/* Compact Time Display */}
-        {compact && (
-          <View style={styles.compactTimeInfo}>
-            <Text
-              style={[styles.timeText, { color: theme.colors.textSecondary }]}>
-              {formatTime(state.currentTrack.currentTime)} /{' '}
-              {formatTime(state.currentTrack.duration)}
             </Text>
           </View>
         )}
@@ -207,6 +202,13 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 1,
+  },
+  timeDisplayContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginTop: 4,
+    marginBottom: 8,
   },
   controlsContainer: {
     alignItems: 'center',
@@ -239,10 +241,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  controlText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
+
   playButton: {
     width: 56,
     height: 56,
@@ -251,16 +250,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 12,
   },
-  timeInfo: {
-    flexDirection: 'row',
+  speedInfo: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 4,
-  },
-  compactTimeInfo: {
-    alignItems: 'flex-end',
-    minWidth: 60,
+    marginTop: 8,
   },
   timeText: {
     fontSize: 10,

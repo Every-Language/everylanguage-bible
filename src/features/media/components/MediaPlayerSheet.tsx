@@ -4,26 +4,71 @@ import {
   BottomSheetModal,
   BottomSheetView,
   BottomSheetModalProvider,
+  BottomSheetBackgroundProps,
   useBottomSheet,
 } from '@gorhom/bottom-sheet';
-import { BlurView } from 'expo-blur';
+
 import Animated, {
   useAnimatedStyle,
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import { MediaControls } from './MediaControls';
 import { TextAndQueueTabs } from './TextAndQueueTabs';
+import { TrackDetailsCollapsed } from './TrackDetailsCollapsed';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Fixed height allocations for expanded view
-const EXPANDED_TRACK_DETAILS_HEIGHT = SCREEN_HEIGHT * 0.15; // 22% of screen height
-const EXPANDED_TABS_HEIGHT = SCREEN_HEIGHT * 0.65; // 63% of screen height
-const EXPANDED_CONTROLS_HEIGHT = SCREEN_HEIGHT * 0.2; // 15% of screen height
+const EXPANDED_TRACK_DETAILS_HEIGHT = SCREEN_HEIGHT * 0.15; // 15% of screen height
+const EXPANDED_TABS_HEIGHT = SCREEN_HEIGHT * 0.7; // 65% of screen height
+
+// Custom Blurred Background Component
+const BlurredBackground: React.FC<BottomSheetBackgroundProps> = ({
+  style,
+  animatedIndex,
+}) => {
+  const { theme } = useTheme();
+
+  const containerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      animatedIndex.value,
+      [0, 1],
+      [0.95, 1],
+      Extrapolation.CLAMP
+    ),
+  }));
+
+  const containerStyle = useMemo(
+    () => [style, containerAnimatedStyle],
+    [style, containerAnimatedStyle]
+  );
+
+  return (
+    <Animated.View style={containerStyle}>
+      <BlurView
+        intensity={30}
+        tint={theme.mode === 'dark' ? 'dark' : 'light'}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <View
+        style={[
+          StyleSheet.absoluteFillObject,
+          {
+            backgroundColor:
+              theme.mode === 'dark'
+                ? 'rgba(0, 0, 0, 0.9)'
+                : 'rgba(255, 255, 255, 0.9)',
+          },
+        ]}
+      />
+    </Animated.View>
+  );
+};
 
 // Inner content component that has access to useBottomSheet
 const MediaPlayerContent: React.FC = () => {
@@ -93,71 +138,50 @@ const MediaPlayerContent: React.FC = () => {
     const translateY = interpolate(
       animatedIndex.value,
       [0, 1],
-      [50, 0, 0],
+      [50, 0],
+      Extrapolation.CLAMP
+    );
+
+    // Hide tabs completely in collapsed mode by setting height to 0
+    const height = interpolate(
+      animatedIndex.value,
+      [0, 0.3, 1],
+      [0, EXPANDED_TABS_HEIGHT * 0.3, EXPANDED_TABS_HEIGHT - insets.bottom],
       Extrapolation.CLAMP
     );
 
     return {
       opacity,
+      height,
       transform: [{ translateY }],
+    };
+  });
+
+  const controlsContainerStyle = useAnimatedStyle(() => {
+    // In collapsed mode, position controls right after track details
+    // In expanded mode, position at bottom with full height
+    const marginTop = interpolate(
+      animatedIndex.value,
+      [0, 1],
+      [8, 0], // Small margin in collapsed, no margin in expanded
+      Extrapolation.CLAMP
+    );
+
+    return {
+      marginTop,
     };
   });
 
   if (!state.currentTrack) return null;
 
   return (
-    <>
-      {/* Background Blur */}
-      <BlurView
-        intensity={80}
-        tint={theme.mode === 'dark' ? 'dark' : 'light'}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <View
-        style={[
-          StyleSheet.absoluteFillObject,
-          {
-            backgroundColor:
-              theme.mode === 'dark'
-                ? 'rgba(0, 0, 0, 0.3)'
-                : 'rgba(255, 255, 255, 0.3)',
-          },
-        ]}
-      />
-
-      {/* Main Content Container */}
+    <View style={styles.contentWrapper}>
       <View style={styles.mainContent}>
         {/* Track Details Section - Animates between collapsed and expanded */}
         <Animated.View
           style={[styles.trackDetailsContainer, trackDetailsAnimatedStyle]}>
           {/* Collapsed View - Shows inline track info */}
-          <Animated.View
-            style={[styles.collapsedTrackInfo, collapsedTrackInfoStyle]}>
-            <View style={styles.collapsedContent}>
-              <View style={styles.trackInfoLeft}>
-                <Text
-                  style={[styles.collapsedTitle, { color: theme.colors.text }]}
-                  numberOfLines={1}>
-                  {state.currentTrack.title}
-                </Text>
-                <Text
-                  style={[
-                    styles.collapsedSubtitle,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                  numberOfLines={1}>
-                  {state.currentTrack.subtitle}
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.collapsedLanguage,
-                  { color: theme.colors.textSecondary },
-                ]}>
-                ENGLISH - BSB
-              </Text>
-            </View>
-          </Animated.View>
+          <TrackDetailsCollapsed style={collapsedTrackInfoStyle} />
 
           {/* Expanded View - Shows centered track info with album art */}
           <Animated.View
@@ -192,29 +216,24 @@ const MediaPlayerContent: React.FC = () => {
           </Animated.View>
         </Animated.View>
 
-        {/* Text and Queue Tabs Section - Fixed height allocation */}
-        <Animated.View
-          style={[
-            styles.tabsContainer,
-            verseListContainerStyle,
-            { height: EXPANDED_TABS_HEIGHT - insets.bottom },
-          ]}>
+        {/* Text and Queue Tabs Section - Animated height and visibility */}
+        <Animated.View style={[styles.tabsContainer, verseListContainerStyle]}>
           <TextAndQueueTabs />
         </Animated.View>
 
-        {/* Controls Section - Fixed height allocation with safe area */}
-        <View
+        {/* Controls Section - Positioned responsively */}
+        <Animated.View
           style={[
             styles.controlsContainer,
+            controlsContainerStyle,
             {
-              height: EXPANDED_CONTROLS_HEIGHT,
               paddingBottom: insets.bottom,
             },
           ]}>
           <MediaControls showAlbumArt={false} compact={true} />
-        </View>
+        </Animated.View>
       </View>
-    </>
+    </View>
   );
 };
 
@@ -273,7 +292,7 @@ export const MediaPlayerSheet: React.FC = () => {
         snapPoints={snapPoints}
         onChange={handleSheetChanges}
         backdropComponent={() => null}
-        backgroundStyle={[styles.sheet, { backgroundColor: 'transparent' }]}
+        backgroundComponent={BlurredBackground}
         handleIndicatorStyle={[styles.handle, { backgroundColor: '#ccc' }]}
         enablePanDownToClose={false}
         enableDynamicSizing={false}
@@ -291,17 +310,9 @@ export const MediaPlayerSheet: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
+  // Content wrapper - no longer needs blur background
+  contentWrapper: {
+    flex: 1,
   },
   handle: {
     width: 40,
@@ -312,7 +323,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainContent: {
-    height: '100%',
+    flex: 1,
     paddingHorizontal: 16,
   },
 
@@ -320,40 +331,6 @@ const styles = StyleSheet.create({
   trackDetailsContainer: {
     position: 'relative',
     width: '100%',
-  },
-
-  // Collapsed Track Info
-  collapsedTrackInfo: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    justifyContent: 'center',
-  },
-  collapsedContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-  },
-  trackInfoLeft: {
-    flex: 1,
-    marginRight: 12,
-  },
-  collapsedTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  collapsedSubtitle: {
-    fontSize: 14,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-  collapsedLanguage: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'right',
   },
 
   // Expanded Track Info
@@ -394,12 +371,13 @@ const styles = StyleSheet.create({
 
   // Tabs Container
   tabsContainer: {
-    marginTop: 8,
+    marginVertical: 10,
   },
 
   // Controls Container
   controlsContainer: {
     justifyContent: 'center',
     paddingHorizontal: 8,
+    minHeight: 100,
   },
 });
