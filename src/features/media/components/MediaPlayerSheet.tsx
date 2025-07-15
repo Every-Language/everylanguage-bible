@@ -1,11 +1,5 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { StyleSheet, View, Text, Image, Dimensions } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
@@ -21,15 +15,21 @@ import Animated, {
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import { MediaControls } from './MediaControls';
-import { VerseListAndQueue } from './VerseListAndQueue';
+import { TextAndQueueTabs } from './TextAndQueueTabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Fixed height allocations for expanded view
+const EXPANDED_TRACK_DETAILS_HEIGHT = SCREEN_HEIGHT * 0.15; // 22% of screen height
+const EXPANDED_TABS_HEIGHT = SCREEN_HEIGHT * 0.65; // 63% of screen height
+const EXPANDED_CONTROLS_HEIGHT = SCREEN_HEIGHT * 0.2; // 15% of screen height
 
 // Inner content component that has access to useBottomSheet
-const MediaPlayerContent: React.FC<{
-  viewMode: 'text' | 'queue';
-  setViewMode: (mode: 'text' | 'queue') => void;
-}> = ({ viewMode, setViewMode }) => {
+const MediaPlayerContent: React.FC = () => {
   const { theme } = useTheme();
   const { state } = useMediaPlayer();
+  const insets = useSafeAreaInsets();
 
   // Get the animated index from the bottom sheet context
   const { animatedIndex } = useBottomSheet();
@@ -39,7 +39,7 @@ const MediaPlayerContent: React.FC<{
     const height = interpolate(
       animatedIndex.value,
       [0, 1],
-      [60, 120], // Heights for collapsed vs expanded track details
+      [60, EXPANDED_TRACK_DETAILS_HEIGHT], // Heights for collapsed vs expanded track details
       Extrapolation.CLAMP
     );
 
@@ -86,14 +86,14 @@ const MediaPlayerContent: React.FC<{
     const opacity = interpolate(
       animatedIndex.value,
       [0, 0.5, 1],
-      [0, 0, 1],
+      [0, 0.3, 1],
       Extrapolation.CLAMP
     );
 
     const translateY = interpolate(
       animatedIndex.value,
       [0, 1],
-      [50, 0],
+      [50, 0, 0],
       Extrapolation.CLAMP
     );
 
@@ -188,66 +188,29 @@ const MediaPlayerContent: React.FC<{
                   {state.currentTrack.subtitle}
                 </Text>
               </View>
-
-              {/* Toggle Buttons */}
-              <View style={styles.toggleContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.toggleButton,
-                    viewMode === 'text' && [
-                      styles.activeToggle,
-                      { backgroundColor: theme.colors.primary },
-                    ],
-                  ]}
-                  onPress={() => setViewMode('text')}>
-                  <Text
-                    style={[
-                      styles.toggleButtonText,
-                      {
-                        color:
-                          viewMode === 'text'
-                            ? theme.colors.background
-                            : theme.colors.text,
-                      },
-                    ]}>
-                    Text
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.toggleButton,
-                    viewMode === 'queue' && [
-                      styles.activeToggle,
-                      { backgroundColor: theme.colors.primary },
-                    ],
-                  ]}
-                  onPress={() => setViewMode('queue')}>
-                  <Text
-                    style={[
-                      styles.toggleButtonText,
-                      {
-                        color:
-                          viewMode === 'queue'
-                            ? theme.colors.background
-                            : theme.colors.text,
-                      },
-                    ]}>
-                    Queue
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </Animated.View>
         </Animated.View>
 
-        {/* Verse List/Queue Section - Only visible when expanded */}
+        {/* Text and Queue Tabs Section - Fixed height allocation */}
         <Animated.View
-          style={[styles.verseListContainer, verseListContainerStyle]}>
-          <VerseListAndQueue viewMode={viewMode} />
+          style={[
+            styles.tabsContainer,
+            verseListContainerStyle,
+            { height: EXPANDED_TABS_HEIGHT - insets.bottom },
+          ]}>
+          <TextAndQueueTabs />
         </Animated.View>
 
-        {/* Controls Section - Always at bottom with consistent height */}
-        <View style={styles.controlsContainer}>
+        {/* Controls Section - Fixed height allocation with safe area */}
+        <View
+          style={[
+            styles.controlsContainer,
+            {
+              height: EXPANDED_CONTROLS_HEIGHT,
+              paddingBottom: insets.bottom,
+            },
+          ]}>
           <MediaControls showAlbumArt={false} compact={true} />
         </View>
       </View>
@@ -258,9 +221,8 @@ const MediaPlayerContent: React.FC<{
 export const MediaPlayerSheet: React.FC = () => {
   const { state, actions } = useMediaPlayer();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const [viewMode, setViewMode] = useState<'text' | 'queue'>('text');
 
-  // Snap points: collapsed (25%), expanded (100%)
+  // Snap points: collapsed (25%), expanded (100vh)
   const snapPoints = useMemo(() => ['25%', '100%'], []);
 
   // Handle sheet changes for state management only
@@ -314,11 +276,14 @@ export const MediaPlayerSheet: React.FC = () => {
         backgroundStyle={[styles.sheet, { backgroundColor: 'transparent' }]}
         handleIndicatorStyle={[styles.handle, { backgroundColor: '#ccc' }]}
         enablePanDownToClose={false}
+        enableDynamicSizing={false}
+        enableOverDrag={false}
+        animateOnMount={true}
         keyboardBehavior='fillParent'
         keyboardBlurBehavior='restore'
         android_keyboardInputMode='adjustResize'>
         <BottomSheetView style={styles.content}>
-          <MediaPlayerContent viewMode={viewMode} setViewMode={setViewMode} />
+          <MediaPlayerContent />
         </BottomSheetView>
       </BottomSheetModal>
     </BottomSheetModalProvider>
@@ -347,7 +312,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainContent: {
-    flex: 1,
+    height: '100%',
     paddingHorizontal: 16,
   },
 
@@ -397,7 +362,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 120,
+    height: EXPANDED_TRACK_DETAILS_HEIGHT,
     justifyContent: 'center',
   },
   expandedContent: {
@@ -426,35 +391,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
-  toggleContainer: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  toggleButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  activeToggle: {
-    // backgroundColor set dynamically
-  },
-  toggleButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
 
-  // Verse List Container
-  verseListContainer: {
-    flex: 1,
+  // Tabs Container
+  tabsContainer: {
     marginTop: 8,
   },
 
   // Controls Container
   controlsContainer: {
-    paddingVertical: 8,
-    paddingBottom: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
 });
