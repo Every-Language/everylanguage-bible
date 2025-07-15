@@ -1,33 +1,42 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { SyncStatusPill } from './SyncStatusPill';
 
 interface TopBarProps {
   title?: string;
   showProfile?: boolean;
   showThemeToggle?: boolean;
+  showSyncStatus?: boolean;
   onProfilePress?: () => void;
+  onSyncPress?: () => void;
 }
 
-// Using simple text icons for now - you can replace with icon libraries later
-const Icons = {
-  profile: '👤',
-  sun: '☀️',
-  moon: '🌙',
-  search: '🔍',
-};
-
-export const TopBar: React.FC<TopBarProps> = ({ 
-  title, 
-  showProfile = true, 
+export const TopBar: React.FC<TopBarProps> = ({
+  title,
+  showProfile = true,
   showThemeToggle = true,
-  onProfilePress 
+  showSyncStatus = true,
+  onProfilePress,
+  onSyncPress,
 }) => {
   const { theme, mode, toggleTheme } = useTheme();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: theme.colors.background },
+        ]}>
         <View style={styles.leftSection}>
           {title && (
             <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -35,27 +44,31 @@ export const TopBar: React.FC<TopBarProps> = ({
             </Text>
           )}
         </View>
-        
+
         <View style={styles.rightSection}>
+          {showSyncStatus && (
+            <SyncStatusPill {...(onSyncPress && { onPress: onSyncPress })} />
+          )}
+
           <TouchableOpacity style={styles.iconButton}>
-            <Text style={[styles.icon, { color: theme.colors.text }]}>
-              {Icons.search}
-            </Text>
+            <Ionicons name='search' size={20} color={theme.colors.text} />
           </TouchableOpacity>
-          
+
           {showThemeToggle && (
             <TouchableOpacity style={styles.iconButton} onPress={toggleTheme}>
-              <Text style={[styles.icon, { color: theme.colors.text }]}>
-                {mode === 'light' ? Icons.moon : Icons.sun}
-              </Text>
+              <Ionicons
+                name={mode === 'light' ? 'moon' : 'sunny'}
+                size={20}
+                color={theme.colors.text}
+              />
             </TouchableOpacity>
           )}
-          
+
           {showProfile && (
-            <TouchableOpacity style={styles.iconButton} onPress={onProfilePress}>
-              <Text style={[styles.icon, { color: theme.colors.text }]}>
-                {Icons.profile}
-              </Text>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={onProfilePress}>
+              <Ionicons name='person' size={20} color={theme.colors.text} />
             </TouchableOpacity>
           )}
         </View>
@@ -65,9 +78,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    zIndex: 1000,
-  },
+  safeArea: {},
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -96,7 +107,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  icon: {
-    fontSize: 20,
-  },
-}); 
+});

@@ -21,7 +21,6 @@ This project uses a **feature-first architecture** with offline-first design pri
 - **Frontend**: React Native with New Architecture (Fabric + TurboModules)
 - **Database**: SQLite with Drizzle ORM for local storage
 - **Backend**: Supabase (PostgreSQL + Authentication)
-- **Sync**: PowerSync for real-time offline-first synchronization
 - **File Storage**: Backblaze B2 for audio file delivery
 - **State Management**: Zustand + TanStack Query
 - **UI Framework**: Tamagui for consistent design system
@@ -38,7 +37,6 @@ This project uses a **feature-first architecture** with offline-first design pri
 
 - **SQLite** + **Drizzle ORM** (Local database)
 - **Supabase** (Authentication & PostgreSQL)
-- **PowerSync** (Real-time sync)
 - **Backblaze B2** (File storage & CDN)
 
 ### State & UI

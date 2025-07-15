@@ -1,97 +1,86 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { useTranslations } from '@/shared/context/LocalizationContext';
+import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import { BookGrid } from '../components/BookGrid';
-import { MediaPlayer } from '@/features/media';
 import { useBibleBooks } from '../hooks/useBibleBooks';
 import type { Book } from '../types';
 
-type Testament = 'old' | 'new';
-
 export const BibleBooksScreen: React.FC = () => {
   const { theme } = useTheme();
-  const [selectedTestament, setSelectedTestament] = useState<Testament>('old');
-  
-  const {
-    books,
-    loading,
-    error,
-    selectedBook,
-    selectBook,
-  } = useBibleBooks();
+  const t = useTranslations();
+  const { books, loading, selectedBook, selectBook } = useBibleBooks();
+  const { actions } = useMediaPlayer();
+
+  const handleLoadDemoTrack = () => {
+    // Load a sample track for demonstration
+    const demoTrack = {
+      id: 'demo-john-1',
+      title: 'John Chapter 1',
+      subtitle: 'ENGLISH - BSB',
+      duration: 180, // 3 minutes
+      currentTime: 0,
+      url: 'demo-url',
+      book: 'John',
+      chapter: '1',
+      verse: '1',
+    };
+
+    actions.setCurrentTrack(demoTrack);
+  };
 
   const handleBookSelect = (book: Book) => {
     selectBook(book);
-    Alert.alert('Book Selected', `You selected: ${book.name}`);
+    // You can add more logic here, like navigating to chapters
   };
 
-  // Filter books by testament (we'll use book_number ranges for now)
-  const filteredBooks = books.filter(book => {
-    if (selectedTestament === 'old') {
-      return book.book_number <= 39; // Old Testament (Genesis to Malachi)
-    } else {
-      return book.book_number >= 40; // New Testament (Matthew onwards)
-    }
-  });
-
-  if (error) {
+  if (loading) {
     return (
-      <View style={[styles.errorContainer, { backgroundColor: theme.colors.background }]}>
-        <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
-          Error Loading Books
-        </Text>
-        <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
-          {error}
-        </Text>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: theme.colors.background },
+        ]}>
+        <View
+          style={[
+            styles.centered,
+            { backgroundColor: theme.colors.background },
+          ]}>
+          <Text style={[styles.loadingText, { color: theme.colors.text }]}>
+            {t('loading')}
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Testament Selection */}
-      <View style={styles.testamentContainer}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View
+        style={[styles.header, { backgroundColor: theme.colors.background }]}>
+        <Text style={[styles.title, { color: theme.colors.text }]}>
+          {t('bible.books')}
+        </Text>
+
+        {/* Demo Button */}
         <TouchableOpacity
-          style={[
-            styles.testamentButton,
-            selectedTestament === 'old' && [styles.activeTestament, { backgroundColor: theme.colors.accent }]
-          ]}
-          onPress={() => setSelectedTestament('old')}
-        >
-          <Text style={[
-            styles.testamentText,
-            { color: selectedTestament === 'old' ? theme.colors.textInverse : theme.colors.text }
-          ]}>
-            Old testament
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.testamentButton,
-            selectedTestament === 'new' && [styles.activeTestament, { backgroundColor: theme.colors.accent }]
-          ]}
-          onPress={() => setSelectedTestament('new')}
-        >
-          <Text style={[
-            styles.testamentText,
-            { color: selectedTestament === 'new' ? theme.colors.textInverse : theme.colors.text }
-          ]}>
-            New testament
+          style={[styles.demoButton, { backgroundColor: theme.colors.primary }]}
+          onPress={handleLoadDemoTrack}>
+          <Text
+            style={[styles.demoButtonText, { color: theme.colors.background }]}>
+            Play Demo Track
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Book Grid */}
       <BookGrid
-        books={filteredBooks}
+        books={books}
         selectedBook={selectedBook}
         onBookSelect={handleBookSelect}
         loading={loading}
       />
-
-      {/* Media Player */}
-      <MediaPlayer />
     </View>
   );
 };
@@ -100,38 +89,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  testamentContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 12,
+  header: {
+    padding: 20,
+    paddingBottom: 16,
   },
-  testamentButton: {
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  demoButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
   },
-  activeTestament: {
-    // backgroundColor set dynamically
+  demoButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
-  testamentText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  errorContainer: {
+  centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
   },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  errorText: {
+  loadingText: {
     fontSize: 16,
-    textAlign: 'center',
+    fontWeight: '500',
   },
-}); 
+});

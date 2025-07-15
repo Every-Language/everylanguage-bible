@@ -1,7 +1,15 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from 'react';
+import NetInfo from '@react-native-community/netinfo';
 import { databaseManager } from '../services/database/DatabaseManager';
 import { syncService, type SyncResult } from '../services/database/SyncService';
 import { localDataService } from '../services/database/LocalDataService';
+import { backgroundSyncService } from '../services/database/BackgroundSyncService';
 
 export interface SyncContextType {
   isInitialized: boolean;
@@ -9,6 +17,8 @@ export interface SyncContextType {
   syncProgress: SyncProgress | null;
   lastSyncAt: string | null;
   hasLocalData: boolean;
+  isConnected: boolean;
+  connectionType: string | null;
   initializeDatabase: () => Promise<void>;
   syncNow: () => Promise<void>;
   forceFFullSync: () => Promise<void>;
@@ -20,6 +30,7 @@ export interface SyncContextType {
 export interface SyncProgress {
   table: string;
   recordsSynced: number;
+  totalRecords?: number;
   isComplete: boolean;
   error?: string;
 }
@@ -36,6 +47,18 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [hasLocalData, setHasLocalData] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionType, setConnectionType] = useState<string | null>(null);
+
+  // Network connectivity monitoring
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected ?? false);
+      setConnectionType(state.type);
+    });
+
+    return unsubscribe;
+  }, []);
 
   const initializeDatabase = useCallback(async () => {
     if (isInitialized) return;
@@ -43,15 +66,18 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     try {
       console.log('Initializing local database...');
       await databaseManager.initialize();
-      
+
+      // Initialize background sync service
+      await backgroundSyncService.initialize();
+
       // Check if we have local data
       const dataAvailable = await localDataService.isDataAvailable();
       setHasLocalData(dataAvailable);
-      
+
       // Get last sync time
       const lastSync = await localDataService.getLastSyncedAt();
       setLastSyncAt(lastSync);
-      
+
       setIsInitialized(true);
       console.log('Database initialized successfully');
 
@@ -59,6 +85,14 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       if (!dataAvailable) {
         console.log('No local data found, starting initial sync...');
         await syncNow();
+      }
+
+      // Register background sync after successful initialization
+      try {
+        await backgroundSyncService.registerBackgroundFetch();
+        console.log('Background sync registered successfully');
+      } catch (error) {
+        console.warn('Failed to register background sync:', error);
       }
     } catch (error) {
       console.error('Failed to initialize database:', error);
@@ -71,14 +105,24 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
 
     try {
       setIsSyncing(true);
-      setSyncProgress({ table: 'books', recordsSynced: 0, isComplete: false });
+
+      // Get total count first for progress tracking
+      const totalBooksCount =
+        await syncService.getTotalRemoteRecordsCount('books');
+      setSyncProgress({
+        table: 'books',
+        recordsSynced: 0,
+        totalRecords: totalBooksCount,
+        isComplete: false,
+      });
 
       const results = await syncService.syncAll();
-      
+
       for (const result of results) {
         const progress: SyncProgress = {
           table: result.tableName,
           recordsSynced: result.recordsSynced,
+          totalRecords: totalBooksCount,
           isComplete: result.success,
         };
         if (result.error) {
@@ -90,7 +134,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       // Update local state
       const dataAvailable = await localDataService.isDataAvailable();
       setHasLocalData(dataAvailable);
-      
+
       const lastSync = await localDataService.getLastSyncedAt();
       setLastSyncAt(lastSync);
 
@@ -100,8 +144,9 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       setSyncProgress({
         table: 'unknown',
         recordsSynced: 0,
+        totalRecords: 0,
         isComplete: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     } finally {
       setIsSyncing(false);
@@ -118,7 +163,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       setSyncProgress({ table: 'books', recordsSynced: 0, isComplete: false });
 
       const result = await syncService.forceFullSync('books');
-      
+
       const progress: SyncProgress = {
         table: result.tableName,
         recordsSynced: result.recordsSynced,
@@ -132,17 +177,16 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       // Update local state
       const dataAvailable = await localDataService.isDataAvailable();
       setHasLocalData(dataAvailable);
-      
+
       const lastSync = await localDataService.getLastSyncedAt();
       setLastSyncAt(lastSync);
-
     } catch (error) {
       console.error('Force sync failed:', error);
       setSyncProgress({
         table: 'books',
         recordsSynced: 0,
         isComplete: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     } finally {
       setIsSyncing(false);
@@ -177,7 +221,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
 
   const getSyncMetadata = useCallback(async () => {
     if (!isInitialized) return [];
-    
+
     try {
       return await syncService.getSyncMetadata();
     } catch (error) {
@@ -214,19 +258,17 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     syncProgress,
     lastSyncAt,
     hasLocalData,
+    isConnected,
+    connectionType,
     initializeDatabase,
     syncNow,
     forceFFullSync,
     resetSyncTimestamp,
     clearLocalData,
-    getSyncMetadata
+    getSyncMetadata,
   };
 
-  return (
-    <SyncContext.Provider value={value}>
-      {children}
-    </SyncContext.Provider>
-  );
+  return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
 };
 
 export const useSync = (): SyncContextType => {
@@ -235,4 +277,4 @@ export const useSync = (): SyncContextType => {
     throw new Error('useSync must be used within a SyncProvider');
   }
   return context;
-}; 
+};

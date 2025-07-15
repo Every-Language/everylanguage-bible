@@ -1,42 +1,57 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useSync } from '@/shared/context/SyncContext';
+import { useBackgroundSync } from '@/shared/hooks/useBackgroundSync';
 
 interface SyncStatusProps {
   showDetails?: boolean;
   onSyncPress?: () => void;
 }
 
-export const SyncStatus: React.FC<SyncStatusProps> = ({ 
+export const SyncStatus: React.FC<SyncStatusProps> = ({
   showDetails = false,
-  onSyncPress 
+  onSyncPress,
 }) => {
   const { theme } = useTheme();
-  const { 
-    isSyncing, 
-    syncProgress, 
-    lastSyncAt, 
+  const {
+    isSyncing,
+    syncProgress,
+    lastSyncAt,
     hasLocalData,
     isInitialized,
-    syncNow 
+    syncNow,
   } = useSync();
 
-  const handleSyncPress = () => {
+  const {
+    hasRemoteChanges,
+    isEnabled: isBackgroundSyncEnabled,
+    checkForRemoteChanges,
+  } = useBackgroundSync();
+
+  const handleSyncPress = async () => {
     if (onSyncPress) {
       onSyncPress();
     } else {
-      syncNow();
+      // Check for changes before syncing
+      await checkForRemoteChanges();
+      await syncNow();
     }
   };
 
   const formatLastSync = (timestamp: string | null) => {
     if (!timestamp) return 'Never';
-    
+
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 1) {
       return 'Just now';
     } else if (diffInHours < 24) {
@@ -48,8 +63,9 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({
 
   if (!isInitialized) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-        <ActivityIndicator size="small" color={theme.colors.primary} />
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+        <ActivityIndicator size='small' color={theme.colors.primary} />
         <Text style={[styles.statusText, { color: theme.colors.text }]}>
           Initializing...
         </Text>
@@ -60,16 +76,39 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
       <View style={styles.statusRow}>
-        {isSyncing && <ActivityIndicator size="small" color={theme.colors.primary} />}
-        
+        {isSyncing && (
+          <ActivityIndicator size='small' color={theme.colors.primary} />
+        )}
+
         <View style={styles.statusInfo}>
           <Text style={[styles.statusText, { color: theme.colors.text }]}>
-            {isSyncing ? 'Syncing...' : hasLocalData ? 'Up to date' : 'No data'}
+            {isSyncing
+              ? 'Syncing...'
+              : hasLocalData
+                ? hasRemoteChanges
+                  ? 'Updates available'
+                  : 'Up to date'
+                : 'No data'}
           </Text>
-          
+
           {showDetails && lastSyncAt && (
-            <Text style={[styles.lastSyncText, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.lastSyncText,
+                { color: theme.colors.textSecondary },
+              ]}>
               Last sync: {formatLastSync(lastSyncAt)}
+            </Text>
+          )}
+
+          {showDetails && (
+            <Text
+              style={[
+                styles.lastSyncText,
+                { color: theme.colors.textSecondary },
+              ]}>
+              Background sync:{' '}
+              {isBackgroundSyncEnabled ? 'Enabled' : 'Disabled'}
             </Text>
           )}
         </View>
@@ -78,12 +117,15 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({
           style={[
             styles.syncButton,
             { backgroundColor: theme.colors.primary },
-            isSyncing && { opacity: 0.6 }
+            isSyncing && { opacity: 0.6 },
           ]}
           onPress={handleSyncPress}
-          disabled={isSyncing}
-        >
-          <Text style={[styles.syncButtonText, { color: theme.colors.textInverse }]}>
+          disabled={isSyncing}>
+          <Text
+            style={[
+              styles.syncButtonText,
+              { color: theme.colors.textInverse },
+            ]}>
             {isSyncing ? 'Syncing' : 'Sync'}
           </Text>
         </TouchableOpacity>
@@ -91,7 +133,11 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({
 
       {syncProgress && (
         <View style={styles.progressContainer}>
-          <Text style={[styles.progressText, { color: theme.colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.progressText,
+              { color: theme.colors.textSecondary },
+            ]}>
             {syncProgress.table}: {syncProgress.recordsSynced} records
             {syncProgress.error && ` (Error: ${syncProgress.error})`}
           </Text>
@@ -141,4 +187,4 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 12,
   },
-}); 
+});

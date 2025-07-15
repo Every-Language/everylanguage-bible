@@ -22,13 +22,13 @@ class DatabaseManager {
 
     try {
       console.log('Initializing database...');
-      
+
       // Open the database
       this.db = await SQLite.openDatabaseAsync(DATABASE_NAME);
 
       // Create tables and schema
       await createTables(this.db);
-      
+
       this.isInitialized = true;
       console.log('Database initialized successfully');
     } catch (error) {
@@ -44,12 +44,15 @@ class DatabaseManager {
     return this.db;
   }
 
+  get initialized(): boolean {
+    return this.isInitialized;
+  }
+
   async close(): Promise<void> {
     if (this.db) {
       await this.db.closeAsync();
       this.db = null;
       this.isInitialized = false;
-      console.log('Database closed');
     }
   }
 
@@ -91,4 +94,4 @@ class DatabaseManager {
   }
 }
 
-export const databaseManager = DatabaseManager.getInstance(); 
+export const databaseManager = DatabaseManager.getInstance();

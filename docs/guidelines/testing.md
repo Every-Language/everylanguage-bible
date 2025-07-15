@@ -39,7 +39,6 @@ With Expo Managed Workflow, testing is simplified:
 
 - Component integration with state management
 - Database operations with SQLite
-- PowerSync synchronization logic
 - Authentication flows
 - Audio player integration
 - Notification handling

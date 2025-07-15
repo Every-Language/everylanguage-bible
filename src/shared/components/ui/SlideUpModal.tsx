@@ -1,138 +1,117 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { StyleSheet } from 'react-native';
 import {
-  Modal,
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Dimensions,
-  PanResponder,
-} from 'react-native';
+  BottomSheetModal,
+  BottomSheetView,
+  BottomSheetBackdrop,
+  BottomSheetModalProvider,
+  BottomSheetBackdropProps,
+} from '@gorhom/bottom-sheet';
 import { useTheme } from '@/shared/context/ThemeContext';
 
 interface SlideUpModalProps {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  height?: number;
+  /** Snap points for the modal (default: ['80%'] for simple open/close) */
+  snapPoints?: string[];
+  /** Allow dismissing by tapping outside (default: true) */
+  enableDismissOnClose?: boolean;
+  /** Allow dismissing by dragging down (default: true) */
+  enablePanDownToClose?: boolean;
+  /** Custom backdrop component */
+  backdropComponent?: React.FC<BottomSheetBackdropProps>;
 }
-
-const { height: screenHeight } = Dimensions.get('window');
 
 export const SlideUpModal: React.FC<SlideUpModalProps> = ({
   visible,
   onClose,
   children,
-  height = screenHeight * 0.8,
+  snapPoints = ['80%'], // Default to simple open/close
+  enableDismissOnClose = true,
+  enablePanDownToClose = true,
+  backdropComponent,
 }) => {
   const { theme } = useTheme();
-  const translateY = useRef(new Animated.Value(height)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (_, gestureState) => {
-      return gestureState.dy > 5;
-    },
-    onPanResponderMove: (_, gestureState) => {
-      if (gestureState.dy > 0) {
-        translateY.setValue(gestureState.dy);
-      }
-    },
-    onPanResponderRelease: (_, gestureState) => {
-      if (gestureState.dy > height * 0.3) {
-        closeModal();
-      } else {
-        showModal();
-      }
-    },
-  });
+  // Memoize snap points for better performance
+  const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
 
-  const showModal = () => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const closeModal = () => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: height,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(({ finished }) => {
-      if (finished) {
-        onClose();
-      }
-    });
-  };
-
+  // Present/dismiss modal based on visible prop
   useEffect(() => {
     if (visible) {
-      showModal();
+      bottomSheetModalRef.current?.present();
     } else {
-      translateY.setValue(height);
-      opacity.setValue(0);
+      bottomSheetModalRef.current?.dismiss();
     }
   }, [visible]);
 
+  // Handle sheet changes
+  const handleSheetChanges = useCallback(
+    (index: number) => {
+      // If modal is dismissed (index -1), call onClose
+      if (index === -1) {
+        onClose();
+      }
+    },
+    [onClose]
+  );
+
+  // Custom backdrop component that covers the entire screen
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        onPress={enableDismissOnClose ? onClose : undefined}
+        style={[
+          props.style,
+          {
+            // Cover the entire screen from top to bottom
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            position: 'absolute',
+          },
+        ]}
+      />
+    ),
+    [enableDismissOnClose, onClose]
+  );
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={closeModal}
-    >
-      <View style={styles.overlay}>
-        <TouchableOpacity
-          style={styles.overlayBackground}
-          activeOpacity={1}
-          onPress={closeModal}
-        />
-        <Animated.View
-          style={[
-            styles.modal,
-            {
-              backgroundColor: theme.colors.background,
-              height,
-              transform: [{ translateY }],
-            },
-          ]}
-          {...panResponder.panHandlers}
-        >
-          <View style={[styles.handle, { backgroundColor: theme.colors.border }]} />
-          <View style={styles.content}>
-            {children}
-          </View>
-        </Animated.View>
-      </View>
-    </Modal>
+    <BottomSheetModalProvider>
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        index={0} // Always start at first (and typically only) snap point
+        snapPoints={memoizedSnapPoints}
+        onChange={handleSheetChanges}
+        onDismiss={onClose}
+        enableDismissOnClose={enableDismissOnClose}
+        enablePanDownToClose={enablePanDownToClose}
+        backdropComponent={backdropComponent || renderBackdrop}
+        backgroundStyle={[
+          styles.modal,
+          { backgroundColor: theme.colors.background },
+        ]}
+        handleIndicatorStyle={[
+          styles.handle,
+          { backgroundColor: theme.colors.border },
+        ]}
+        keyboardBehavior='fillParent'
+        keyboardBlurBehavior='restore'
+        android_keyboardInputMode='adjustResize'>
+        <BottomSheetView style={styles.content}>{children}</BottomSheetView>
+      </BottomSheetModal>
+    </BottomSheetModalProvider>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  overlayBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
   modal: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -149,11 +128,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 8,
   },
   content: {
     flex: 1,
+    paddingHorizontal: 16,
   },
-}); 
+});

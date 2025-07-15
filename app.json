@@ -5,12 +5,13 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.everylanguage.elbible"
+      "bundleIdentifier": "com.everylanguage.elbible",
+      "infoPlist": {
+        "UIBackgroundModes": ["background-fetch", "background-processing"]
+      }
     },
     "android": {
       "package": "com.everylanguage.elbible"
@@ -22,7 +23,9 @@
       "expo-localization",
       "expo-notifications",
       "expo-audio",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-background-fetch",
+      "expo-task-manager"
     ],
     "scheme": "el-bible",
     "newArchEnabled": true,

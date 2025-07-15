@@ -1,0 +1,273 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '@/shared/context/ThemeContext';
+import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+
+interface MediaControlsProps {
+  showAlbumArt?: boolean;
+  compact?: boolean;
+}
+
+export const MediaControls: React.FC<MediaControlsProps> = ({
+  showAlbumArt = false,
+  compact = false,
+}) => {
+  const { theme } = useTheme();
+  const { state, actions } = useMediaPlayer();
+
+  const handlePlayPause = () => {
+    if (state.isPlaying) {
+      actions.pause();
+    } else {
+      actions.play();
+    }
+  };
+
+  const handleSkipBack = () => {
+    actions.seekTo(Math.max(0, (state.currentTrack?.currentTime || 0) - 10));
+  };
+
+  const handleSkipForward = () => {
+    if (state.currentTrack) {
+      actions.seekTo(
+        Math.min(
+          state.currentTrack.duration,
+          state.currentTrack.currentTime + 10
+        )
+      );
+    }
+  };
+
+  const handleNextTrack = () => {
+    actions.nextTrack();
+  };
+
+  const handlePreviousTrack = () => {
+    actions.previousTrack();
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getSpeedDisplay = (): string => {
+    return `${state.playbackRate}x`;
+  };
+
+  const progressPercentage = state.currentTrack?.duration
+    ? (state.currentTrack.currentTime / state.currentTrack.duration) * 100
+    : 0;
+
+  if (!state.currentTrack) return null;
+
+  return (
+    <View style={[styles.container, compact && styles.compactContainer]}>
+      {/* Progress Bar */}
+      <View style={styles.progressBarContainer}>
+        <View
+          style={[
+            styles.progressBar,
+            { backgroundColor: theme.colors.border },
+          ]}>
+          <View
+            style={[
+              styles.progressFill,
+              {
+                backgroundColor: theme.colors.primary,
+                width: `${progressPercentage}%`,
+              },
+            ]}
+          />
+        </View>
+      </View>
+
+      {/* Main Controls */}
+      <View
+        style={[
+          styles.controlsContainer,
+          compact && styles.compactControlsContainer,
+        ]}>
+        {/* Album Art */}
+        {showAlbumArt && (
+          <View style={styles.albumArtContainer}>
+            <Image
+              source={{
+                uri: 'https://via.placeholder.com/60x60/8B5CF6/FFFFFF?text=📖',
+              }}
+              style={styles.albumArt}
+            />
+          </View>
+        )}
+
+        {/* Control Buttons */}
+        <View style={styles.controls}>
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={handlePreviousTrack}>
+            <MaterialIcons
+              name='skip-previous'
+              size={compact ? 24 : 32}
+              color={theme.colors.text}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={handleSkipBack}>
+            <Text style={[styles.controlText, { color: theme.colors.text }]}>
+              -10
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.playButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={handlePlayPause}>
+            <MaterialIcons
+              name={state.isPlaying ? 'pause' : 'play-arrow'}
+              size={compact ? 28 : 40}
+              color={theme.colors.background}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={handleSkipForward}>
+            <Text style={[styles.controlText, { color: theme.colors.text }]}>
+              +10
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={handleNextTrack}>
+            <MaterialIcons
+              name='skip-next'
+              size={compact ? 24 : 32}
+              color={theme.colors.text}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Time and Speed */}
+        {!compact && (
+          <View style={styles.timeInfo}>
+            <Text
+              style={[styles.timeText, { color: theme.colors.textSecondary }]}>
+              {formatTime(state.currentTrack.currentTime)}
+            </Text>
+            <Text
+              style={[styles.speedText, { color: theme.colors.textSecondary }]}>
+              {getSpeedDisplay()}
+            </Text>
+            <Text
+              style={[styles.timeText, { color: theme.colors.textSecondary }]}>
+              {formatTime(state.currentTrack.duration)}
+            </Text>
+          </View>
+        )}
+
+        {/* Compact Time Display */}
+        {compact && (
+          <View style={styles.compactTimeInfo}>
+            <Text
+              style={[styles.timeText, { color: theme.colors.textSecondary }]}>
+              {formatTime(state.currentTrack.currentTime)} /{' '}
+              {formatTime(state.currentTrack.duration)}
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  compactContainer: {
+    paddingVertical: 4,
+  },
+  progressBarContainer: {
+    height: 2,
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: 2,
+    width: '100%',
+    borderRadius: 1,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 1,
+  },
+  controlsContainer: {
+    alignItems: 'center',
+  },
+  compactControlsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+  },
+  albumArtContainer: {
+    marginBottom: 12,
+  },
+  albumArt: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    flex: 1,
+  },
+  controlButton: {
+    padding: 8,
+    marginHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controlText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  playButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 12,
+  },
+  timeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 4,
+  },
+  compactTimeInfo: {
+    alignItems: 'flex-end',
+    minWidth: 60,
+  },
+  timeText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  speedText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});

@@ -79,7 +79,6 @@ npx expo install react-native-screens react-native-safe-area-context
 npm install zustand @tanstack/react-query
 
 # Database and sync
-npm install drizzle-orm better-sqlite3 @powersync/react-native
 npx expo install expo-sqlite
 
 # Authentication and backend
@@ -159,15 +158,6 @@ BACKBLAZE_KEY_ID=your_key_id
 BACKBLAZE_APPLICATION_KEY=your_app_key
 BACKBLAZE_BUCKET_NAME=your_bucket_name
 
-# Analytics
-EXPO_PUBLIC_POSTHOG_API_KEY=your_posthog_key
-EXPO_PUBLIC_POSTHOG_HOST=your_posthog_host
-
-# Sentry
-SENTRY_DSN=your_sentry_dsn
-
-# PowerSync
-POWERSYNC_URL=your_powersync_url
 ```
 
 - [ ] Create `.env` file with actual values
@@ -182,14 +172,7 @@ POWERSYNC_URL=your_powersync_url
 - [x] Set up authentication providers (email, phone)
 - [ ] Generate and save API keys
 - [ ] Test connection from app
-
-### 4.2 PowerSync Configuration
-
-- [ ] Create PowerSync account and project
-- [ ] Configure sync rules
-- [ ] Set up Supabase integration
-- [ ] Test sync functionality
-- [ ] Document sync patterns
+      but
 
 ### 4.3 Backblaze B2 Setup
 
@@ -420,7 +403,6 @@ jobs:
 ### 10.3 Service Integration Testing
 
 - [ ] Test Supabase integration
-- [ ] Verify PowerSync functionality
 - [ ] Test file storage operations
 - [ ] Verify analytics tracking
 - [ ] Test error monitoring
