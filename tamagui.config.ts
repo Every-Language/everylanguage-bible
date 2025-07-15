@@ -4,6 +4,12 @@ import { shorthands } from '@tamagui/shorthands';
 import { themes, tokens } from '@tamagui/themes';
 import { createMedia } from '@tamagui/react-native-media-driver';
 import { createAnimations } from '@tamagui/animations-react-native';
+import {
+  lightTheme,
+  darkTheme,
+  lightShadows,
+  darkShadows,
+} from './src/shared/constants/tamagui-themes';
 
 const config = createTamagui({
   defaultFont: 'body',
@@ -85,8 +91,12 @@ const config = createTamagui({
       },
     }),
   },
-  themes,
   tokens,
+  themes: {
+    ...themes,
+    light_omt: lightTheme,
+    dark_omt: darkTheme,
+  },
   media: createMedia({
     xs: { maxWidth: 660 },
     sm: { maxWidth: 800 },

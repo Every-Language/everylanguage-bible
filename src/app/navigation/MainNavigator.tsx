@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { BibleBooksScreen } from '@/features/bible/screens/BibleBooksScreen';
+import { ThemeDemoScreen } from '@/features/theme';
 import { MiniPlayer } from '@/features/audio/components/MiniPlayer';
 import { type Book } from '@/shared/utils';
 import { useAudioStore, useTheme, useQueueStore } from '@/shared/store';
@@ -16,6 +17,7 @@ const getRecordingId = (book: Book, chapter: number): string => {
 export const MainNavigator: React.FC = () => {
   const { colors } = useTheme();
   const audioStore = useAudioStore();
+  const [showThemeDemo, setShowThemeDemo] = useState(false);
   const {
     currentRecording,
     currentChapter,
@@ -142,6 +144,14 @@ export const MainNavigator: React.FC = () => {
     }
   };
 
+  const handleThemeDemoPress = () => {
+    setShowThemeDemo(true);
+  };
+
+  const handleThemeDemoBack = () => {
+    setShowThemeDemo(false);
+  };
+
   const handleVerseSelect = async (
     book: Book,
     chapter: number,
@@ -237,10 +247,15 @@ export const MainNavigator: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <BibleBooksScreen
-        onChapterSelect={handleChapterSelect}
-        onVerseSelect={handleVerseSelect}
-      />
+      {showThemeDemo ? (
+        <ThemeDemoScreen onBack={handleThemeDemoBack} />
+      ) : (
+        <BibleBooksScreen
+          onChapterSelect={handleChapterSelect}
+          onVerseSelect={handleVerseSelect}
+          onThemeDemoPress={handleThemeDemoPress}
+        />
+      )}
 
       {/* Mini Player Overlay - Show when we have a current recording */}
       {currentRecording && (

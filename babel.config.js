@@ -20,15 +20,14 @@ module.exports = function (api) {
           include: ['EXPO_ROUTER_APP_ROOT'],
         },
       ],
-      // Temporarily disable Tamagui babel plugin for web debugging
-      // [
-      //   '@tamagui/babel-plugin',
-      //   {
-      //     components: ['tamagui'],
-      //     config: './tamagui.config.ts',
-      //     logTimings: true,
-      //   },
-      // ],
+      [
+        '@tamagui/babel-plugin',
+        {
+          components: ['tamagui'],
+          config: './tamagui.config.ts',
+          logTimings: true,
+        },
+      ],
     ],
   };
 };

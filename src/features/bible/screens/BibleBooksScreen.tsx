@@ -19,6 +19,54 @@ import {
   SlideUpPanel,
 } from '@/shared/components/ui';
 import { MoreIcon } from '@/shared/components/ui/icons/AudioIcons';
+
+// Eye icon component for theme demo
+const EyeIcon: React.FC<{ size: number; color: string }> = ({
+  size,
+  color,
+}) => (
+  <View
+    style={{
+      width: size,
+      height: size,
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}>
+    <View
+      style={{
+        width: size * 0.8,
+        height: size * 0.5,
+        borderRadius: size * 0.25,
+        borderWidth: 2,
+        borderColor: color,
+        backgroundColor: 'transparent',
+        position: 'relative',
+      }}>
+      <View
+        style={{
+          position: 'absolute',
+          top: size * 0.1,
+          left: size * 0.15,
+          width: size * 0.2,
+          height: size * 0.2,
+          borderRadius: size * 0.1,
+          backgroundColor: color,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: size * 0.1,
+          right: size * 0.15,
+          width: size * 0.2,
+          height: size * 0.2,
+          borderRadius: size * 0.1,
+          backgroundColor: color,
+        }}
+      />
+    </View>
+  </View>
+);
 import { ChapterCard } from '../components';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
@@ -36,6 +84,7 @@ import { getBookImageSource } from '@/shared/services';
 interface BibleBooksScreenProps {
   onChapterSelect: (book: Book, chapter: number) => void;
   onVerseSelect: (book: Book, chapter: number, verse: number) => void;
+  onThemeDemoPress?: () => void;
 }
 
 type TestamentMode = 'old' | 'new';
@@ -422,6 +471,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
 export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
   onVerseSelect,
+  onThemeDemoPress,
 }) => {
   const { colors, toggleTheme } = useTheme();
   const { openChapterCard } = useChapterCardStore();
@@ -480,6 +530,10 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     setShowOptionsPanel(false);
   };
 
+  const handleThemeDemoPress = () => {
+    onThemeDemoPress?.();
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -493,9 +547,8 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'space-between',
       marginBottom: Dimensions.spacing.md,
-      position: 'relative',
     },
     title: {
       fontSize: Fonts.size['3xl'],
@@ -503,9 +556,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       color: colors.text,
       textAlign: 'center',
     },
-    optionsButton: {
-      position: 'absolute',
-      right: 0,
+    headerButton: {
       backgroundColor: colors.primary,
       paddingHorizontal: Dimensions.spacing.md,
       paddingVertical: Dimensions.spacing.sm,
@@ -555,9 +606,17 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={handleThemeDemoPress}
+            accessibilityLabel='Theme demo'
+            accessibilityRole='button'
+            testID='theme-demo-button'>
+            <EyeIcon size={18} color={colors.background} />
+          </TouchableOpacity>
           <Text style={styles.title}>Bible</Text>
           <TouchableOpacity
-            style={styles.optionsButton}
+            style={styles.headerButton}
             onPress={handleOptionsPress}
             accessibilityLabel='Options menu'
             accessibilityRole='button'
