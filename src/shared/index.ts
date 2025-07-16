@@ -24,10 +24,9 @@ export * from './utils/theme';
 // Export services
 export * from './services/i18n/config';
 export * from './services/database/DatabaseManager';
-export * from './services/database/SyncService';
-export * from './services/database/BackgroundSyncService';
 export * from './services/database/LocalDataService';
 export * from './services/database/schema';
+export * from './services/sync';
 
 // Export hooks
 export * from './hooks/useBackgroundSync';

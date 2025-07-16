@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import * as BackgroundFetch from 'expo-background-fetch';
-import { backgroundSyncService } from '../services/database/BackgroundSyncService';
-import { syncService } from '../services/database/SyncService';
+import { backgroundSyncService } from '../services/sync/BackgroundSyncService';
+import { bibleSync } from '../services/sync/bible/BibleSyncService';
 import { useSync } from '../context/SyncContext';
 
 export interface BackgroundSyncState {
@@ -10,10 +10,11 @@ export interface BackgroundSyncState {
   status: BackgroundFetch.BackgroundFetchStatus;
   isEnabled: boolean;
   hasRemoteChanges: boolean;
+  lastUpdateCheck?: string;
 }
 
 export const useBackgroundSync = () => {
-  const { isInitialized } = useSync(); // Add dependency on database initialization
+  const { isInitialized } = useSync();
   const [state, setState] = useState<BackgroundSyncState>({
     isRegistered: false,
     status: BackgroundFetch.BackgroundFetchStatus.Denied,
@@ -35,8 +36,7 @@ export const useBackgroundSync = () => {
         // Check current status
         const status = await backgroundSyncService.getBackgroundFetchStatus();
         const isRegistered = await backgroundSyncService.isTaskRegistered();
-        const isEnabled =
-          status === BackgroundFetch.BackgroundFetchStatus.Available;
+        const isEnabled = backgroundSyncService.isEnabled;
 
         setState(prev => ({
           ...prev,
@@ -46,7 +46,10 @@ export const useBackgroundSync = () => {
         }));
 
         // Auto-register if available
-        if (isEnabled && !isRegistered) {
+        if (
+          status === BackgroundFetch.BackgroundFetchStatus.Available &&
+          !isRegistered
+        ) {
           await backgroundSyncService.registerBackgroundFetch();
           setState(prev => ({ ...prev, isRegistered: true }));
         }
@@ -60,14 +63,19 @@ export const useBackgroundSync = () => {
     initializeBackgroundSync();
   }, []);
 
-  // Check for remote changes periodically - only after database is initialized
+  // Check for remote changes periodically - optimized for bible content
   useEffect(() => {
-    if (!isInitialized) return; // Wait for database to be initialized
+    if (!isInitialized) return;
 
     const checkForChanges = async () => {
       try {
-        const hasChanges = await syncService.hasRemoteChanges('books');
-        setState(prev => ({ ...prev, hasRemoteChanges: hasChanges }));
+        // Use the optimized needsUpdate method for bible content
+        const updateCheck = await bibleSync.needsUpdate();
+        setState(prev => ({
+          ...prev,
+          hasRemoteChanges: updateCheck.needsUpdate,
+          lastUpdateCheck: new Date().toISOString(),
+        }));
       } catch (error) {
         console.error('Failed to check for remote changes:', error);
       }
@@ -76,13 +84,14 @@ export const useBackgroundSync = () => {
     // Check immediately
     checkForChanges();
 
-    // Set up interval to check periodically (every 5 minutes when app is active)
-    const interval = setInterval(checkForChanges, 5 * 60 * 1000);
+    // For bible content, check less frequently (every 30 minutes when app is active)
+    const interval = setInterval(checkForChanges, 30 * 60 * 1000);
 
     // Listen for app state changes
     const handleAppStateChange = (nextAppState: string) => {
       if (nextAppState === 'active') {
-        checkForChanges();
+        // Check for updates when app becomes active
+        setTimeout(checkForChanges, 1000); // Small delay to ensure app is fully active
       }
     };
 
@@ -95,7 +104,7 @@ export const useBackgroundSync = () => {
       clearInterval(interval);
       appStateSubscription?.remove();
     };
-  }, [isInitialized]); // Add isInitialized as dependency
+  }, [isInitialized]);
 
   const enableBackgroundSync = async (): Promise<boolean> => {
     try {
@@ -114,6 +123,7 @@ export const useBackgroundSync = () => {
         return true;
       }
 
+      console.warn('Background fetch is not available:', status);
       return false;
     } catch (error) {
       console.error('Failed to enable background sync:', error);
@@ -140,21 +150,28 @@ export const useBackgroundSync = () => {
 
   const checkForRemoteChanges = async (): Promise<boolean> => {
     try {
-      const hasChanges = await syncService.hasRemoteChanges('books');
-      setState(prev => ({ ...prev, hasRemoteChanges: hasChanges }));
-      return hasChanges;
+      const updateCheck = await bibleSync.needsUpdate();
+      setState(prev => ({
+        ...prev,
+        hasRemoteChanges: updateCheck.needsUpdate,
+        lastUpdateCheck: new Date().toISOString(),
+      }));
+      return updateCheck.needsUpdate;
     } catch (error) {
       console.error('Failed to check for remote changes:', error);
       return false;
     }
   };
 
-  const getChangesSummary = async (): Promise<Record<string, boolean>> => {
+  const getChangesSummary = async (): Promise<{
+    needsUpdate: boolean;
+    tables: string[];
+  }> => {
     try {
-      return await syncService.getRemoteChangesSummary(['books']);
+      return await bibleSync.needsUpdate();
     } catch (error) {
       console.error('Failed to get changes summary:', error);
-      return {};
+      return { needsUpdate: false, tables: [] };
     }
   };
 

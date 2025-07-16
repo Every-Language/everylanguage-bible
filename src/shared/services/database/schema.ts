@@ -6,6 +6,11 @@ export interface SyncMetadata {
   total_records: number;
   sync_status: 'idle' | 'syncing' | 'error';
   error_message?: string;
+  // New fields for bible content sync optimization
+  content_version?: string; // For version-based syncing
+  last_version_check?: string; // When we last checked for new versions
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface LocalBook {
@@ -49,7 +54,7 @@ export const createTables = async (
   // Enable foreign keys
   await db.execAsync('PRAGMA foreign_keys = ON');
 
-  // Sync metadata table to track sync state
+  // Enhanced sync metadata table to track sync state with bible content optimizations
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS sync_metadata (
       table_name TEXT PRIMARY KEY,
@@ -57,6 +62,8 @@ export const createTables = async (
       total_records INTEGER DEFAULT 0,
       sync_status TEXT DEFAULT 'idle',
       error_message TEXT,
+      content_version TEXT,
+      last_version_check TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
@@ -143,7 +150,7 @@ export const createTables = async (
     'CREATE INDEX IF NOT EXISTS idx_verses_updated_at ON verses(updated_at)'
   );
 
-  // Initialize sync metadata
+  // Initialize sync metadata for bible content
   await db.execAsync(`
     INSERT OR IGNORE INTO sync_metadata (table_name, last_sync)
     VALUES ('books', '1970-01-01T00:00:00.000Z')

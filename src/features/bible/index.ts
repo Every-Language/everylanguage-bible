@@ -29,9 +29,9 @@ export { useVerses } from './hooks/useVerses';
 export { BookCard } from './components/BookCard';
 export { BookGrid } from './components/BookGrid';
 export { BookList } from './components/BookList';
+export { ChapterCard } from './components/ChapterCard';
+export { VerseCard } from './components/VerseCard';
 
-// Bible context
-export {
-  BibleNavigationProvider,
-  useBibleNavigation,
-} from './context/BibleNavigationContext';
+// Bible navigation (React Navigation)
+export { BibleStackNavigator } from './navigation/BibleStackNavigator';
+export type { BibleStackParamList } from './navigation/BibleStackNavigator';

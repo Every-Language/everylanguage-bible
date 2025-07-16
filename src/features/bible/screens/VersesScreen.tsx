@@ -8,32 +8,31 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
 import { useTheme } from '../../../shared/context/ThemeContext';
+import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
 import { useVerses } from '../hooks/useVerses';
+import { VerseCard } from '@/features/bible/components/VerseCard';
 import type { Chapter, Verse } from '../types';
+import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 
-interface VersesScreenProps {
-  chapter: Chapter;
-  onBack: () => void;
-  onPlayVerse?: ((verse: Verse) => void) | undefined;
-  _onQueueVerse?: ((verse: Verse) => void) | undefined;
-  onPlayChapter?: ((chapter: Chapter) => void) | undefined;
-  onQueueChapter?: ((chapter: Chapter) => void) | undefined;
-  onShareChapter?: ((chapter: Chapter) => void) | undefined;
-  onShareVerse?: ((verse: Verse) => void) | undefined;
-}
+type VersesScreenProps = NativeStackScreenProps<
+  BibleStackParamList,
+  'BibleVerses'
+>;
 
-export const VersesScreen: React.FC<VersesScreenProps> = ({
-  chapter,
-  onBack,
-  onPlayVerse = () => {},
-  _onQueueVerse = () => {},
-  onPlayChapter = () => {},
-  onQueueChapter = () => {},
-  onShareChapter = () => {},
-  onShareVerse = () => {},
-}) => {
+export const VersesScreen: React.FC = () => {
   const { theme } = useTheme();
+  const { actions: mediaActions } = useMediaPlayer();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<BibleStackParamList>>();
+  const route = useRoute<VersesScreenProps['route']>();
+
+  const { book, chapter } = route.params;
   const { verses, loading, error } = useVerses(chapter.id);
 
   const styles = StyleSheet.create({
@@ -120,44 +119,6 @@ export const VersesScreen: React.FC<VersesScreenProps> = ({
     versesList: {
       padding: 16,
     },
-    verseCard: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    verseHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 12,
-    },
-    verseNumber: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.colors.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    verseActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    verseActionButton: {
-      padding: 4,
-    },
-    verseContent: {
-      fontSize: 16,
-      lineHeight: 24,
-      color: theme.colors.text,
-    },
-    placeholderText: {
-      fontStyle: 'italic',
-      color: theme.colors.textSecondary,
-    },
     emptyContainer: {
       flex: 1,
       justifyContent: 'center',
@@ -172,7 +133,6 @@ export const VersesScreen: React.FC<VersesScreenProps> = ({
   });
 
   const formatChapterTitle = (chapter: Chapter) => {
-    // We'll need to get the book name - for now using placeholder
     return `Chapter ${chapter.chapter_number}`;
   };
 
@@ -184,35 +144,88 @@ export const VersesScreen: React.FC<VersesScreenProps> = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const createMockTrackForChapter =
+    (): import('../../../shared/context/MediaPlayerContext').MediaTrack => {
+      // Estimate duration based on verse count (rough calculation)
+      const estimatedDuration = chapter.total_verses * 20; // ~20 seconds per verse
+
+      return {
+        id: `${book.id}-${chapter.id}`,
+        title: `${book.name} - Chapter ${chapter.chapter_number}`,
+        subtitle: `${chapter.total_verses} verses • ${Math.floor(estimatedDuration / 60)}:${(estimatedDuration % 60).toString().padStart(2, '0')}`,
+        duration: estimatedDuration,
+        currentTime: 0,
+        book: book.name,
+        chapter: `Chapter ${chapter.chapter_number}`,
+        url: `mock://audio/${book.id}/${chapter.id}`, // Mock URL for testing
+      };
+    };
+
+  const createMockTrackForVerse = (
+    verse: Verse
+  ): import('../../../shared/context/MediaPlayerContext').MediaTrack => {
+    // Estimate duration for a single verse (rough calculation)
+    const estimatedDuration = 20; // ~20 seconds per verse
+
+    return {
+      id: `${book.id}-${chapter.id}-${verse.id}`,
+      title: `${book.name} ${chapter.chapter_number}:${verse.verse_number}`,
+      subtitle: `Verse ${verse.verse_number}`,
+      duration: estimatedDuration,
+      currentTime: 0,
+      book: book.name,
+      chapter: `Chapter ${chapter.chapter_number}`,
+      verse: `Verse ${verse.verse_number}`,
+      url: `mock://audio/${book.id}/${chapter.id}/${verse.id}`, // Mock URL for testing
+    };
+  };
+
+  const handlePlayChapter = () => {
+    // Create mock track data and load it into the media player
+    const mockTrack = createMockTrackForChapter();
+
+    console.log('Playing chapter:', chapter);
+    console.log('Mock track data:', mockTrack);
+
+    // Set the track and start playback
+    mediaActions.setCurrentTrack(mockTrack);
+    mediaActions.play();
+  };
+
+  const handleQueueChapter = () => {
+    // TODO: Implement queue chapter functionality
+    console.log('Queue chapter:', chapter);
+  };
+
+  const handleShareChapter = () => {
+    // TODO: Implement share chapter functionality
+    console.log('Share chapter:', chapter);
+  };
+
+  const handlePlayVerse = (verse: Verse) => {
+    // Create mock track data and load it into the media player
+    const mockTrack = createMockTrackForVerse(verse);
+
+    console.log('Playing verse:', verse);
+    console.log('Mock track data:', mockTrack);
+
+    // Set the track and start playback
+    mediaActions.setCurrentTrack(mockTrack);
+    mediaActions.play();
+  };
+
+  const handleShareVerse = (verse: Verse) => {
+    // TODO: Implement share verse functionality
+    console.log('Share verse:', verse);
+  };
+
   const renderVerseCard = (verse: Verse) => (
-    <View key={verse.id} style={styles.verseCard}>
-      <View style={styles.verseHeader}>
-        <Text style={styles.verseNumber}>VERSE {verse.verse_number}</Text>
-        <View style={styles.verseActions}>
-          <TouchableOpacity
-            style={styles.verseActionButton}
-            onPress={() => onShareVerse(verse)}>
-            <MaterialIcons
-              name='more-horiz'
-              size={20}
-              color={theme.colors.textSecondary}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.verseActionButton}
-            onPress={() => onPlayVerse(verse)}>
-            <MaterialIcons
-              name='play-arrow'
-              size={20}
-              color={theme.colors.textSecondary}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-      <Text style={[styles.verseContent, styles.placeholderText]}>
-        Verse content will be available when text versions are implemented
-      </Text>
-    </View>
+    <VerseCard
+      key={verse.id}
+      verse={verse}
+      onPlay={handlePlayVerse}
+      onShare={handleShareVerse}
+    />
   );
 
   const renderContent = () => {
@@ -269,11 +282,17 @@ export const VersesScreen: React.FC<VersesScreenProps> = ({
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <MaterialIcons name='close' size={24} color={theme.colors.text} />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <MaterialIcons
+              name='arrow-back'
+              size={24}
+              color={theme.colors.text}
+            />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Text style={styles.testament}>OLD TESTAMENT</Text>
+            <Text style={styles.testament}>{book.name.toUpperCase()}</Text>
             <Text style={styles.chapterTitle}>
               {formatChapterTitle(chapter)}
             </Text>
@@ -285,12 +304,12 @@ export const VersesScreen: React.FC<VersesScreenProps> = ({
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => onShareChapter(chapter)}>
+            onPress={handleShareChapter}>
             <MaterialIcons name='share' size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => onQueueChapter(chapter)}>
+            onPress={handleQueueChapter}>
             <MaterialIcons
               name='playlist-add'
               size={24}
@@ -299,8 +318,12 @@ export const VersesScreen: React.FC<VersesScreenProps> = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.playButton]}
-            onPress={() => onPlayChapter(chapter)}>
-            <MaterialIcons name='play-arrow' size={24} color='white' />
+            onPress={handlePlayChapter}>
+            <MaterialIcons
+              name='play-arrow'
+              size={24}
+              color={theme.colors.textInverse}
+            />
           </TouchableOpacity>
         </View>
       </View>

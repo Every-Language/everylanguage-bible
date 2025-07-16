@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useSync } from '@/shared/context/SyncContext';
 import { useBackgroundSync } from '@/shared/hooks/useBackgroundSync';
@@ -27,21 +28,34 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ onPress }) => {
 
   const { hasRemoteChanges } = useBackgroundSync();
 
-  const getConnectionIcon = () => {
-    if (!isConnected) return '🔴';
+  const getConnectionIcon = (): keyof typeof MaterialIcons.glyphMap => {
+    if (!isConnected) return 'cloud-off';
 
     switch (connectionType) {
       case 'wifi':
-        return '📶';
+        return 'wifi';
       case 'cellular':
-        return '📱';
+        return 'signal-cellular-4-bar';
       case 'bluetooth':
-        return '🔵';
+        return 'bluetooth';
       case 'ethernet':
-        return '🔌';
+        return 'cable';
       default:
-        return '🌐';
+        return 'language';
     }
+  };
+
+  const getStatusIcon = (): keyof typeof MaterialIcons.glyphMap | null => {
+    if (!isInitialized || isSyncing) return null;
+
+    // Only check for remote changes if database is initialized
+    if (isInitialized && hasRemoteChanges) return 'update';
+
+    if (!hasLocalData) return 'error';
+
+    if (!isConnected) return 'cloud-off';
+
+    return 'check-circle';
   };
 
   const getStatusText = () => {
@@ -77,31 +91,31 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ onPress }) => {
     if (isSyncing) return theme.colors.primary;
 
     // Only check for remote changes if database is initialized
-    if (isInitialized && hasRemoteChanges)
-      return theme.colors.warning || '#FF9500';
+    if (isInitialized && hasRemoteChanges) return theme.colors.warning;
 
-    if (!hasLocalData) return theme.colors.error || '#FF3B30';
+    if (!hasLocalData) return theme.colors.error;
 
     if (!isConnected) return theme.colors.textSecondary;
 
-    return theme.colors.success || '#34C759';
+    return theme.colors.success;
   };
 
   const getPillBackgroundColor = () => {
     if (!isInitialized) return theme.colors.surface;
 
-    if (isSyncing) return theme.colors.primary + '10';
+    if (isSyncing) return theme.colors.surfaceVariant;
 
     // Only check for remote changes if database is initialized
-    if (isInitialized && hasRemoteChanges)
-      return (theme.colors.warning || '#FF9500') + '10';
+    if (isInitialized && hasRemoteChanges) return theme.colors.surfaceVariant;
 
-    if (!hasLocalData) return (theme.colors.error || '#FF3B30') + '10';
+    if (!hasLocalData) return theme.colors.surfaceVariant;
 
     if (!isConnected) return theme.colors.surface;
 
-    return (theme.colors.success || '#34C759') + '10';
+    return theme.colors.surfaceVariant;
   };
+
+  const statusIcon = getStatusIcon();
 
   return (
     <TouchableOpacity
@@ -109,19 +123,31 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ onPress }) => {
         styles.container,
         {
           backgroundColor: getPillBackgroundColor(),
-          borderColor: getStatusColor() + '20',
         },
       ]}
       onPress={onPress}
       disabled={!onPress}>
       <View style={styles.content}>
-        <Text style={styles.connectionIcon}>{getConnectionIcon()}</Text>
+        <MaterialIcons
+          name={getConnectionIcon()}
+          size={12}
+          color={getStatusColor()}
+        />
 
         {isSyncing && (
           <ActivityIndicator
             size='small'
             color={theme.colors.primary}
             style={styles.spinner}
+          />
+        )}
+
+        {statusIcon && !isSyncing && (
+          <MaterialIcons
+            name={statusIcon}
+            size={12}
+            color={getStatusColor()}
+            style={styles.statusIcon}
           />
         )}
 
@@ -136,7 +162,6 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ onPress }) => {
 const styles = StyleSheet.create({
   container: {
     borderRadius: 12,
-    borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
     minWidth: 60,
@@ -146,10 +171,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  connectionIcon: {
-    fontSize: 12,
-  },
   spinner: {
+    marginRight: 2,
+  },
+  statusIcon: {
     marginRight: 2,
   },
   statusText: {

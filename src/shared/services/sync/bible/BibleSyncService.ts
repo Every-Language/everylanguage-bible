@@ -1,33 +1,43 @@
-import { supabase } from '../api/supabase';
-import { databaseManager } from './DatabaseManager';
-import type { SyncMetadata } from './schema';
+import { supabase } from '../../api/supabase';
+import { databaseManager } from '../../database/DatabaseManager';
+import type {
+  SyncOptions,
+  SyncResult,
+  BaseSyncService,
+  BibleSyncMetadata,
+  SyncConfig,
+} from '../types';
 import type { Tables } from '@everylanguage/shared-types';
 
-export interface SyncOptions {
-  batchSize?: number;
-  maxRetries?: number;
-  retryDelay?: number;
+export interface BibleSyncOptions extends SyncOptions {
+  forceFullSync?: boolean;
+  checkVersionOnly?: boolean;
 }
 
-export interface SyncResult {
-  success: boolean;
-  tableName: string;
-  recordsSynced: number;
-  error?: string;
-}
-
-class SyncService {
-  private static instance: SyncService;
+class BibleSyncService implements BaseSyncService {
+  private static instance: BibleSyncService;
   private isSyncing = false;
   private syncListeners: ((result: SyncResult) => void)[] = [];
+  private config: SyncConfig = {
+    strategy: 'version', // Use version-based syncing for bible content
+    checkInterval: 24 * 60 * 60 * 1000, // Check for updates once per day
+    autoSync: true,
+  };
+
+  // Cache for version check results to avoid frequent API calls
+  private versionCheckCache: Map<
+    string,
+    { version: string; timestamp: number }
+  > = new Map();
+  private readonly VERSION_CACHE_TTL = 60 * 60 * 1000; // 1 hour cache
 
   private constructor() {}
 
-  static getInstance(): SyncService {
-    if (!SyncService.instance) {
-      SyncService.instance = new SyncService();
+  static getInstance(): BibleSyncService {
+    if (!BibleSyncService.instance) {
+      BibleSyncService.instance = new BibleSyncService();
     }
-    return SyncService.instance;
+    return BibleSyncService.instance;
   }
 
   // Subscribe to sync events
@@ -45,31 +55,96 @@ class SyncService {
     this.syncListeners.forEach(listener => listener(result));
   }
 
-  async syncAll(options: SyncOptions = {}): Promise<SyncResult[]> {
+  /**
+   * Check if bible content needs updating (optimized for rarely changing data)
+   */
+  async needsUpdate(): Promise<{ needsUpdate: boolean; tables: string[] }> {
+    try {
+      const tables = ['books', 'chapters', 'verses'];
+      const tablesToUpdate: string[] = [];
+
+      for (const table of tables) {
+        // Check cache first
+        const cached = this.versionCheckCache.get(table);
+        if (cached && Date.now() - cached.timestamp < this.VERSION_CACHE_TTL) {
+          const localVersion = await this.getLocalVersion(table);
+          if (localVersion !== cached.version) {
+            tablesToUpdate.push(table);
+          }
+          continue;
+        }
+
+        // Check remote version (this would ideally be a lightweight endpoint)
+        const hasChanges = await this.hasRemoteChanges(table);
+        if (hasChanges) {
+          tablesToUpdate.push(table);
+        }
+      }
+
+      return {
+        needsUpdate: tablesToUpdate.length > 0,
+        tables: tablesToUpdate,
+      };
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+      return { needsUpdate: false, tables: [] };
+    }
+  }
+
+  /**
+   * Optimized sync method for bible content
+   */
+  async syncAll(options: BibleSyncOptions = {}): Promise<SyncResult[]> {
     if (this.isSyncing) {
-      throw new Error('Sync is already in progress');
+      throw new Error('Bible sync is already in progress');
     }
 
     this.isSyncing = true;
     const results: SyncResult[] = [];
 
     try {
+      // Check if we need to sync at all (unless force sync)
+      if (!options.forceFullSync) {
+        const updateCheck = await this.needsUpdate();
+        if (!updateCheck.needsUpdate) {
+          console.log('Bible content is up to date, skipping sync');
+          return [
+            {
+              success: true,
+              tableName: 'all',
+              recordsSynced: 0,
+            },
+          ];
+        }
+
+        console.log(
+          'Bible content needs updating for tables:',
+          updateCheck.tables
+        );
+      }
+
       // Sync books table
       const booksResult = await this.syncBooks(options);
       results.push(booksResult);
       this.notifyListeners(booksResult);
 
-      // Sync chapters table
-      const chaptersResult = await this.syncChapters(options);
-      results.push(chaptersResult);
-      this.notifyListeners(chaptersResult);
+      // Only sync chapters and verses if books sync was successful
+      if (booksResult.success) {
+        const chaptersResult = await this.syncChapters(options);
+        results.push(chaptersResult);
+        this.notifyListeners(chaptersResult);
 
-      // Sync verses table
-      const versesResult = await this.syncVerses(options);
-      results.push(versesResult);
-      this.notifyListeners(versesResult);
+        if (chaptersResult.success) {
+          const versesResult = await this.syncVerses(options);
+          results.push(versesResult);
+          this.notifyListeners(versesResult);
+        }
+      }
+
+      // Update last successful sync time
+      await this.updateLastFullSync();
     } catch (error) {
-      console.error('Sync failed:', error);
+      console.error('Bible sync failed:', error);
     } finally {
       this.isSyncing = false;
     }
@@ -77,62 +152,41 @@ class SyncService {
     return results;
   }
 
-  private async syncBooks(options: SyncOptions = {}): Promise<SyncResult> {
+  private async syncBooks(options: BibleSyncOptions = {}): Promise<SyncResult> {
     const { batchSize = 1000 } = options;
 
     try {
       await this.updateSyncStatus('books', 'syncing');
 
-      // Get last sync timestamp
-      const lastSync = await this.getLastSync('books');
-      const anonClient = supabase;
+      // For bible content, we often want full sync to ensure consistency
+      const lastSync = options.forceFullSync
+        ? '1970-01-01T00:00:00.000Z'
+        : await this.getLastSync('books');
 
       let allBooks: Tables<'books'>[] = [];
-      let currentLastSync = lastSync || '1970-01-01T00:00:00.000Z';
       let hasMoreData = true;
       let lastFetchedId: string | null = null;
 
-      // Fetch all records in batches using cursor pagination
+      // Use smaller batches for mobile to reduce memory usage
+      const mobileBatchSize = Math.min(batchSize, 500);
+
       while (hasMoreData) {
-        let query = anonClient
+        let query = supabase
           .from('books')
           .select('*')
-          .gte('updated_at', currentLastSync)
+          .gte('updated_at', lastSync)
           .order('updated_at', { ascending: true })
           .order('id', { ascending: true })
-          .limit(batchSize);
+          .limit(mobileBatchSize);
 
         if (lastFetchedId) {
           query = query.gt('id', lastFetchedId);
         }
 
-        let { data: remoteBooks, error } = await query;
+        const { data: remoteBooks, error } = await query;
 
         if (error) {
-          // Handle auth-related errors gracefully
-          if (error.message.includes('JWT') || error.message.includes('auth')) {
-            let retryQuery = anonClient
-              .from('books')
-              .select('*')
-              .gte('updated_at', currentLastSync)
-              .order('updated_at', { ascending: true })
-              .order('id', { ascending: true })
-              .limit(batchSize);
-
-            if (lastFetchedId) {
-              retryQuery = retryQuery.gt('id', lastFetchedId);
-            }
-
-            const { data: retryData, error: retryError } = await retryQuery;
-
-            if (retryError) {
-              throw new Error(`Failed to fetch books: ${retryError.message}`);
-            }
-
-            remoteBooks = retryData;
-          } else {
-            throw new Error(`Failed to fetch books: ${error.message}`);
-          }
+          throw new Error(`Failed to fetch books: ${error.message}`);
         }
 
         if (!remoteBooks || remoteBooks.length === 0) {
@@ -147,7 +201,7 @@ class SyncService {
           lastFetchedId = lastBook.id;
         }
 
-        if (remoteBooks.length < batchSize) {
+        if (remoteBooks.length < mobileBatchSize) {
           hasMoreData = false;
         }
       }
@@ -161,15 +215,17 @@ class SyncService {
         };
       }
 
-      // Sync all records to local database
+      // Batch insert for better performance
       await this.upsertBooks(allBooks);
 
-      // Update sync metadata with the timestamp of the very last record
+      // Update sync metadata
       const latestBook = allBooks[allBooks.length - 1];
       if (latestBook?.updated_at) {
         await this.updateLastSync('books', latestBook.updated_at);
       }
       await this.updateSyncStatus('books', 'idle');
+
+      console.log(`Synced ${allBooks.length} books`);
 
       return {
         success: true,
@@ -193,64 +249,40 @@ class SyncService {
     }
   }
 
-  private async syncChapters(options: SyncOptions = {}): Promise<SyncResult> {
+  private async syncChapters(
+    options: BibleSyncOptions = {}
+  ): Promise<SyncResult> {
     const { batchSize = 1000 } = options;
 
     try {
       await this.updateSyncStatus('chapters', 'syncing');
 
-      // Get last sync timestamp
-      const lastSync = await this.getLastSync('chapters');
-      const anonClient = supabase;
+      const lastSync = options.forceFullSync
+        ? '1970-01-01T00:00:00.000Z'
+        : await this.getLastSync('chapters');
 
       let allChapters: Tables<'chapters'>[] = [];
-      let currentLastSync = lastSync || '1970-01-01T00:00:00.000Z';
       let hasMoreData = true;
       let lastFetchedId: string | null = null;
+      const mobileBatchSize = Math.min(batchSize, 500);
 
-      // Fetch all records in batches using cursor pagination
       while (hasMoreData) {
-        let query = anonClient
+        let query = supabase
           .from('chapters')
           .select('*')
-          .gte('updated_at', currentLastSync)
+          .gte('updated_at', lastSync)
           .order('updated_at', { ascending: true })
           .order('id', { ascending: true })
-          .limit(batchSize);
+          .limit(mobileBatchSize);
 
         if (lastFetchedId) {
           query = query.gt('id', lastFetchedId);
         }
 
-        let { data: remoteChapters, error } = await query;
+        const { data: remoteChapters, error } = await query;
 
         if (error) {
-          // Handle auth-related errors gracefully
-          if (error.message.includes('JWT') || error.message.includes('auth')) {
-            let retryQuery = anonClient
-              .from('chapters')
-              .select('*')
-              .gte('updated_at', currentLastSync)
-              .order('updated_at', { ascending: true })
-              .order('id', { ascending: true })
-              .limit(batchSize);
-
-            if (lastFetchedId) {
-              retryQuery = retryQuery.gt('id', lastFetchedId);
-            }
-
-            const { data: retryData, error: retryError } = await retryQuery;
-
-            if (retryError) {
-              throw new Error(
-                `Failed to fetch chapters: ${retryError.message}`
-              );
-            }
-
-            remoteChapters = retryData;
-          } else {
-            throw new Error(`Failed to fetch chapters: ${error.message}`);
-          }
+          throw new Error(`Failed to fetch chapters: ${error.message}`);
         }
 
         if (!remoteChapters || remoteChapters.length === 0) {
@@ -265,7 +297,7 @@ class SyncService {
           lastFetchedId = lastChapter.id;
         }
 
-        if (remoteChapters.length < batchSize) {
+        if (remoteChapters.length < mobileBatchSize) {
           hasMoreData = false;
         }
       }
@@ -279,15 +311,15 @@ class SyncService {
         };
       }
 
-      // Sync all records to local database
       await this.upsertChapters(allChapters);
 
-      // Update sync metadata with the timestamp of the very last record
       const latestChapter = allChapters[allChapters.length - 1];
       if (latestChapter?.updated_at) {
         await this.updateLastSync('chapters', latestChapter.updated_at);
       }
       await this.updateSyncStatus('chapters', 'idle');
+
+      console.log(`Synced ${allChapters.length} chapters`);
 
       return {
         success: true,
@@ -311,62 +343,40 @@ class SyncService {
     }
   }
 
-  private async syncVerses(options: SyncOptions = {}): Promise<SyncResult> {
+  private async syncVerses(
+    options: BibleSyncOptions = {}
+  ): Promise<SyncResult> {
     const { batchSize = 1000 } = options;
 
     try {
       await this.updateSyncStatus('verses', 'syncing');
 
-      // Get last sync timestamp
-      const lastSync = await this.getLastSync('verses');
-      const anonClient = supabase;
+      const lastSync = options.forceFullSync
+        ? '1970-01-01T00:00:00.000Z'
+        : await this.getLastSync('verses');
 
       let allVerses: Tables<'verses'>[] = [];
-      let currentLastSync = lastSync || '1970-01-01T00:00:00.000Z';
       let hasMoreData = true;
       let lastFetchedId: string | null = null;
+      const mobileBatchSize = Math.min(batchSize, 500);
 
-      // Fetch all records in batches using cursor pagination
       while (hasMoreData) {
-        let query = anonClient
+        let query = supabase
           .from('verses')
           .select('*')
-          .gte('updated_at', currentLastSync)
+          .gte('updated_at', lastSync)
           .order('updated_at', { ascending: true })
           .order('id', { ascending: true })
-          .limit(batchSize);
+          .limit(mobileBatchSize);
 
         if (lastFetchedId) {
           query = query.gt('id', lastFetchedId);
         }
 
-        let { data: remoteVerses, error } = await query;
+        const { data: remoteVerses, error } = await query;
 
         if (error) {
-          // Handle auth-related errors gracefully
-          if (error.message.includes('JWT') || error.message.includes('auth')) {
-            let retryQuery = anonClient
-              .from('verses')
-              .select('*')
-              .gte('updated_at', currentLastSync)
-              .order('updated_at', { ascending: true })
-              .order('id', { ascending: true })
-              .limit(batchSize);
-
-            if (lastFetchedId) {
-              retryQuery = retryQuery.gt('id', lastFetchedId);
-            }
-
-            const { data: retryData, error: retryError } = await retryQuery;
-
-            if (retryError) {
-              throw new Error(`Failed to fetch verses: ${retryError.message}`);
-            }
-
-            remoteVerses = retryData;
-          } else {
-            throw new Error(`Failed to fetch verses: ${error.message}`);
-          }
+          throw new Error(`Failed to fetch verses: ${error.message}`);
         }
 
         if (!remoteVerses || remoteVerses.length === 0) {
@@ -381,7 +391,7 @@ class SyncService {
           lastFetchedId = lastVerse.id;
         }
 
-        if (remoteVerses.length < batchSize) {
+        if (remoteVerses.length < mobileBatchSize) {
           hasMoreData = false;
         }
       }
@@ -395,15 +405,15 @@ class SyncService {
         };
       }
 
-      // Sync all records to local database
       await this.upsertVerses(allVerses);
 
-      // Update sync metadata with the timestamp of the very last record
       const latestVerse = allVerses[allVerses.length - 1];
       if (latestVerse?.updated_at) {
         await this.updateLastSync('verses', latestVerse.updated_at);
       }
       await this.updateSyncStatus('verses', 'idle');
+
+      console.log(`Synced ${allVerses.length} verses`);
 
       return {
         success: true,
@@ -427,6 +437,7 @@ class SyncService {
     }
   }
 
+  // Optimized upsert methods using batch transactions
   private async upsertBooks(books: Tables<'books'>[]): Promise<void> {
     await databaseManager.transaction(async () => {
       for (const book of books) {
@@ -499,17 +510,31 @@ class SyncService {
     });
   }
 
+  // Helper methods
   async getLastSync(tableName: string): Promise<string> {
     if (!databaseManager.initialized) {
       return '1970-01-01T00:00:00.000Z';
     }
 
-    const result = await databaseManager.executeQuery<SyncMetadata>(
+    const result = await databaseManager.executeQuery<BibleSyncMetadata>(
       'SELECT last_sync FROM sync_metadata WHERE table_name = ?',
       [tableName]
     );
 
     return result[0]?.last_sync || '1970-01-01T00:00:00.000Z';
+  }
+
+  private async getLocalVersion(tableName: string): Promise<string | null> {
+    if (!databaseManager.initialized) {
+      return null;
+    }
+
+    const result = await databaseManager.executeQuery<BibleSyncMetadata>(
+      'SELECT content_version FROM sync_metadata WHERE table_name = ?',
+      [tableName]
+    );
+
+    return result[0]?.content_version || null;
   }
 
   private async updateLastSync(
@@ -520,6 +545,18 @@ class SyncService {
       'UPDATE sync_metadata SET last_sync = ?, updated_at = CURRENT_TIMESTAMP WHERE table_name = ?',
       [timestamp, tableName]
     );
+  }
+
+  private async updateLastFullSync(): Promise<void> {
+    const timestamp = new Date().toISOString();
+    const tables = ['books', 'chapters', 'verses'];
+
+    for (const table of tables) {
+      await databaseManager.executeQuery(
+        'UPDATE sync_metadata SET last_version_check = ?, updated_at = CURRENT_TIMESTAMP WHERE table_name = ?',
+        [timestamp, table]
+      );
+    }
   }
 
   private async updateSyncStatus(
@@ -533,53 +570,16 @@ class SyncService {
     );
   }
 
-  async getSyncMetadata(tableName?: string): Promise<SyncMetadata[]> {
+  async getSyncMetadata(tableName?: string): Promise<BibleSyncMetadata[]> {
     const query = tableName
       ? 'SELECT * FROM sync_metadata WHERE table_name = ?'
-      : 'SELECT * FROM sync_metadata';
+      : 'SELECT * FROM sync_metadata WHERE table_name IN (?, ?, ?)';
 
-    const params = tableName ? [tableName] : undefined;
+    const params = tableName ? [tableName] : ['books', 'chapters', 'verses'];
 
-    return databaseManager.executeQuery<SyncMetadata>(query, params);
+    return databaseManager.executeQuery<BibleSyncMetadata>(query, params);
   }
 
-  async forceFullSync(tableName: string): Promise<SyncResult> {
-    // Reset last sync to force full sync
-    await this.updateLastSync(tableName, '1970-01-01T00:00:00.000Z');
-
-    if (tableName === 'books') {
-      return this.syncBooks();
-    } else if (tableName === 'chapters') {
-      return this.syncChapters();
-    } else if (tableName === 'verses') {
-      return this.syncVerses();
-    }
-
-    throw new Error(`Unknown table: ${tableName}`);
-  }
-
-  async clearLocalData(tableName: string): Promise<void> {
-    if (tableName === 'books') {
-      await databaseManager.executeQuery('DELETE FROM books');
-      await this.updateLastSync(tableName, '1970-01-01T00:00:00.000Z');
-    } else if (tableName === 'chapters') {
-      await databaseManager.executeQuery('DELETE FROM chapters');
-      await this.updateLastSync(tableName, '1970-01-01T00:00:00.000Z');
-    } else if (tableName === 'verses') {
-      await databaseManager.executeQuery('DELETE FROM verses');
-      await this.updateLastSync(tableName, '1970-01-01T00:00:00.000Z');
-    } else {
-      throw new Error(`Unknown table: ${tableName}`);
-    }
-  }
-
-  isSyncInProgress(): boolean {
-    return this.isSyncing;
-  }
-
-  /**
-   * Check if there are remote changes for a table since last sync
-   */
   async hasRemoteChanges(tableName: string): Promise<boolean> {
     try {
       if (!databaseManager.initialized) {
@@ -588,7 +588,6 @@ class SyncService {
 
       const lastSync = await this.getLastSync(tableName);
 
-      // Check if there are any records updated since last sync
       const { data, error } = await supabase
         .from(tableName as any)
         .select('id')
@@ -608,24 +607,9 @@ class SyncService {
   }
 
   /**
-   * Get a summary of remote changes for multiple tables
+   * Reset sync metadata to force a complete resync
    */
-  async getRemoteChangesSummary(
-    tableNames: string[] = ['books', 'chapters', 'verses']
-  ): Promise<Record<string, boolean>> {
-    const results: Record<string, boolean> = {};
-
-    for (const tableName of tableNames) {
-      results[tableName] = await this.hasRemoteChanges(tableName);
-    }
-
-    return results;
-  }
-
-  /**
-   * Reset sync metadata for a specific table to force a complete resync
-   */
-  async resetSyncMetadata(tableName: string): Promise<void> {
+  async resetSyncMetadata(tableName?: string): Promise<void> {
     try {
       if (!databaseManager.initialized) {
         throw new Error('Database not initialized');
@@ -634,67 +618,61 @@ class SyncService {
       const resetTimestamp = '1970-01-01T00:00:00.000Z';
       const currentTimestamp = new Date().toISOString();
 
-      const db = databaseManager.getDatabase();
-      await db.runAsync(
-        `INSERT OR REPLACE INTO sync_metadata (table_name, last_sync, sync_status, updated_at) 
-         VALUES (?, ?, 'idle', ?)`,
-        [tableName, resetTimestamp, currentTimestamp]
-      );
-
-      // Verify the reset worked
-      const afterReset = await this.getLastSync(tableName);
-      if (afterReset !== resetTimestamp) {
-        throw new Error(
-          `Reset failed: expected ${resetTimestamp}, got ${afterReset}`
+      if (tableName) {
+        await databaseManager.executeQuery(
+          `UPDATE sync_metadata 
+           SET last_sync = ?, sync_status = 'idle', updated_at = ?
+           WHERE table_name = ?`,
+          [resetTimestamp, currentTimestamp, tableName]
         );
+      } else {
+        // Reset all bible tables
+        const tables = ['books', 'chapters', 'verses'];
+        for (const table of tables) {
+          await databaseManager.executeQuery(
+            `UPDATE sync_metadata 
+             SET last_sync = ?, sync_status = 'idle', updated_at = ?
+             WHERE table_name = ?`,
+            [resetTimestamp, currentTimestamp, table]
+          );
+        }
       }
     } catch (error) {
-      console.error(`Failed to reset sync metadata for ${tableName}:`, error);
+      console.error('Failed to reset sync metadata:', error);
       throw error;
     }
   }
 
-  /**
-   * Reset sync metadata for all tables to force a complete resync
-   */
-  async resetAllSyncMetadata(): Promise<void> {
-    try {
-      await this.resetSyncMetadata('books');
-      await this.resetSyncMetadata('chapters');
-      await this.resetSyncMetadata('verses');
-    } catch (error) {
-      console.error('Failed to reset all sync metadata:', error);
-      throw error;
+  async forceFullSync(): Promise<SyncResult[]> {
+    return this.syncAll({ forceFullSync: true });
+  }
+
+  async clearLocalData(tableName?: string): Promise<void> {
+    const tables = tableName ? [tableName] : ['books', 'chapters', 'verses'];
+
+    for (const table of tables) {
+      await databaseManager.executeQuery(`DELETE FROM ${table}`);
+      await this.resetSyncMetadata(table);
     }
   }
 
-  /**
-   * Get the total count of remote records for a table (for progress tracking)
-   */
-  async getTotalRemoteRecordsCount(tableName: string): Promise<number> {
-    try {
-      const { count, error } = await supabase
-        .from(tableName as any)
-        .select('*', { count: 'exact', head: true });
-
-      if (error) {
-        console.error(`Failed to get total count for ${tableName}:`, error);
-        return 0;
-      }
-
-      return count || 0;
-    } catch (error) {
-      console.error(`Error getting total count for ${tableName}:`, error);
-      return 0;
-    }
+  isSyncInProgress(): boolean {
+    return this.isSyncing;
   }
 
   /**
-   * Alias for resetSyncMetadata to match SyncContext expectations
+   * Get configuration for bible sync
    */
-  async resetSyncTimestamp(tableName: string): Promise<void> {
-    return this.resetSyncMetadata(tableName);
+  getConfig(): SyncConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Update configuration for bible sync
+   */
+  updateConfig(config: Partial<SyncConfig>): void {
+    this.config = { ...this.config, ...config };
   }
 }
 
-export const syncService = SyncService.getInstance();
+export const bibleSync = BibleSyncService.getInstance();

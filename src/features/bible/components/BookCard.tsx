@@ -6,10 +6,14 @@ import type { Book } from '../types';
 interface BookCardProps {
   book: Book;
   onPress: (book: Book) => void;
-  selected?: boolean;
+  selected?: boolean; // Keep for backward compatibility but don't use
 }
 
-export const BookCard: React.FC<BookCardProps> = ({ book, onPress, selected = false }) => {
+export const BookCard: React.FC<BookCardProps> = ({
+  book,
+  onPress,
+  selected: _selected = false,
+}) => {
   const { theme } = useTheme();
 
   const handlePress = () => {
@@ -17,24 +21,19 @@ export const BookCard: React.FC<BookCardProps> = ({ book, onPress, selected = fa
   };
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
         styles.container,
-        { 
-          backgroundColor: selected ? theme.colors.primary : theme.colors.surface,
-          borderColor: theme.colors.border,
-        }
+        {
+          backgroundColor: theme.colors.surface,
+          // Remove border and selected state
+        },
       ]}
       onPress={handlePress}
-      activeOpacity={0.7}
-    >
-      <Text 
-        style={[
-          styles.bookName,
-          { color: selected ? theme.colors.textInverse : theme.colors.text }
-        ]}
-        numberOfLines={3}
-      >
+      activeOpacity={0.7}>
+      <Text
+        style={[styles.bookName, { color: theme.colors.text }]}
+        numberOfLines={3}>
         {book.name}
       </Text>
     </TouchableOpacity>
@@ -45,15 +44,11 @@ const styles = StyleSheet.create({
   container: {
     aspectRatio: 1,
     borderRadius: 16,
-    borderWidth: 1,
+    // Remove borderWidth and borderColor
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   bookName: {
     fontSize: 16,
@@ -61,4 +56,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-}); 
+});

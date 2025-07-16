@@ -7,9 +7,10 @@ import React, {
 } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import { databaseManager } from '../services/database/DatabaseManager';
-import { syncService, type SyncResult } from '../services/database/SyncService';
+import { bibleSync } from '../services/sync/bible/BibleSyncService';
 import { localDataService } from '../services/database/LocalDataService';
-import { backgroundSyncService } from '../services/database/BackgroundSyncService';
+import { backgroundSyncService } from '../services/sync/BackgroundSyncService';
+import type { SyncResult, SyncProgress } from '../services/sync/types';
 
 export interface SyncContextType {
   isInitialized: boolean;
@@ -21,18 +22,11 @@ export interface SyncContextType {
   connectionType: string | null;
   initializeDatabase: () => Promise<void>;
   syncNow: () => Promise<void>;
-  forceFFullSync: () => Promise<void>;
+  forceFullSync: () => Promise<void>;
   resetSyncTimestamp: () => Promise<void>;
   clearLocalData: () => Promise<void>;
   getSyncMetadata: () => Promise<any[]>;
-}
-
-export interface SyncProgress {
-  table: string;
-  recordsSynced: number;
-  totalRecords?: number;
-  isComplete: boolean;
-  error?: string;
+  checkForUpdates: () => Promise<{ needsUpdate: boolean; tables: string[] }>;
 }
 
 const SyncContext = createContext<SyncContextType | undefined>(undefined);
@@ -81,10 +75,15 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       setIsInitialized(true);
       console.log('Database initialized successfully');
 
-      // Auto-sync if no local data exists
+      // For bible content, we can be more conservative about auto-syncing
+      // Only auto-sync if no local data exists or if explicitly needed
       if (!dataAvailable) {
         console.log('No local data found, starting initial sync...');
         await syncNow();
+      } else {
+        // Check for updates in background without forcing sync
+        console.log('Checking for bible content updates...');
+        await checkForUpdates();
       }
 
       // Register background sync after successful initialization
@@ -100,6 +99,28 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     }
   }, [isInitialized]);
 
+  const checkForUpdates = useCallback(async (): Promise<{
+    needsUpdate: boolean;
+    tables: string[];
+  }> => {
+    if (!isInitialized) {
+      return { needsUpdate: false, tables: [] };
+    }
+
+    try {
+      const updateCheck = await bibleSync.needsUpdate();
+      if (updateCheck.needsUpdate) {
+        console.log('Bible content updates available for:', updateCheck.tables);
+      } else {
+        console.log('Bible content is up to date');
+      }
+      return updateCheck;
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      return { needsUpdate: false, tables: [] };
+    }
+  }, [isInitialized]);
+
   const syncNow = useCallback(async () => {
     if (isSyncing || !isInitialized) return;
 
@@ -108,13 +129,13 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
 
       // Reset progress
       setSyncProgress({
-        table: 'Starting sync...',
+        table: 'Checking for updates...',
         recordsSynced: 0,
         totalRecords: 0,
         isComplete: false,
       });
 
-      const results = await syncService.syncAll();
+      const results = await bibleSync.syncAll();
 
       // Process results and update progress for each table
       let totalSynced = 0;
@@ -132,7 +153,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
         setSyncProgress(progress);
 
         // Small delay to show progress for each table
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
       // Update local state
@@ -142,9 +163,9 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       const lastSync = await localDataService.getLastSyncedAt();
       setLastSyncAt(lastSync);
 
-      console.log('Sync completed:', results);
+      console.log('Bible sync completed:', results);
     } catch (error) {
-      console.error('Sync failed:', error);
+      console.error('Bible sync failed:', error);
       setSyncProgress({
         table: 'Sync failed',
         recordsSynced: 0,
@@ -159,28 +180,26 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     }
   }, [isSyncing, isInitialized]);
 
-  const forceFFullSync = useCallback(async () => {
+  const forceFullSync = useCallback(async () => {
     if (isSyncing || !isInitialized) return;
 
     try {
       setIsSyncing(true);
       setSyncProgress({
-        table: 'Force syncing all tables...',
+        table: 'Force syncing all bible content...',
         recordsSynced: 0,
         isComplete: false,
       });
 
-      // Force full sync for all tables
-      const tableNames = ['books', 'chapters', 'verses'];
-      const results: any[] = [];
+      const results = await bibleSync.forceFullSync();
 
-      for (const tableName of tableNames) {
-        const result = await syncService.forceFullSync(tableName);
-        results.push(result);
-
+      let totalSynced = 0;
+      for (const result of results) {
+        totalSynced += result.recordsSynced;
         const progress: SyncProgress = {
           table: result.tableName,
           recordsSynced: result.recordsSynced,
+          totalRecords: totalSynced,
           isComplete: result.success,
         };
         if (result.error) {
@@ -189,7 +208,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
         setSyncProgress(progress);
 
         // Small delay between tables
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
       // Update local state
@@ -218,10 +237,10 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     if (!isInitialized) return;
 
     try {
-      // Reset sync timestamp for all tables
-      await syncService.resetAllSyncMetadata();
+      // Reset sync timestamp for all bible tables
+      await bibleSync.resetSyncMetadata();
       setLastSyncAt(null);
-      console.log('Sync timestamp reset for all tables');
+      console.log('Sync timestamp reset for all bible tables');
     } catch (error) {
       console.error('Failed to reset sync timestamp:', error);
     }
@@ -231,13 +250,11 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     if (!isInitialized) return;
 
     try {
-      // Clear local data for all tables
-      await syncService.clearLocalData('books');
-      await syncService.clearLocalData('chapters');
-      await syncService.clearLocalData('verses');
+      // Clear local data for all bible tables
+      await bibleSync.clearLocalData();
       setHasLocalData(false);
       setLastSyncAt(null);
-      console.log('Local data cleared for all tables');
+      console.log('Local bible data cleared');
     } catch (error) {
       console.error('Failed to clear local data:', error);
     }
@@ -247,7 +264,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     if (!isInitialized) return [];
 
     try {
-      return await syncService.getSyncMetadata();
+      return await bibleSync.getSyncMetadata();
     } catch (error) {
       console.error('Failed to get sync metadata:', error);
       return [];
@@ -261,7 +278,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
 
   // Listen to sync events
   useEffect(() => {
-    const unsubscribe = syncService.onSync((result: SyncResult) => {
+    const unsubscribe = bibleSync.onSync((result: SyncResult) => {
       const progress: SyncProgress = {
         table: result.tableName,
         recordsSynced: result.recordsSynced,
@@ -286,10 +303,11 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     connectionType,
     initializeDatabase,
     syncNow,
-    forceFFullSync,
+    forceFullSync,
     resetSyncTimestamp,
     clearLocalData,
     getSyncMetadata,
+    checkForUpdates,
   };
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
