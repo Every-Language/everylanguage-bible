@@ -8,7 +8,9 @@ import { MainNavigator } from '@/app/navigation/MainNavigator';
 import { AppProvider } from '@/app/providers';
 import { useTheme, useCalculatorMode } from '@/shared/store';
 import '@/shared/services/i18n';
-import OnBoardingScreen from '@/features/onboarding/screens/OnBoardingScreen';
+import { NewOnboardingScreen } from '@/features/onboarding/screens/NewOnboardingScreen';
+import { OnboardingFlow1Screen } from '@/features/onboarding/screens/OnboardingFlow1Screen';
+import { OnboardingFlow2Screen } from '@/features/onboarding/screens/OnboardingFlow2Screen';
 import { CalculatorScreen } from '@/features/calculator/screens/CalculatorScreen';
 import { RootStackParamList } from './types/onboarding';
 
@@ -54,7 +56,17 @@ export default function App() {
               <Stack.Screen
                 name='Onboarding'
                 options={{ headerShown: false }}
-                component={OnBoardingScreen}
+                component={NewOnboardingScreen}
+              />
+              <Stack.Screen
+                name='OnboardingFlow1'
+                options={{ headerShown: false }}
+                component={OnboardingFlow1Screen}
+              />
+              <Stack.Screen
+                name='OnboardingFlow2'
+                options={{ headerShown: false }}
+                component={OnboardingFlow2Screen}
               />
             </Stack.Navigator>
           </NavigationContainer>

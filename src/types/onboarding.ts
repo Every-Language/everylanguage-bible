@@ -1,16 +1,5 @@
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-export type Slide = {
-  id: number;
-  component:
-    | 'SplashScreen'
-    | 'LanguageDetection'
-    | 'AudioSample'
-    | 'BasicSetup'
-    | 'ContentPreview'
-    | 'QuickStart';
-};
-
 export type UserPreferences = {
   language: string;
   audioEnabled: boolean;
@@ -23,6 +12,8 @@ export type UserPreferences = {
 export type RootStackParamList = {
   Home: undefined;
   Onboarding: undefined;
+  OnboardingFlow1: undefined;
+  OnboardingFlow2: undefined;
 };
 
 export type NavigationProp = NativeStackNavigationProp<RootStackParamList>;

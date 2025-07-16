@@ -45,10 +45,17 @@ jest.mock('expo-status-bar', () => ({
 // Mock the i18n service
 jest.mock('@/shared/services/i18n', () => ({}));
 
-// Mock the onboarding screen
-jest.mock('@/features/onboarding/screens/OnBoardingScreen', () => ({
-  __esModule: true,
-  default: () => null,
+// Mock the onboarding screens
+jest.mock('@/features/onboarding/screens/NewOnboardingScreen', () => ({
+  NewOnboardingScreen: () => null,
+}));
+
+jest.mock('@/features/onboarding/screens/OnboardingFlow1Screen', () => ({
+  OnboardingFlow1Screen: () => null,
+}));
+
+jest.mock('@/features/onboarding/screens/OnboardingFlow2Screen', () => ({
+  OnboardingFlow2Screen: () => null,
 }));
 
 // Mock the calculator screen
