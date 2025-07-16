@@ -42,10 +42,17 @@ import { getBookImageSource } from '@/shared/services';
 interface BibleBooksScreenProps {
   onChapterSelect: (book: Book, chapter: number) => void;
   onVerseSelect: (book: Book, chapter: number, verse: number) => void;
+  onSearchPress?: () => void;
 }
 
 type TestamentMode = 'old' | 'new';
-type SubMenuType = 'profile' | 'language' | 'settings' | 'help' | null;
+type SubMenuType =
+  | 'profile'
+  | 'language'
+  | 'settings'
+  | 'help'
+  | 'login'
+  | null;
 
 // Go to Testament Tile Component
 interface GoToTestamentTileProps {
@@ -430,6 +437,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
 export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
   onVerseSelect,
+  onSearchPress,
 }) => {
   const { colors } = useTheme();
   const { openChapterCard } = useChapterCardStore();
@@ -500,8 +508,12 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   };
 
   const handleSearchPress = () => {
-    console.log('Search pressed');
-    // TODO: Implement search functionality
+    if (onSearchPress) {
+      onSearchPress();
+    } else {
+      console.log('Search pressed');
+      // TODO: Implement search functionality
+    }
   };
 
   const styles = StyleSheet.create({
