@@ -1,19 +1,19 @@
 import { createTamagui } from 'tamagui';
-import { createInterFont } from '@tamagui/font-inter';
 import { shorthands } from '@tamagui/shorthands';
 import { themes, tokens } from '@tamagui/themes';
 import { createMedia } from '@tamagui/react-native-media-driver';
 import { createAnimations } from '@tamagui/animations-react-native';
-import {
-  lightTheme,
-  darkTheme,
-  lightShadows,
-  darkShadows,
-} from './src/shared/constants/tamagui-themes';
+import { lightTheme, darkTheme } from './src/shared/constants/tamagui-themes';
 
 const config = createTamagui({
   defaultFont: 'body',
   animations: createAnimations({
+    quick: {
+      type: 'spring',
+      damping: 15,
+      mass: 1,
+      stiffness: 200,
+    },
     fast: {
       type: 'spring',
       damping: 20,
@@ -36,7 +36,8 @@ const config = createTamagui({
   themeClassNameOnRoot: true,
   shorthands,
   fonts: {
-    heading: createInterFont({
+    heading: {
+      family: 'Indivisible Black',
       size: {
         6: 15,
         7: 18,
@@ -50,23 +51,12 @@ const config = createTamagui({
         15: 55,
         16: 65,
       },
-      transform: {
-        6: 'uppercase',
-        7: 'none',
-      },
       weight: {
         6: '400',
         7: '600',
         8: '700',
         9: '600',
         10: '700',
-      },
-      color: {
-        6: '$colorFocus',
-        7: '$color',
-        8: '$color',
-        9: '$color',
-        10: '$color',
       },
       letterSpacing: {
         5: 2,
@@ -79,17 +69,34 @@ const config = createTamagui({
         14: -4,
         15: -10,
       },
-      face: {
-        700: { normal: 'InterBold' },
-        800: { normal: 'InterBold' },
-        900: { normal: 'InterBold' },
+    },
+    body: {
+      family: 'GT Flexa Var',
+      size: {
+        1: 12,
+        2: 14,
+        3: 16,
+        4: 18,
+        5: 20,
+        6: 24,
+        7: 28,
+        8: 32,
+        9: 36,
+        10: 40,
+        11: 44,
+        12: 48,
+        13: 52,
+        14: 56,
+        15: 60,
+        16: 64,
       },
-    }),
-    body: createInterFont({
-      face: {
-        700: { normal: 'InterBold' },
+      weight: {
+        1: '400',
+        2: '500',
+        3: '600',
+        4: '700',
       },
-    }),
+    },
   },
   tokens,
   themes: {

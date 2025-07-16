@@ -6,27 +6,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MainNavigator } from '@/app/navigation/MainNavigator';
 import { AppProvider } from '@/app/providers';
-import { useTheme, useCalculatorMode } from '@/shared/store';
+import { useTheme } from '@/shared/hooks/useTamaguiTheme';
 import '@/shared/services/i18n';
-import { NewOnboardingScreen } from '@/features/onboarding/screens/NewOnboardingScreen';
-import { OnboardingFlow1Screen } from '@/features/onboarding/screens/OnboardingFlow1Screen';
-import { OnboardingFlow2Screen } from '@/features/onboarding/screens/OnboardingFlow2Screen';
-import { CalculatorScreen } from '@/features/calculator/screens/CalculatorScreen';
+import { OnboardingScreen } from '@/features/onboarding/screens/OnboardingScreen';
+import { SelectMotherTongue } from '@/features/onboarding/screens/SelectMotherTongue';
+import { ImportBibleScreen } from '@/features/onboarding/screens/ImportBibleScreen';
 import { RootStackParamList } from './types/onboarding';
 
 const AppContent: React.FC = () => {
   const { isDark } = useTheme();
-  const { isCalculatorMode } = useCalculatorMode();
-
-  // If calculator mode is active, show only the calculator screen
-  if (isCalculatorMode) {
-    return (
-      <>
-        <CalculatorScreen />
-        <StatusBar style={isDark ? 'light' : 'dark'} />
-      </>
-    );
-  }
 
   return (
     <>
@@ -56,17 +44,17 @@ export default function App() {
               <Stack.Screen
                 name='Onboarding'
                 options={{ headerShown: false }}
-                component={NewOnboardingScreen}
+                component={OnboardingScreen}
               />
               <Stack.Screen
-                name='OnboardingFlow1'
+                name='SelectMotherTongue'
                 options={{ headerShown: false }}
-                component={OnboardingFlow1Screen}
+                component={SelectMotherTongue}
               />
               <Stack.Screen
-                name='OnboardingFlow2'
+                name='ImportBible'
                 options={{ headerShown: false }}
-                component={OnboardingFlow2Screen}
+                component={ImportBibleScreen}
               />
             </Stack.Navigator>
           </NavigationContainer>

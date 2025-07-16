@@ -8,7 +8,8 @@ import {
   Alert,
 } from 'react-native';
 import { SlideUpPanel } from './SlideUpPanel';
-import { useTheme, useCalculatorMode } from '@/shared/store';
+import { useTheme } from '@/shared/hooks/useTamaguiTheme';
+import { useCalculatorMode } from '@/shared/store';
 import { Dimensions, Fonts } from '@/shared/constants';
 
 // Import utility icons
@@ -156,11 +157,11 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
     icon: {
       width: 18,
       height: 18,
-      tintColor: colors.text,
+      tintColor: colors.textPrimary,
     },
     label: {
       fontSize: Fonts.size.base,
-      color: colors.text,
+      color: colors.textPrimary,
       flex: 1,
       fontWeight: Fonts.weight.medium,
     },

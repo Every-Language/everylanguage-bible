@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, View, Text } from 'react-native';
 import { Fonts, Dimensions } from '@/shared/constants';
-import { useTheme } from '@/shared/store';
+import { useTheme } from '@/shared/hooks/useTamaguiTheme';
 
 interface ToggleOption<T extends string> {
   key: T;

@@ -1,9 +1,6 @@
 // Audio store
 export { useAudioStore } from './audioStore';
 
-// Theme store
-export { useThemeStore, useTheme } from './themeStore';
-
 // Chapter card store (unified chapter/verse view)
 export { useChapterCardStore } from './chapterCardStore';
 

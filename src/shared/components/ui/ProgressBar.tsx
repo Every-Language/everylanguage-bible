@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Fonts, Dimensions } from '@/shared/constants';
-import { useTheme } from '@/shared/store';
+import { useTheme } from '@/shared/hooks/useTamaguiTheme';
 
 interface VerseMarker {
   verseNumber: number;

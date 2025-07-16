@@ -12,8 +12,8 @@ export type UserPreferences = {
 export type RootStackParamList = {
   Home: undefined;
   Onboarding: undefined;
-  OnboardingFlow1: undefined;
-  OnboardingFlow2: undefined;
+  SelectMotherTongue: undefined;
+  ImportBible: undefined;
 };
 
 export type NavigationProp = NativeStackNavigationProp<RootStackParamList>;

@@ -19,7 +19,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Fonts, Dimensions } from '@/shared/constants';
-import { useTheme } from '@/shared/store';
+import { useTheme } from '@/shared/hooks/useTamaguiTheme';
 
 interface SlideUpPanelProps {
   isVisible: boolean;
@@ -151,7 +151,9 @@ export const SlideUpPanel: React.FC<SlideUpPanelProps> = ({
     const dragProgress = Math.min(1, translateY.value / (screenHeight * 0.1));
     return {
       backgroundColor:
-        dragProgress > 0.1 ? colors.text + '80' : colors.text + '60',
+        dragProgress > 0.1
+          ? colors.textPrimary + '80'
+          : colors.textPrimary + '60',
       width: 40 + dragProgress * 20,
     };
   });
@@ -212,7 +214,7 @@ export const SlideUpPanel: React.FC<SlideUpPanelProps> = ({
     title: {
       fontSize: Fonts.size.lg,
       fontWeight: Fonts.weight.bold,
-      color: colors.text,
+      color: colors.textPrimary,
       textAlign: 'center',
     },
     closeButton: {
@@ -233,7 +235,7 @@ export const SlideUpPanel: React.FC<SlideUpPanelProps> = ({
       position: 'absolute',
       width: 10,
       height: 1,
-      backgroundColor: colors.text,
+      backgroundColor: colors.textPrimary,
     },
     content: {
       flex: fullScreen ? 1 : 0,

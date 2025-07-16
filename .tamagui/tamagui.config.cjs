@@ -20952,49 +20952,6 @@ Expected a subset of: ${expected.join(", ")}
   return tamaguiConfig;
 };
 
-// node_modules/@tamagui/font-inter/dist/esm/index.mjs
-var import_core2 = require("@tamagui/core");
-var createInterFont = /* @__PURE__ */ __name((font = {}, {
-  sizeLineHeight = /* @__PURE__ */ __name((size2) => size2 + 10, "sizeLineHeight"),
-  sizeSize = /* @__PURE__ */ __name((size2) => size2 * 1, "sizeSize")
-} = {}) => {
-  const size2 = Object.fromEntries(Object.entries({
-    ...defaultSizes,
-    ...font.size
-  }).map(([k, v]) => [k, sizeSize(+v)]));
-  return (0, import_core2.createFont)({
-    family: import_core2.isWeb ? 'Inter, -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' : "Inter",
-    lineHeight: Object.fromEntries(Object.entries(size2).map(([k, v]) => [k, sizeLineHeight((0, import_core2.getVariableValue)(v))])),
-    weight: {
-      4: "300"
-    },
-    letterSpacing: {
-      4: 0
-    },
-    ...font,
-    size: size2
-  });
-}, "createInterFont");
-var defaultSizes = {
-  1: 11,
-  2: 12,
-  3: 13,
-  4: 14,
-  true: 14,
-  5: 16,
-  6: 18,
-  7: 20,
-  8: 23,
-  9: 30,
-  10: 46,
-  11: 55,
-  12: 62,
-  13: 72,
-  14: 92,
-  15: 114,
-  16: 134
-};
-
 // node_modules/@tamagui/shorthands/dist/esm/index.mjs
 var shorthands = {
   // web-only
@@ -23734,10 +23691,10 @@ function getValue(input, isColor = false) {
 __name(getValue, "getValue");
 
 // src/shared/constants/tamagui-themes.ts
-var import_core4 = require("@tamagui/core");
+var import_core3 = require("@tamagui/core");
 
 // src/shared/constants/theme.ts
-var import_core3 = require("@tamagui/core");
+var import_core2 = require("@tamagui/core");
 var brandColors = {
   // Primary colors
   primaryDark: "#282827",
@@ -23753,7 +23710,7 @@ var brandColors = {
   secondaryDark: "#070707"
   // Almost black
 };
-var colorTokens2 = (0, import_core3.createTokens)({
+var colorTokens2 = (0, import_core2.createTokens)({
   color: {
     // Core brand colors
     primary: brandColors.primaryAccent,
@@ -23800,7 +23757,7 @@ var colorTokens2 = (0, import_core3.createTokens)({
     shadowAccent: "rgba(38, 72, 84, 0.15)"
   }
 });
-var darkColorTokens = (0, import_core3.createTokens)({
+var darkColorTokens = (0, import_core2.createTokens)({
   color: {
     // Core brand colors (adjusted for dark theme)
     primary: brandColors.secondaryLight,
@@ -23847,7 +23804,7 @@ var darkColorTokens = (0, import_core3.createTokens)({
     shadowAccent: "rgba(146, 142, 195, 0.2)"
   }
 });
-var sizeTokens = (0, import_core3.createTokens)({
+var sizeTokens = (0, import_core2.createTokens)({
   size: {
     0: 0,
     1: 4,
@@ -23909,7 +23866,7 @@ var sizeTokens = (0, import_core3.createTokens)({
     32: 128
   }
 });
-var fontTokens = (0, import_core3.createTokens)({
+var fontTokens = (0, import_core2.createTokens)({
   font: {
     heading: "Indivisible Black",
     body: "GT Flexa Var"
@@ -24011,7 +23968,7 @@ var darkTheme = {
 };
 
 // src/shared/constants/tamagui-themes.ts
-var lightTheme2 = (0, import_core4.createTheme)({
+var lightTheme2 = (0, import_core3.createTheme)({
   background: brandColors.primaryLight,
   backgroundHover: "#F5F4F0",
   backgroundPress: "#EDE8DC",
@@ -24069,7 +24026,7 @@ var lightTheme2 = (0, import_core4.createTheme)({
   shadowDark: "rgba(7, 7, 7, 0.2)",
   shadowAccent: "rgba(38, 72, 84, 0.15)"
 });
-var darkTheme2 = (0, import_core4.createTheme)({
+var darkTheme2 = (0, import_core3.createTheme)({
   background: brandColors.primaryDark,
   backgroundHover: "#1F1F1E",
   backgroundPress: "#161615",
@@ -24132,6 +24089,12 @@ var darkTheme2 = (0, import_core4.createTheme)({
 var config = createTamagui({
   defaultFont: "body",
   animations: createAnimations({
+    quick: {
+      type: "spring",
+      damping: 15,
+      mass: 1,
+      stiffness: 200
+    },
     fast: {
       type: "spring",
       damping: 20,
@@ -24154,7 +24117,8 @@ var config = createTamagui({
   themeClassNameOnRoot: true,
   shorthands,
   fonts: {
-    heading: createInterFont({
+    heading: {
+      family: "Indivisible Black",
       size: {
         6: 15,
         7: 18,
@@ -24168,23 +24132,12 @@ var config = createTamagui({
         15: 55,
         16: 65
       },
-      transform: {
-        6: "uppercase",
-        7: "none"
-      },
       weight: {
         6: "400",
         7: "600",
         8: "700",
         9: "600",
         10: "700"
-      },
-      color: {
-        6: "$colorFocus",
-        7: "$color",
-        8: "$color",
-        9: "$color",
-        10: "$color"
       },
       letterSpacing: {
         5: 2,
@@ -24196,18 +24149,35 @@ var config = createTamagui({
         12: -3,
         14: -4,
         15: -10
+      }
+    },
+    body: {
+      family: "GT Flexa Var",
+      size: {
+        1: 12,
+        2: 14,
+        3: 16,
+        4: 18,
+        5: 20,
+        6: 24,
+        7: 28,
+        8: 32,
+        9: 36,
+        10: 40,
+        11: 44,
+        12: 48,
+        13: 52,
+        14: 56,
+        15: 60,
+        16: 64
       },
-      face: {
-        700: { normal: "InterBold" },
-        800: { normal: "InterBold" },
-        900: { normal: "InterBold" }
+      weight: {
+        1: "400",
+        2: "500",
+        3: "600",
+        4: "700"
       }
-    }),
-    body: createInterFont({
-      face: {
-        700: { normal: "InterBold" }
-      }
-    })
+    }
   },
   tokens,
   themes: {

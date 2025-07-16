@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Image, Text } from 'react-native';
 import { getBookImageSource } from '@/shared/services';
 import { Dimensions } from '@/shared/constants';
-import { useTheme } from '@/shared/store';
+import { useTheme } from '@/shared/hooks/useTamaguiTheme';
 
 interface BookImageProps {
   imagePath?: string;
@@ -60,7 +60,7 @@ export const BookImage: React.FC<BookImageProps> = ({
       <Text
         style={{
           fontSize: size * 0.5,
-          color: colors.text,
+          color: colors.textPrimary,
         }}
         testID='book-image-emoji'>
         {fallbackEmoji}
