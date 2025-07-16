@@ -106,29 +106,33 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     try {
       setIsSyncing(true);
 
-      // Get total count first for progress tracking
-      const totalBooksCount =
-        await syncService.getTotalRemoteRecordsCount('books');
+      // Reset progress
       setSyncProgress({
-        table: 'books',
+        table: 'Starting sync...',
         recordsSynced: 0,
-        totalRecords: totalBooksCount,
+        totalRecords: 0,
         isComplete: false,
       });
 
       const results = await syncService.syncAll();
 
+      // Process results and update progress for each table
+      let totalSynced = 0;
       for (const result of results) {
+        totalSynced += result.recordsSynced;
         const progress: SyncProgress = {
           table: result.tableName,
           recordsSynced: result.recordsSynced,
-          totalRecords: totalBooksCount,
+          totalRecords: totalSynced,
           isComplete: result.success,
         };
         if (result.error) {
           progress.error = result.error;
         }
         setSyncProgress(progress);
+
+        // Small delay to show progress for each table
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       // Update local state
@@ -142,7 +146,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Sync failed:', error);
       setSyncProgress({
-        table: 'unknown',
+        table: 'Sync failed',
         recordsSynced: 0,
         totalRecords: 0,
         isComplete: false,
@@ -160,19 +164,33 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
 
     try {
       setIsSyncing(true);
-      setSyncProgress({ table: 'books', recordsSynced: 0, isComplete: false });
+      setSyncProgress({
+        table: 'Force syncing all tables...',
+        recordsSynced: 0,
+        isComplete: false,
+      });
 
-      const result = await syncService.forceFullSync('books');
+      // Force full sync for all tables
+      const tableNames = ['books', 'chapters', 'verses'];
+      const results: any[] = [];
 
-      const progress: SyncProgress = {
-        table: result.tableName,
-        recordsSynced: result.recordsSynced,
-        isComplete: result.success,
-      };
-      if (result.error) {
-        progress.error = result.error;
+      for (const tableName of tableNames) {
+        const result = await syncService.forceFullSync(tableName);
+        results.push(result);
+
+        const progress: SyncProgress = {
+          table: result.tableName,
+          recordsSynced: result.recordsSynced,
+          isComplete: result.success,
+        };
+        if (result.error) {
+          progress.error = result.error;
+        }
+        setSyncProgress(progress);
+
+        // Small delay between tables
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
-      setSyncProgress(progress);
 
       // Update local state
       const dataAvailable = await localDataService.isDataAvailable();
@@ -180,10 +198,12 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
 
       const lastSync = await localDataService.getLastSyncedAt();
       setLastSyncAt(lastSync);
+
+      console.log('Force sync completed:', results);
     } catch (error) {
       console.error('Force sync failed:', error);
       setSyncProgress({
-        table: 'books',
+        table: 'Force sync failed',
         recordsSynced: 0,
         isComplete: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -198,9 +218,10 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     if (!isInitialized) return;
 
     try {
-      await syncService.resetSyncTimestamp('books');
+      // Reset sync timestamp for all tables
+      await syncService.resetAllSyncMetadata();
       setLastSyncAt(null);
-      console.log('Sync timestamp reset');
+      console.log('Sync timestamp reset for all tables');
     } catch (error) {
       console.error('Failed to reset sync timestamp:', error);
     }
@@ -210,10 +231,13 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     if (!isInitialized) return;
 
     try {
+      // Clear local data for all tables
       await syncService.clearLocalData('books');
+      await syncService.clearLocalData('chapters');
+      await syncService.clearLocalData('verses');
       setHasLocalData(false);
       setLastSyncAt(null);
-      console.log('Local data cleared');
+      console.log('Local data cleared for all tables');
     } catch (error) {
       console.error('Failed to clear local data:', error);
     }

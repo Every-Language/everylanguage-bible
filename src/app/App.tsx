@@ -8,7 +8,7 @@ import { LocalizationProvider } from '@/shared/context/LocalizationContext';
 import { SyncProvider } from '@/shared/context/SyncContext';
 import { MediaPlayerProvider } from '@/shared/context/MediaPlayerContext';
 import { AuthProvider, AuthScreen, ProfileScreen } from '@/features/auth';
-import { BibleBooksScreen } from '@/features/bible/screens/BibleBooksScreen';
+import { BibleContainerScreen } from '@/features/bible';
 import { PlaylistsScreen } from '@/features/playlists';
 import { TopBar } from '@/shared/components/TopBar';
 import { SlideUpModal } from '@/shared/components/ui/SlideUpModal';
@@ -107,7 +107,11 @@ const MainContent: React.FC = () => {
 
         {/* Content */}
         <View style={styles.content}>
-          {activeTab === 'Bible' ? <BibleBooksScreen /> : <PlaylistsScreen />}
+          {activeTab === 'Bible' ? (
+            <BibleContainerScreen />
+          ) : (
+            <PlaylistsScreen />
+          )}
         </View>
 
         {/* Media Player Sheet */}

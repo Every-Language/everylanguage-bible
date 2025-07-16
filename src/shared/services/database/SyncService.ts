@@ -2,7 +2,6 @@ import { supabase } from '../api/supabase';
 import { databaseManager } from './DatabaseManager';
 import type { SyncMetadata } from './schema';
 import type { Tables } from '@everylanguage/shared-types';
-import { createClient } from '@supabase/supabase-js';
 
 export interface SyncOptions {
   batchSize?: number;
@@ -60,9 +59,15 @@ class SyncService {
       results.push(booksResult);
       this.notifyListeners(booksResult);
 
-      // Add more table syncs here as needed
-      // const chaptersResult = await this.syncChapters(options);
-      // results.push(chaptersResult);
+      // Sync chapters table
+      const chaptersResult = await this.syncChapters(options);
+      results.push(chaptersResult);
+      this.notifyListeners(chaptersResult);
+
+      // Sync verses table
+      const versesResult = await this.syncVerses(options);
+      results.push(versesResult);
+      this.notifyListeners(versesResult);
     } catch (error) {
       console.error('Sync failed:', error);
     } finally {
@@ -73,54 +78,81 @@ class SyncService {
   }
 
   private async syncBooks(options: SyncOptions = {}): Promise<SyncResult> {
-    const { batchSize = 100 } = options;
+    const { batchSize = 1000 } = options;
 
     try {
       await this.updateSyncStatus('books', 'syncing');
 
       // Get last sync timestamp
       const lastSync = await this.getLastSync('books');
-      console.log(`Syncing books since: ${lastSync}`);
-
-      // Create a separate client for anonymous access to ensure RLS policies work
       const anonClient = supabase;
 
-      // Fetch updated records from Supabase (works with anonymous access due to RLS policies)
-      let { data: remoteBooks, error } = await anonClient
-        .from('books')
-        .select('*')
-        .gt('updated_at', lastSync)
-        .order('updated_at', { ascending: true })
-        .limit(batchSize);
+      let allBooks: Tables<'books'>[] = [];
+      let currentLastSync = lastSync || '1970-01-01T00:00:00.000Z';
+      let hasMoreData = true;
+      let lastFetchedId: string | null = null;
 
-      if (error) {
-        // Handle auth-related errors gracefully
-        if (error.message.includes('JWT') || error.message.includes('auth')) {
-          console.warn(
-            'Authentication issue, but continuing with anonymous access:',
-            error.message
-          );
-          // Try again with explicit anonymous session
-          const { data: retryData, error: retryError } = await anonClient
-            .from('books')
-            .select('*')
-            .gt('updated_at', lastSync)
-            .order('updated_at', { ascending: true })
-            .limit(batchSize);
+      // Fetch all records in batches using cursor pagination
+      while (hasMoreData) {
+        let query = anonClient
+          .from('books')
+          .select('*')
+          .gte('updated_at', currentLastSync)
+          .order('updated_at', { ascending: true })
+          .order('id', { ascending: true })
+          .limit(batchSize);
 
-          if (retryError) {
-            throw new Error(`Failed to fetch books: ${retryError.message}`);
+        if (lastFetchedId) {
+          query = query.gt('id', lastFetchedId);
+        }
+
+        let { data: remoteBooks, error } = await query;
+
+        if (error) {
+          // Handle auth-related errors gracefully
+          if (error.message.includes('JWT') || error.message.includes('auth')) {
+            let retryQuery = anonClient
+              .from('books')
+              .select('*')
+              .gte('updated_at', currentLastSync)
+              .order('updated_at', { ascending: true })
+              .order('id', { ascending: true })
+              .limit(batchSize);
+
+            if (lastFetchedId) {
+              retryQuery = retryQuery.gt('id', lastFetchedId);
+            }
+
+            const { data: retryData, error: retryError } = await retryQuery;
+
+            if (retryError) {
+              throw new Error(`Failed to fetch books: ${retryError.message}`);
+            }
+
+            remoteBooks = retryData;
+          } else {
+            throw new Error(`Failed to fetch books: ${error.message}`);
           }
+        }
 
-          remoteBooks = retryData;
-        } else {
-          throw new Error(`Failed to fetch books: ${error.message}`);
+        if (!remoteBooks || remoteBooks.length === 0) {
+          hasMoreData = false;
+          break;
+        }
+
+        allBooks = allBooks.concat(remoteBooks);
+
+        const lastBook = remoteBooks[remoteBooks.length - 1];
+        if (lastBook?.id) {
+          lastFetchedId = lastBook.id;
+        }
+
+        if (remoteBooks.length < batchSize) {
+          hasMoreData = false;
         }
       }
 
-      console.log(`Found ${remoteBooks?.length || 0} books to sync`);
-
-      if (!remoteBooks || remoteBooks.length === 0) {
+      if (allBooks.length === 0) {
         await this.updateSyncStatus('books', 'idle');
         return {
           success: true,
@@ -129,19 +161,11 @@ class SyncService {
         };
       }
 
-      // Log some details about the books being synced
-      console.log(
-        `First book: ${remoteBooks[0]?.name} (updated: ${remoteBooks[0]?.updated_at})`
-      );
-      console.log(
-        `Last book: ${remoteBooks[remoteBooks.length - 1]?.name} (updated: ${remoteBooks[remoteBooks.length - 1]?.updated_at})`
-      );
+      // Sync all records to local database
+      await this.upsertBooks(allBooks);
 
-      // Sync records to local database
-      await this.upsertBooks(remoteBooks);
-
-      // Update sync metadata
-      const latestBook = remoteBooks[remoteBooks.length - 1];
+      // Update sync metadata with the timestamp of the very last record
+      const latestBook = allBooks[allBooks.length - 1];
       if (latestBook?.updated_at) {
         await this.updateLastSync('books', latestBook.updated_at);
       }
@@ -150,7 +174,7 @@ class SyncService {
       return {
         success: true,
         tableName: 'books',
-        recordsSynced: remoteBooks.length,
+        recordsSynced: allBooks.length,
       };
     } catch (error) {
       console.error('Books sync failed:', error);
@@ -163,6 +187,240 @@ class SyncService {
       return {
         success: false,
         tableName: 'books',
+        recordsSynced: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  private async syncChapters(options: SyncOptions = {}): Promise<SyncResult> {
+    const { batchSize = 1000 } = options;
+
+    try {
+      await this.updateSyncStatus('chapters', 'syncing');
+
+      // Get last sync timestamp
+      const lastSync = await this.getLastSync('chapters');
+      const anonClient = supabase;
+
+      let allChapters: Tables<'chapters'>[] = [];
+      let currentLastSync = lastSync || '1970-01-01T00:00:00.000Z';
+      let hasMoreData = true;
+      let lastFetchedId: string | null = null;
+
+      // Fetch all records in batches using cursor pagination
+      while (hasMoreData) {
+        let query = anonClient
+          .from('chapters')
+          .select('*')
+          .gte('updated_at', currentLastSync)
+          .order('updated_at', { ascending: true })
+          .order('id', { ascending: true })
+          .limit(batchSize);
+
+        if (lastFetchedId) {
+          query = query.gt('id', lastFetchedId);
+        }
+
+        let { data: remoteChapters, error } = await query;
+
+        if (error) {
+          // Handle auth-related errors gracefully
+          if (error.message.includes('JWT') || error.message.includes('auth')) {
+            let retryQuery = anonClient
+              .from('chapters')
+              .select('*')
+              .gte('updated_at', currentLastSync)
+              .order('updated_at', { ascending: true })
+              .order('id', { ascending: true })
+              .limit(batchSize);
+
+            if (lastFetchedId) {
+              retryQuery = retryQuery.gt('id', lastFetchedId);
+            }
+
+            const { data: retryData, error: retryError } = await retryQuery;
+
+            if (retryError) {
+              throw new Error(
+                `Failed to fetch chapters: ${retryError.message}`
+              );
+            }
+
+            remoteChapters = retryData;
+          } else {
+            throw new Error(`Failed to fetch chapters: ${error.message}`);
+          }
+        }
+
+        if (!remoteChapters || remoteChapters.length === 0) {
+          hasMoreData = false;
+          break;
+        }
+
+        allChapters = allChapters.concat(remoteChapters);
+
+        const lastChapter = remoteChapters[remoteChapters.length - 1];
+        if (lastChapter?.id) {
+          lastFetchedId = lastChapter.id;
+        }
+
+        if (remoteChapters.length < batchSize) {
+          hasMoreData = false;
+        }
+      }
+
+      if (allChapters.length === 0) {
+        await this.updateSyncStatus('chapters', 'idle');
+        return {
+          success: true,
+          tableName: 'chapters',
+          recordsSynced: 0,
+        };
+      }
+
+      // Sync all records to local database
+      await this.upsertChapters(allChapters);
+
+      // Update sync metadata with the timestamp of the very last record
+      const latestChapter = allChapters[allChapters.length - 1];
+      if (latestChapter?.updated_at) {
+        await this.updateLastSync('chapters', latestChapter.updated_at);
+      }
+      await this.updateSyncStatus('chapters', 'idle');
+
+      return {
+        success: true,
+        tableName: 'chapters',
+        recordsSynced: allChapters.length,
+      };
+    } catch (error) {
+      console.error('Chapters sync failed:', error);
+      await this.updateSyncStatus(
+        'chapters',
+        'error',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+
+      return {
+        success: false,
+        tableName: 'chapters',
+        recordsSynced: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  private async syncVerses(options: SyncOptions = {}): Promise<SyncResult> {
+    const { batchSize = 1000 } = options;
+
+    try {
+      await this.updateSyncStatus('verses', 'syncing');
+
+      // Get last sync timestamp
+      const lastSync = await this.getLastSync('verses');
+      const anonClient = supabase;
+
+      let allVerses: Tables<'verses'>[] = [];
+      let currentLastSync = lastSync || '1970-01-01T00:00:00.000Z';
+      let hasMoreData = true;
+      let lastFetchedId: string | null = null;
+
+      // Fetch all records in batches using cursor pagination
+      while (hasMoreData) {
+        let query = anonClient
+          .from('verses')
+          .select('*')
+          .gte('updated_at', currentLastSync)
+          .order('updated_at', { ascending: true })
+          .order('id', { ascending: true })
+          .limit(batchSize);
+
+        if (lastFetchedId) {
+          query = query.gt('id', lastFetchedId);
+        }
+
+        let { data: remoteVerses, error } = await query;
+
+        if (error) {
+          // Handle auth-related errors gracefully
+          if (error.message.includes('JWT') || error.message.includes('auth')) {
+            let retryQuery = anonClient
+              .from('verses')
+              .select('*')
+              .gte('updated_at', currentLastSync)
+              .order('updated_at', { ascending: true })
+              .order('id', { ascending: true })
+              .limit(batchSize);
+
+            if (lastFetchedId) {
+              retryQuery = retryQuery.gt('id', lastFetchedId);
+            }
+
+            const { data: retryData, error: retryError } = await retryQuery;
+
+            if (retryError) {
+              throw new Error(`Failed to fetch verses: ${retryError.message}`);
+            }
+
+            remoteVerses = retryData;
+          } else {
+            throw new Error(`Failed to fetch verses: ${error.message}`);
+          }
+        }
+
+        if (!remoteVerses || remoteVerses.length === 0) {
+          hasMoreData = false;
+          break;
+        }
+
+        allVerses = allVerses.concat(remoteVerses);
+
+        const lastVerse = remoteVerses[remoteVerses.length - 1];
+        if (lastVerse?.id) {
+          lastFetchedId = lastVerse.id;
+        }
+
+        if (remoteVerses.length < batchSize) {
+          hasMoreData = false;
+        }
+      }
+
+      if (allVerses.length === 0) {
+        await this.updateSyncStatus('verses', 'idle');
+        return {
+          success: true,
+          tableName: 'verses',
+          recordsSynced: 0,
+        };
+      }
+
+      // Sync all records to local database
+      await this.upsertVerses(allVerses);
+
+      // Update sync metadata with the timestamp of the very last record
+      const latestVerse = allVerses[allVerses.length - 1];
+      if (latestVerse?.updated_at) {
+        await this.updateLastSync('verses', latestVerse.updated_at);
+      }
+      await this.updateSyncStatus('verses', 'idle');
+
+      return {
+        success: true,
+        tableName: 'verses',
+        recordsSynced: allVerses.length,
+      };
+    } catch (error) {
+      console.error('Verses sync failed:', error);
+      await this.updateSyncStatus(
+        'verses',
+        'error',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+
+      return {
+        success: false,
+        tableName: 'verses',
         recordsSynced: 0,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
@@ -194,12 +452,55 @@ class SyncService {
     });
   }
 
+  private async upsertChapters(chapters: Tables<'chapters'>[]): Promise<void> {
+    await databaseManager.transaction(async () => {
+      for (const chapter of chapters) {
+        await databaseManager.execSingle(
+          `
+          INSERT OR REPLACE INTO chapters (
+            id, book_id, chapter_number, total_verses, global_order,
+            created_at, updated_at, synced_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `,
+          [
+            chapter.id,
+            chapter.book_id,
+            chapter.chapter_number,
+            chapter.total_verses,
+            chapter.global_order || 0,
+            chapter.created_at || new Date().toISOString(),
+            chapter.updated_at || new Date().toISOString(),
+          ]
+        );
+      }
+    });
+  }
+
+  private async upsertVerses(verses: Tables<'verses'>[]): Promise<void> {
+    await databaseManager.transaction(async () => {
+      for (const verse of verses) {
+        await databaseManager.execSingle(
+          `
+          INSERT OR REPLACE INTO verses (
+            id, chapter_id, verse_number, global_order,
+            created_at, updated_at, synced_at
+          ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `,
+          [
+            verse.id,
+            verse.chapter_id,
+            verse.verse_number,
+            verse.global_order || 0,
+            verse.created_at || new Date().toISOString(),
+            verse.updated_at || new Date().toISOString(),
+          ]
+        );
+      }
+    });
+  }
+
   async getLastSync(tableName: string): Promise<string> {
-    // Check if database is initialized before proceeding
     if (!databaseManager.initialized) {
-      console.log(
-        `Database not initialized yet, returning default last sync for ${tableName}`
-      );
       return '1970-01-01T00:00:00.000Z';
     }
 
@@ -248,19 +549,24 @@ class SyncService {
 
     if (tableName === 'books') {
       return this.syncBooks();
+    } else if (tableName === 'chapters') {
+      return this.syncChapters();
+    } else if (tableName === 'verses') {
+      return this.syncVerses();
     }
 
     throw new Error(`Unknown table: ${tableName}`);
   }
 
-  async resetSyncTimestamp(tableName: string): Promise<void> {
-    await this.updateLastSync(tableName, '1970-01-01T00:00:00.000Z');
-    console.log(`Reset sync timestamp for ${tableName}`);
-  }
-
   async clearLocalData(tableName: string): Promise<void> {
     if (tableName === 'books') {
       await databaseManager.executeQuery('DELETE FROM books');
+      await this.updateLastSync(tableName, '1970-01-01T00:00:00.000Z');
+    } else if (tableName === 'chapters') {
+      await databaseManager.executeQuery('DELETE FROM chapters');
+      await this.updateLastSync(tableName, '1970-01-01T00:00:00.000Z');
+    } else if (tableName === 'verses') {
+      await databaseManager.executeQuery('DELETE FROM verses');
       await this.updateLastSync(tableName, '1970-01-01T00:00:00.000Z');
     } else {
       throw new Error(`Unknown table: ${tableName}`);
@@ -276,11 +582,7 @@ class SyncService {
    */
   async hasRemoteChanges(tableName: string): Promise<boolean> {
     try {
-      // Check if database is initialized before proceeding
       if (!databaseManager.initialized) {
-        console.log(
-          `Database not initialized yet, skipping remote changes check for ${tableName}`
-        );
         return false;
       }
 
@@ -309,7 +611,7 @@ class SyncService {
    * Get a summary of remote changes for multiple tables
    */
   async getRemoteChangesSummary(
-    tableNames: string[] = ['books']
+    tableNames: string[] = ['books', 'chapters', 'verses']
   ): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
 
@@ -320,28 +622,63 @@ class SyncService {
     return results;
   }
 
-  async getTotalRemoteRecordsCount(tableName: string): Promise<number> {
+  /**
+   * Reset sync metadata for a specific table to force a complete resync
+   */
+  async resetSyncMetadata(tableName: string): Promise<void> {
     try {
-      // Check if database is initialized before proceeding
       if (!databaseManager.initialized) {
-        console.log(
-          `Database not initialized yet, returning 0 for total records count for ${tableName}`
-        );
-        return 0;
+        throw new Error('Database not initialized');
       }
 
-      // Create anonymous client for counting
-      const anonClient = createClient(
-        process.env['EXPO_PUBLIC_SUPABASE_URL']!,
-        process.env['EXPO_PUBLIC_SUPABASE_ANON_KEY']!
+      const resetTimestamp = '1970-01-01T00:00:00.000Z';
+      const currentTimestamp = new Date().toISOString();
+
+      const db = databaseManager.getDatabase();
+      await db.runAsync(
+        `INSERT OR REPLACE INTO sync_metadata (table_name, last_sync, sync_status, updated_at) 
+         VALUES (?, ?, 'idle', ?)`,
+        [tableName, resetTimestamp, currentTimestamp]
       );
 
-      const { count, error } = await anonClient
-        .from(tableName)
+      // Verify the reset worked
+      const afterReset = await this.getLastSync(tableName);
+      if (afterReset !== resetTimestamp) {
+        throw new Error(
+          `Reset failed: expected ${resetTimestamp}, got ${afterReset}`
+        );
+      }
+    } catch (error) {
+      console.error(`Failed to reset sync metadata for ${tableName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reset sync metadata for all tables to force a complete resync
+   */
+  async resetAllSyncMetadata(): Promise<void> {
+    try {
+      await this.resetSyncMetadata('books');
+      await this.resetSyncMetadata('chapters');
+      await this.resetSyncMetadata('verses');
+    } catch (error) {
+      console.error('Failed to reset all sync metadata:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the total count of remote records for a table (for progress tracking)
+   */
+  async getTotalRemoteRecordsCount(tableName: string): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from(tableName as any)
         .select('*', { count: 'exact', head: true });
 
       if (error) {
-        console.warn(`Failed to get total count for ${tableName}:`, error);
+        console.error(`Failed to get total count for ${tableName}:`, error);
         return 0;
       }
 
@@ -350,6 +687,13 @@ class SyncService {
       console.error(`Error getting total count for ${tableName}:`, error);
       return 0;
     }
+  }
+
+  /**
+   * Alias for resetSyncMetadata to match SyncContext expectations
+   */
+  async resetSyncTimestamp(tableName: string): Promise<void> {
+    return this.resetSyncMetadata(tableName);
   }
 }
 

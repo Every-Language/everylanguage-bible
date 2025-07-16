@@ -26,18 +26,13 @@ export class BackgroundSyncService {
     // Define the background task
     TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
       try {
-        console.log('Background sync task executing...');
-
         // Check if there are any changes before syncing
         const hasChanges = await this.checkForChanges();
 
         if (hasChanges) {
-          console.log('Changes detected, starting background sync...');
           await syncService.syncAll({ batchSize: 50 }); // Smaller batch size for background
-          console.log('Background sync completed successfully');
           return BackgroundFetch.BackgroundFetchResult.NewData;
         } else {
-          console.log('No changes detected, skipping sync');
           return BackgroundFetch.BackgroundFetchResult.NoData;
         }
       } catch (error) {
@@ -59,7 +54,6 @@ export class BackgroundSyncService {
         status === BackgroundFetch.BackgroundFetchStatus.Restricted ||
         status === BackgroundFetch.BackgroundFetchStatus.Denied
       ) {
-        console.warn('Background fetch is restricted or denied');
         return;
       }
 
@@ -68,8 +62,6 @@ export class BackgroundSyncService {
         stopOnTerminate: false,
         startOnBoot: true,
       });
-
-      console.log('Background fetch registered successfully');
     } catch (error) {
       console.error('Failed to register background fetch:', error);
     }
@@ -78,7 +70,6 @@ export class BackgroundSyncService {
   async unregisterBackgroundFetch(): Promise<void> {
     try {
       await BackgroundFetch.unregisterTaskAsync(BACKGROUND_SYNC_TASK);
-      console.log('Background fetch unregistered');
     } catch (error) {
       console.error('Failed to unregister background fetch:', error);
     }
@@ -86,22 +77,54 @@ export class BackgroundSyncService {
 
   async checkForChanges(): Promise<boolean> {
     try {
-      // Get the latest sync timestamp from local database
-      const lastSync = await syncService.getLastSync('books');
-
-      // Check if there are any records updated since last sync
-      const { data, error } = await supabase
+      // Check for changes in books table
+      const booksLastSync = await syncService.getLastSync('books');
+      const { data: booksData, error: booksError } = await supabase
         .from('books')
         .select('id')
-        .gt('updated_at', lastSync)
+        .gt('updated_at', booksLastSync)
         .limit(1);
 
-      if (error) {
-        console.error('Error checking for changes:', error);
+      if (booksError) {
+        console.error('Error checking for books changes:', booksError);
         return false; // Don't sync if we can't check for changes
       }
 
-      return data && data.length > 0;
+      if (booksData && booksData.length > 0) {
+        return true;
+      }
+
+      // Check for changes in chapters table
+      const chaptersLastSync = await syncService.getLastSync('chapters');
+      const { data: chaptersData, error: chaptersError } = await supabase
+        .from('chapters')
+        .select('id')
+        .gt('updated_at', chaptersLastSync)
+        .limit(1);
+
+      if (chaptersError) {
+        console.error('Error checking for chapters changes:', chaptersError);
+        return false; // Don't sync if we can't check for changes
+      }
+
+      if (chaptersData && chaptersData.length > 0) {
+        return true;
+      }
+
+      // Check for changes in verses table
+      const versesLastSync = await syncService.getLastSync('verses');
+      const { data: versesData, error: versesError } = await supabase
+        .from('verses')
+        .select('id')
+        .gt('updated_at', versesLastSync)
+        .limit(1);
+
+      if (versesError) {
+        console.error('Error checking for verses changes:', versesError);
+        return false; // Don't sync if we can't check for changes
+      }
+
+      return versesData && versesData.length > 0;
     } catch (error) {
       console.error('Error in checkForChanges:', error);
       return false;

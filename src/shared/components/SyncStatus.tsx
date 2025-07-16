@@ -39,9 +39,12 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({
     if (onSyncPress) {
       onSyncPress();
     } else {
-      // Check for changes before syncing
-      await checkForRemoteChanges();
-      await syncNow();
+      try {
+        await checkForRemoteChanges();
+        await syncNow();
+      } catch (error) {
+        console.error('Sync failed:', error);
+      }
     }
   };
 
