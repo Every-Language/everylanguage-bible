@@ -1,4 +1,10 @@
-import { Theme, ThemeColors, ThemeSpacing, ThemeTypography, ThemeBorderRadius } from '@/shared/types/theme';
+import {
+  Theme,
+  ThemeColors,
+  ThemeSpacing,
+  ThemeTypography,
+  ThemeBorderRadius,
+} from '@/shared/types/theme';
 
 // Brand Colors from Brandkit
 export const BRAND_COLORS = {
@@ -14,15 +20,15 @@ export const COLOR_VARIATIONS = {
   // Charcoal variations
   CHARCOAL_LIGHT: '#3D3E3B',
   CHARCOAL_DARK: '#1A1B19',
-  
+
   // Cream variations
   CREAM_LIGHT: '#F5F3ED',
   CREAM_DARK: '#D4CFC3',
-  
+
   // Gold variations
   GOLD_LIGHT: '#C4A76A',
   GOLD_DARK: '#8A7143',
-  
+
   // Neutral variations
   GRAY_50: '#F9FAFB',
   GRAY_100: '#F3F4F6',
@@ -34,13 +40,13 @@ export const COLOR_VARIATIONS = {
   GRAY_700: '#374151',
   GRAY_800: '#1F2937',
   GRAY_900: '#111827',
-  
+
   // Status colors
   SUCCESS: '#10B981',
   WARNING: '#F59E0B',
   ERROR: '#EF4444',
   INFO: '#3B82F6',
-  
+
   // Transparent variations
   OVERLAY_LIGHT: 'rgba(0, 0, 0, 0.1)',
   OVERLAY_DARK: 'rgba(0, 0, 0, 0.6)',
@@ -54,28 +60,28 @@ const lightColors: ThemeColors = {
   primary: BRAND_COLORS.CHARCOAL,
   secondary: BRAND_COLORS.CREAM,
   accent: BRAND_COLORS.GOLD,
-  
+
   // Background colors
   background: BRAND_COLORS.WHITE,
   surface: BRAND_COLORS.CREAM,
   surfaceVariant: COLOR_VARIATIONS.CREAM_LIGHT,
-  
+
   // Text colors
   text: BRAND_COLORS.CHARCOAL,
   textSecondary: COLOR_VARIATIONS.CHARCOAL_LIGHT,
   textInverse: BRAND_COLORS.WHITE,
-  
+
   // UI colors
   border: COLOR_VARIATIONS.CREAM_DARK,
   shadow: COLOR_VARIATIONS.SHADOW_LIGHT,
   overlay: COLOR_VARIATIONS.OVERLAY_LIGHT,
-  
+
   // Status colors
   success: COLOR_VARIATIONS.SUCCESS,
   warning: COLOR_VARIATIONS.WARNING,
   error: COLOR_VARIATIONS.ERROR,
   info: COLOR_VARIATIONS.INFO,
-  
+
   // Interactive colors
   interactive: BRAND_COLORS.GOLD,
   interactiveHover: COLOR_VARIATIONS.GOLD_LIGHT,
@@ -89,28 +95,28 @@ const darkColors: ThemeColors = {
   primary: BRAND_COLORS.CREAM,
   secondary: BRAND_COLORS.CHARCOAL,
   accent: BRAND_COLORS.GOLD,
-  
+
   // Background colors
   background: BRAND_COLORS.BLACK,
   surface: COLOR_VARIATIONS.CHARCOAL_DARK,
   surfaceVariant: BRAND_COLORS.CHARCOAL,
-  
+
   // Text colors
   text: BRAND_COLORS.CREAM,
   textSecondary: COLOR_VARIATIONS.CREAM_DARK,
   textInverse: BRAND_COLORS.CHARCOAL,
-  
+
   // UI colors
   border: COLOR_VARIATIONS.CHARCOAL_LIGHT,
   shadow: COLOR_VARIATIONS.SHADOW_DARK,
   overlay: COLOR_VARIATIONS.OVERLAY_DARK,
-  
+
   // Status colors
   success: COLOR_VARIATIONS.SUCCESS,
   warning: COLOR_VARIATIONS.WARNING,
   error: COLOR_VARIATIONS.ERROR,
   info: COLOR_VARIATIONS.INFO,
-  
+
   // Interactive colors
   interactive: BRAND_COLORS.GOLD,
   interactiveHover: COLOR_VARIATIONS.GOLD_LIGHT,
@@ -185,4 +191,4 @@ export const darkTheme: Theme = {
 export const themes = {
   light: lightTheme,
   dark: darkTheme,
-}; 
+};

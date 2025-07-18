@@ -15,4 +15,4 @@ export interface MediaPlayerState {
   error: string | null;
   volume: number;
   playbackRate: number;
-} 
+}

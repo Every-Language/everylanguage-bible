@@ -38,16 +38,16 @@ export function useAuth() {
 
   // Listen for auth state changes
   useEffect(() => {
-    const { data: { subscription } } = authService.onAuthStateChange(
-      (_event, session) => {
-        setAuthState({
-          user: session?.user ?? null,
-          session,
-          isLoading: false,
-          isInitialized: true,
-        });
-      }
-    );
+    const {
+      data: { subscription },
+    } = authService.onAuthStateChange((_event, session) => {
+      setAuthState({
+        user: session?.user ?? null,
+        session,
+        isLoading: false,
+        isInitialized: true,
+      });
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -70,9 +70,12 @@ export function useAuth() {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
       const data = await authService.signUp({ email, password });
-      
+
       if (!data.session) {
-        Alert.alert('Success', 'Please check your email to verify your account!');
+        Alert.alert(
+          'Success',
+          'Please check your email to verify your account!'
+        );
       }
     } catch (error: any) {
       Alert.alert('Sign Up Error', error.message);
@@ -111,4 +114,4 @@ export function useAuth() {
     signOut,
     resetPassword,
   };
-} 
+}

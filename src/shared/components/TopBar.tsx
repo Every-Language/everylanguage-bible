@@ -9,14 +9,22 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { SyncStatusPill } from './SyncStatusPill';
+import {
+  AudioVersionSelector,
+  TextVersionSelector,
+} from '@/features/languages/components';
+import { useCurrentVersions } from '@/features/languages/hooks';
 
 interface TopBarProps {
   title?: string;
   showProfile?: boolean;
   showThemeToggle?: boolean;
   showSyncStatus?: boolean;
+  showLanguageSelection?: boolean;
   onProfilePress?: () => void;
   onSyncPress?: () => void;
+  onAudioVersionPress?: () => void;
+  onTextVersionPress?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -24,10 +32,15 @@ export const TopBar: React.FC<TopBarProps> = ({
   showProfile = true,
   showThemeToggle = true,
   showSyncStatus = true,
+  showLanguageSelection = false,
   onProfilePress,
   onSyncPress,
+  onAudioVersionPress,
+  onTextVersionPress,
 }) => {
   const { theme, mode, toggleTheme } = useTheme();
+
+  const { currentAudioVersion, currentTextVersion } = useCurrentVersions();
 
   return (
     <SafeAreaView
@@ -46,6 +59,27 @@ export const TopBar: React.FC<TopBarProps> = ({
         </View>
 
         <View style={styles.rightSection}>
+          {showLanguageSelection && (
+            <>
+              <View style={styles.versionSelector}>
+                <AudioVersionSelector
+                  currentVersion={currentAudioVersion}
+                  onPress={onAudioVersionPress || (() => {})}
+                  size='sm'
+                  variant='compact'
+                />
+              </View>
+              <View style={styles.versionSelector}>
+                <TextVersionSelector
+                  currentVersion={currentTextVersion}
+                  onPress={onTextVersionPress || (() => {})}
+                  size='sm'
+                  variant='compact'
+                />
+              </View>
+            </>
+          )}
+
           {showSyncStatus && (
             <SyncStatusPill {...(onSyncPress && { onPress: onSyncPress })} />
           )}
@@ -106,5 +140,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  versionSelector: {
+    marginHorizontal: 4,
   },
 });

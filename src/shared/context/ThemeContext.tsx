@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  ReactNode,
+} from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Theme, ThemeMode, ThemeContextType } from '@/shared/types/theme';
@@ -80,13 +87,16 @@ export function ThemeProvider({ children, initialTheme }: ThemeProviderProps) {
   // Get current theme object
   const theme: Theme = themes[mode];
 
-  // Context value
-  const contextValue: ThemeContextType = {
-    theme,
-    mode,
-    toggleTheme,
-    setTheme,
-  };
+  // ✅ PERFORMANCE FIX: Memoize context value to prevent unnecessary re-renders
+  const contextValue: ThemeContextType = useMemo(
+    () => ({
+      theme,
+      mode,
+      toggleTheme,
+      setTheme,
+    }),
+    [theme, mode, toggleTheme, setTheme]
+  );
 
   // Don't render until theme is loaded
   if (isLoading) {
@@ -103,11 +113,11 @@ export function ThemeProvider({ children, initialTheme }: ThemeProviderProps) {
 // Custom hook to use theme context
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
-  
+
   if (!context) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
-  
+
   return context;
 }
 
@@ -130,4 +140,4 @@ export function useThemeTypography() {
 export function useThemeBorderRadius() {
   const { theme } = useTheme();
   return theme.borderRadius;
-} 
+}

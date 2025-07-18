@@ -21,29 +21,30 @@ export const useBibleBooks = () => {
   // Fetch books from the service
   const fetchBooks = async () => {
     if (!isInitialized) {
-      setState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: 'Database not initialized. Please wait for the app to finish loading.' 
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error:
+          'Database not initialized. Please wait for the app to finish loading.',
       }));
       return;
     }
 
     setState(prev => ({ ...prev, loading: true, error: null }));
-    
+
     try {
       const books = await bibleService.fetchBooks();
-      setState(prev => ({ 
-        ...prev, 
-        books, 
+      setState(prev => ({
+        ...prev,
+        books,
         filteredBooks: books,
-        loading: false 
+        loading: false,
       }));
     } catch (error) {
-      setState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to fetch books' 
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch books',
       }));
     }
   };
@@ -55,7 +56,7 @@ export const useBibleBooks = () => {
     // Apply search filter
     if (state.filters.searchQuery) {
       const query = state.filters.searchQuery.toLowerCase();
-      filtered = filtered.filter(book => 
+      filtered = filtered.filter(book =>
         book.name.toLowerCase().includes(query)
       );
     }
@@ -99,19 +100,22 @@ export const useBibleBooks = () => {
   const setSearchQuery = (searchQuery: string) => {
     setState(prev => ({
       ...prev,
-      filters: { ...prev.filters, searchQuery }
+      filters: { ...prev.filters, searchQuery },
     }));
   };
 
   // Update sort options
-  const setSortOptions = (sortBy?: BooksFilters['sortBy'], sortOrder?: BooksFilters['sortOrder']) => {
+  const setSortOptions = (
+    sortBy?: BooksFilters['sortBy'],
+    sortOrder?: BooksFilters['sortOrder']
+  ) => {
     setState(prev => ({
       ...prev,
-      filters: { 
-        ...prev.filters, 
+      filters: {
+        ...prev.filters,
         sortBy: sortBy || prev.filters.sortBy || 'global_order',
-        sortOrder: sortOrder || prev.filters.sortOrder || 'asc'
-      }
+        sortOrder: sortOrder || prev.filters.sortOrder || 'asc',
+      },
     }));
   };
 
@@ -130,10 +134,11 @@ export const useBibleBooks = () => {
     if (isInitialized && hasLocalData) {
       fetchBooks();
     } else if (isInitialized && !hasLocalData) {
-      setState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: 'No data available. Please check your internet connection and try syncing.' 
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error:
+          'No data available. Please check your internet connection and try syncing.',
       }));
     }
   }, [isInitialized, hasLocalData]);
@@ -145,7 +150,7 @@ export const useBibleBooks = () => {
     error: state.error,
     selectedBook: state.selectedBook,
     filters: state.filters,
-    
+
     // Actions
     fetchBooks,
     setSearchQuery,
@@ -153,4 +158,4 @@ export const useBibleBooks = () => {
     selectBook,
     clearSelection,
   };
-}; 
+};

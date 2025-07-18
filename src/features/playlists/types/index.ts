@@ -11,4 +11,4 @@ export interface PlaylistsState {
   loading: boolean;
   error: string | null;
   selectedPlaylist: Playlist | null;
-} 
+}

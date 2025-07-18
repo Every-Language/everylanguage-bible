@@ -45,6 +45,40 @@ export interface LocalVerse {
   synced_at: string;
 }
 
+// Language Selection Feature Interfaces
+export interface UserSavedVersion {
+  id: string;
+  version_type: 'audio' | 'text';
+  language_entity_id: string;
+  language_name: string;
+  version_id: string; // project_id or text_version_id
+  version_name: string;
+  created_at: string;
+  updated_at: string;
+  synced_at: string;
+}
+
+export interface LanguageEntityCache {
+  id: string;
+  name: string;
+  level: 'family' | 'language' | 'dialect' | 'mother_tongue';
+  parent_id: string | null;
+  created_at: string;
+  updated_at: string;
+  synced_at: string;
+}
+
+export interface AvailableVersionCache {
+  id: string;
+  version_type: 'audio' | 'text';
+  language_entity_id: string;
+  version_id: string; // project_id or text_version_id
+  version_name: string;
+  created_at: string;
+  updated_at: string;
+  synced_at: string;
+}
+
 export const DATABASE_NAME = 'everylanguage_bible.db';
 export const DATABASE_VERSION = 1;
 
@@ -113,6 +147,53 @@ export const createTables = async (
     )
   `);
 
+  // Language Selection Feature Tables
+
+  // User saved language versions (local storage)
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS user_saved_versions (
+      id TEXT PRIMARY KEY,
+      version_type TEXT NOT NULL CHECK (version_type IN ('audio', 'text')),
+      language_entity_id TEXT NOT NULL,
+      language_name TEXT NOT NULL,
+      version_id TEXT NOT NULL,
+      version_name TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(version_type, version_id)
+    )
+  `);
+
+  // Cache for language entities (for offline access)
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS language_entities_cache (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      level TEXT NOT NULL CHECK (level IN ('family', 'language', 'dialect', 'mother_tongue')),
+      parent_id TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (parent_id) REFERENCES language_entities_cache (id)
+    )
+  `);
+
+  // Cache for available versions (audio/text)
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS available_versions_cache (
+      id TEXT PRIMARY KEY,
+      version_type TEXT NOT NULL CHECK (version_type IN ('audio', 'text')),
+      language_entity_id TEXT NOT NULL,
+      version_id TEXT NOT NULL,
+      version_name TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (language_entity_id) REFERENCES language_entities_cache (id)
+    )
+  `);
+
   // Create indexes for better performance
   await db.execAsync(
     'CREATE INDEX IF NOT EXISTS idx_books_testament ON books(testament)'
@@ -150,6 +231,48 @@ export const createTables = async (
     'CREATE INDEX IF NOT EXISTS idx_verses_updated_at ON verses(updated_at)'
   );
 
+  // ✅ PERFORMANCE: Add compound indexes for optimized JOIN queries
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_chapters_book_chapter ON chapters(book_id, chapter_number)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_verses_chapter_verse ON verses(chapter_id, verse_number)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_sync_metadata_table_status ON sync_metadata(table_name, sync_status)'
+  );
+
+  // Language Selection Feature Indexes
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_user_saved_versions_type ON user_saved_versions(version_type)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_user_saved_versions_language ON user_saved_versions(language_entity_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_user_saved_versions_version_id ON user_saved_versions(version_id)'
+  );
+
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_language_entities_cache_parent ON language_entities_cache(parent_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_language_entities_cache_level ON language_entities_cache(level)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_language_entities_cache_name ON language_entities_cache(name)'
+  );
+
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_available_versions_cache_language ON available_versions_cache(language_entity_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_available_versions_cache_type ON available_versions_cache(version_type)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_available_versions_cache_version_id ON available_versions_cache(version_id)'
+  );
+
   // Initialize sync metadata for bible content
   await db.execAsync(`
     INSERT OR IGNORE INTO sync_metadata (table_name, last_sync)
@@ -166,10 +289,32 @@ export const createTables = async (
     VALUES ('verses', '1970-01-01T00:00:00.000Z')
   `);
 
+  // Initialize sync metadata for language selection tables
+  await db.execAsync(`
+    INSERT OR IGNORE INTO sync_metadata (table_name, last_sync)
+    VALUES ('language_entities_cache', '1970-01-01T00:00:00.000Z')
+  `);
+
+  await db.execAsync(`
+    INSERT OR IGNORE INTO sync_metadata (table_name, last_sync)
+    VALUES ('available_versions_cache', '1970-01-01T00:00:00.000Z')
+  `);
+
+  await db.execAsync(`
+    INSERT OR IGNORE INTO sync_metadata (table_name, last_sync)
+    VALUES ('user_saved_versions', '1970-01-01T00:00:00.000Z')
+  `);
+
   console.log('Database tables created successfully');
 };
 
 export const dropTables = async (db: SQLite.SQLiteDatabase): Promise<void> => {
+  // Drop language selection tables first (due to foreign key constraints)
+  await db.execAsync('DROP TABLE IF EXISTS available_versions_cache');
+  await db.execAsync('DROP TABLE IF EXISTS user_saved_versions');
+  await db.execAsync('DROP TABLE IF EXISTS language_entities_cache');
+
+  // Drop existing tables
   await db.execAsync('DROP TABLE IF EXISTS verses');
   await db.execAsync('DROP TABLE IF EXISTS chapters');
   await db.execAsync('DROP TABLE IF EXISTS books');
@@ -189,6 +334,21 @@ export const getTableSchema = () => ({
   },
   verses: {
     tableName: 'verses',
+    primaryKey: 'id',
+    timestampField: 'updated_at',
+  },
+  language_entities_cache: {
+    tableName: 'language_entities_cache',
+    primaryKey: 'id',
+    timestampField: 'updated_at',
+  },
+  available_versions_cache: {
+    tableName: 'available_versions_cache',
+    primaryKey: 'id',
+    timestampField: 'updated_at',
+  },
+  user_saved_versions: {
+    tableName: 'user_saved_versions',
     primaryKey: 'id',
     timestampField: 'updated_at',
   },

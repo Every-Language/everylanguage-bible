@@ -1,41 +1,35 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { useAuthContext } from './AuthProvider';
 import { useTheme, Button, createThemedStyles, getInputStyle } from '@/shared';
 import { useTranslations } from '@/shared/context/LocalizationContext';
 
 const themedStyles = createThemedStyles({
-  container: (theme) => ({
+  container: theme => ({
     flex: 1,
     justifyContent: 'center',
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.background,
   }),
-  title: (theme) => ({
+  title: theme => ({
     fontSize: theme.typography.fontSize.xxl,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
     color: theme.colors.text,
   }),
-  input: (theme) => ({
+  input: theme => ({
     ...getInputStyle(theme),
     marginBottom: theme.spacing.md,
   }),
-  buttonContainer: (theme) => ({
+  buttonContainer: theme => ({
     marginBottom: theme.spacing.md,
   }),
-  linkButton: (theme) => ({
+  linkButton: theme => ({
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
   }),
-  linkText: (theme) => ({
+  linkText: theme => ({
     color: theme.colors.interactive,
     fontSize: theme.typography.fontSize.sm,
   }),
@@ -84,8 +78,8 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
         placeholderTextColor={theme.colors.textSecondary}
         value={email}
         onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
+        keyboardType='email-address'
+        autoCapitalize='none'
         autoCorrect={false}
       />
 
@@ -96,30 +90,29 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        autoCapitalize="none"
+        autoCapitalize='none'
       />
 
       <View style={styles.buttonContainer}>
         <Button
-          title={mode === 'signin' ? t('auth.signInButton') : t('auth.signUpButton')}
+          title={
+            mode === 'signin' ? t('auth.signInButton') : t('auth.signUpButton')
+          }
           onPress={handleSubmit}
           disabled={isLoading}
           loading={isLoading}
-          variant="primary"
+          variant='primary'
           fullWidth
         />
       </View>
 
       <TouchableOpacity
         style={styles.linkButton}
-        onPress={() => onModeChange(mode === 'signin' ? 'signup' : 'signin')}
-      >
+        onPress={() => onModeChange(mode === 'signin' ? 'signup' : 'signin')}>
         <Text style={styles.linkText}>
-          {mode === 'signin'
-            ? t('auth.noAccount')
-            : t('auth.hasAccount')}
+          {mode === 'signin' ? t('auth.noAccount') : t('auth.hasAccount')}
         </Text>
       </TouchableOpacity>
     </View>
   );
-} 
+}

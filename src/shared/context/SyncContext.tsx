@@ -4,9 +4,12 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useMemo,
 } from 'react';
 import NetInfo from '@react-native-community/netinfo';
-import { databaseManager } from '../services/database/DatabaseManager';
+import DatabaseManager from '../services/database/DatabaseManager';
+
+const databaseManager = DatabaseManager.getInstance();
 import { bibleSync } from '../services/sync/bible/BibleSyncService';
 import { localDataService } from '../services/database/LocalDataService';
 import { backgroundSyncService } from '../services/sync/BackgroundSyncService';
@@ -293,22 +296,41 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     return unsubscribe;
   }, []);
 
-  const value: SyncContextType = {
-    isInitialized,
-    isSyncing,
-    syncProgress,
-    lastSyncAt,
-    hasLocalData,
-    isConnected,
-    connectionType,
-    initializeDatabase,
-    syncNow,
-    forceFullSync,
-    resetSyncTimestamp,
-    clearLocalData,
-    getSyncMetadata,
-    checkForUpdates,
-  };
+  // ✅ PERFORMANCE FIX: Memoize context value to prevent unnecessary re-renders
+  const value: SyncContextType = useMemo(
+    () => ({
+      isInitialized,
+      isSyncing,
+      syncProgress,
+      lastSyncAt,
+      hasLocalData,
+      isConnected,
+      connectionType,
+      initializeDatabase,
+      syncNow,
+      forceFullSync,
+      resetSyncTimestamp,
+      clearLocalData,
+      getSyncMetadata,
+      checkForUpdates,
+    }),
+    [
+      isInitialized,
+      isSyncing,
+      syncProgress,
+      lastSyncAt,
+      hasLocalData,
+      isConnected,
+      connectionType,
+      initializeDatabase,
+      syncNow,
+      forceFullSync,
+      resetSyncTimestamp,
+      clearLocalData,
+      getSyncMetadata,
+      checkForUpdates,
+    ]
+  );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
 };

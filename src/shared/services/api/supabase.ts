@@ -6,8 +6,14 @@ import type { Database } from '@everylanguage/shared-types';
 
 import { env, getRequiredEnvVar } from '@/app/config/env';
 
-const supabaseUrl = getRequiredEnvVar('EXPO_PUBLIC_SUPABASE_URL', env.supabase.url);
-const supabaseAnonKey = getRequiredEnvVar('EXPO_PUBLIC_SUPABASE_ANON_KEY', env.supabase.anonKey);
+const supabaseUrl = getRequiredEnvVar(
+  'EXPO_PUBLIC_SUPABASE_URL',
+  env.supabase.url
+);
+const supabaseAnonKey = getRequiredEnvVar(
+  'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+  env.supabase.anonKey
+);
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -19,10 +25,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 });
 
 // Handle session refresh for React Native
-AppState.addEventListener('change', (state) => {
+AppState.addEventListener('change', state => {
   if (state === 'active') {
     supabase.auth.startAutoRefresh();
   } else {
     supabase.auth.stopAutoRefresh();
   }
-}); 
+});

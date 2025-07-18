@@ -30,11 +30,12 @@ export const BookGrid: React.FC<BookGridProps> = ({
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <FlatList
         data={books}
         renderItem={renderBook}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         numColumns={2}
         contentContainerStyle={styles.gridContent}
         columnWrapperStyle={styles.row}
@@ -59,4 +60,4 @@ const styles = StyleSheet.create({
     width: '48%',
     marginBottom: 16,
   },
-}); 
+});

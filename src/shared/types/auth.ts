@@ -17,4 +17,4 @@ export interface AuthContextValue extends AuthState {
 export interface AuthCredentials {
   email: string;
   password: string;
-} 
+}

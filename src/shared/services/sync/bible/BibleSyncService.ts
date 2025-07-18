@@ -1,5 +1,7 @@
 import { supabase } from '../../api/supabase';
-import { databaseManager } from '../../database/DatabaseManager';
+import DatabaseManager from '../../database/DatabaseManager';
+
+const databaseManager = DatabaseManager.getInstance();
 import type {
   SyncOptions,
   SyncResult,
@@ -437,77 +439,102 @@ class BibleSyncService implements BaseSyncService {
     }
   }
 
-  // Optimized upsert methods using batch transactions
+  // ✅ PERFORMANCE FIX: True batch upsert using SQLite batch operations
   private async upsertBooks(books: Tables<'books'>[]): Promise<void> {
+    if (books.length === 0) return;
+
     await databaseManager.transaction(async () => {
-      for (const book of books) {
-        await databaseManager.execSingle(
-          `
-          INSERT OR REPLACE INTO books (
-            id, book_number, name, testament, chapters, global_order, 
-            created_at, updated_at, synced_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `,
-          [
-            book.id,
-            book.book_number,
-            book.name,
-            'OT', // Default value since it's not in the schema
-            1, // Default value since chapters is not in the schema
-            book.global_order || 0,
-            book.created_at || new Date().toISOString(),
-            book.updated_at || new Date().toISOString(),
-          ]
-        );
-      }
+      // Create placeholders for batch insert
+      const placeholders = books
+        .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+        .join(', ');
+
+      const query = `
+        INSERT OR REPLACE INTO books (
+          id, book_number, name, testament, chapters, global_order, 
+          created_at, updated_at, synced_at
+        ) VALUES ${placeholders}
+      `;
+
+      // Flatten all parameters
+      const params = books.flatMap(book => [
+        book.id,
+        book.book_number,
+        book.name,
+        'OT', // Default value since it's not in the schema
+        1, // Default value since chapters is not in the schema
+        book.global_order || 0,
+        book.created_at || new Date().toISOString(),
+        book.updated_at || new Date().toISOString(),
+      ]);
+
+      await databaseManager.execSingle(query, params);
     });
   }
 
   private async upsertChapters(chapters: Tables<'chapters'>[]): Promise<void> {
+    if (chapters.length === 0) return;
+
     await databaseManager.transaction(async () => {
-      for (const chapter of chapters) {
-        await databaseManager.execSingle(
-          `
-          INSERT OR REPLACE INTO chapters (
-            id, book_id, chapter_number, total_verses, global_order,
-            created_at, updated_at, synced_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `,
-          [
-            chapter.id,
-            chapter.book_id,
-            chapter.chapter_number,
-            chapter.total_verses,
-            chapter.global_order || 0,
-            chapter.created_at || new Date().toISOString(),
-            chapter.updated_at || new Date().toISOString(),
-          ]
-        );
-      }
+      // ✅ PERFORMANCE FIX: Batch insert for chapters
+      const placeholders = chapters
+        .map(() => '(?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+        .join(', ');
+
+      const query = `
+        INSERT OR REPLACE INTO chapters (
+          id, book_id, chapter_number, total_verses, global_order,
+          created_at, updated_at, synced_at
+        ) VALUES ${placeholders}
+      `;
+
+      const params = chapters.flatMap(chapter => [
+        chapter.id,
+        chapter.book_id,
+        chapter.chapter_number,
+        chapter.total_verses,
+        chapter.global_order || 0,
+        chapter.created_at || new Date().toISOString(),
+        chapter.updated_at || new Date().toISOString(),
+      ]);
+
+      await databaseManager.execSingle(query, params);
     });
   }
 
   private async upsertVerses(verses: Tables<'verses'>[]): Promise<void> {
-    await databaseManager.transaction(async () => {
-      for (const verse of verses) {
-        await databaseManager.execSingle(
-          `
+    if (verses.length === 0) return;
+
+    // ✅ PERFORMANCE FIX: Split large verse batches to avoid SQLite variable limits
+    const BATCH_SIZE = 500; // SQLite has variable limits (~999), so batch to be safe
+
+    for (let i = 0; i < verses.length; i += BATCH_SIZE) {
+      const batch = verses.slice(i, i + BATCH_SIZE);
+
+      await databaseManager.transaction(async () => {
+        const placeholders = batch
+          .map(() => '(?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+          .join(', ');
+
+        const query = `
           INSERT OR REPLACE INTO verses (
             id, chapter_id, verse_number, global_order,
             created_at, updated_at, synced_at
-          ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `,
-          [
-            verse.id,
-            verse.chapter_id,
-            verse.verse_number,
-            verse.global_order || 0,
-            verse.created_at || new Date().toISOString(),
-            verse.updated_at || new Date().toISOString(),
-          ]
-        );
-      }
-    });
+          ) VALUES ${placeholders}
+        `;
+
+        const params = batch.flatMap(verse => [
+          verse.id,
+          verse.chapter_id,
+          verse.verse_number,
+          verse.global_order || 0,
+          verse.created_at || new Date().toISOString(),
+          verse.updated_at || new Date().toISOString(),
+        ]);
+
+        await databaseManager.execSingle(query, params);
+      });
+    }
   }
 
   // Helper methods

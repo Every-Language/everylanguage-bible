@@ -6,7 +6,8 @@ export const PlaylistsScreen: React.FC = () => {
   const { theme } = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
           Playlists
@@ -15,7 +16,8 @@ export const PlaylistsScreen: React.FC = () => {
           Create and manage your audio playlists
         </Text>
         <View style={styles.emptyState}>
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+          <Text
+            style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
             No playlists yet. Create your first playlist!
           </Text>
         </View>
@@ -51,4 +53,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
-}); 
+});

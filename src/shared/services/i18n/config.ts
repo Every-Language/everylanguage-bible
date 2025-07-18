@@ -51,18 +51,18 @@ function getDeviceLocale(): string {
   try {
     const deviceLocales = Localization.getLocales();
     const deviceLocale = deviceLocales[0];
-    
+
     if (!deviceLocale) {
       return 'en'; // Default fallback
     }
-    
+
     const supportedCodes = SUPPORTED_LOCALES.map(locale => locale.code);
     const localeCode = deviceLocale.languageCode?.toLowerCase();
-    
+
     if (localeCode && supportedCodes.includes(localeCode)) {
       return localeCode;
     }
-    
+
     return 'en'; // Default fallback
   } catch (error) {
     console.error('Error getting device locale:', error);
@@ -94,59 +94,57 @@ const initializeI18n = async () => {
   try {
     const savedLocale = await getSavedLocale();
     const deviceLocale = getDeviceLocale();
-    
+
     const initialLocale = savedLocale || deviceLocale;
-    
-    await i18n
-      .use(initReactI18next)
-      .init({
-        resources,
-        lng: initialLocale,
-        fallbackLng: 'en',
-        
-        interpolation: {
-          escapeValue: false,
-        },
-        
-        react: {
-          useSuspense: false,
-        },
-        
-        debug: __DEV__,
-        
-        // Key separator
-        keySeparator: '.',
-        
-        // Namespace separator
-        nsSeparator: ':',
-        
-        // Pluralization
-        pluralSeparator: '_',
-        
-        // Context separator
-        contextSeparator: '_',
-        
-        // Missing key handler
-        missingKeyHandler: (lng, ns, key, fallbackValue) => {
-          if (__DEV__) {
-            console.warn(`Missing translation key: ${key} for locale: ${lng}`);
-          }
-          return fallbackValue || key;
-        },
-        
-        // Load languages on demand
-        load: 'languageOnly',
-        
-        // Clean code
-        cleanCode: true,
-        
-        // Detect language on client side
-        detection: {
-          order: ['localStorage', 'navigator'],
-          caches: ['localStorage'],
-        },
-      });
-      
+
+    await i18n.use(initReactI18next).init({
+      resources,
+      lng: initialLocale,
+      fallbackLng: 'en',
+
+      interpolation: {
+        escapeValue: false,
+      },
+
+      react: {
+        useSuspense: false,
+      },
+
+      debug: __DEV__,
+
+      // Key separator
+      keySeparator: '.',
+
+      // Namespace separator
+      nsSeparator: ':',
+
+      // Pluralization
+      pluralSeparator: '_',
+
+      // Context separator
+      contextSeparator: '_',
+
+      // Missing key handler
+      missingKeyHandler: (lng, ns, key, fallbackValue) => {
+        if (__DEV__) {
+          console.warn(`Missing translation key: ${key} for locale: ${lng}`);
+        }
+        return fallbackValue || key;
+      },
+
+      // Load languages on demand
+      load: 'languageOnly',
+
+      // Clean code
+      cleanCode: true,
+
+      // Detect language on client side
+      detection: {
+        order: ['localStorage', 'navigator'],
+        caches: ['localStorage'],
+      },
+    });
+
     console.log('i18n initialized successfully');
   } catch (error) {
     console.error('Failed to initialize i18n:', error);
@@ -162,7 +160,10 @@ export default i18n;
 // Helper function to get current locale info
 export function getCurrentLocaleInfo() {
   const currentLocale = i18n.language;
-  return SUPPORTED_LOCALES.find(locale => locale.code === currentLocale) || SUPPORTED_LOCALES[0];
+  return (
+    SUPPORTED_LOCALES.find(locale => locale.code === currentLocale) ||
+    SUPPORTED_LOCALES[0]
+  );
 }
 
 // Helper function to check if locale is RTL
@@ -175,4 +176,4 @@ export function isRTLLocale(localeCode?: string): boolean {
 // Helper function to get locale direction
 export function getLocaleDirection(localeCode?: string): 'ltr' | 'rtl' {
   return isRTLLocale(localeCode) ? 'rtl' : 'ltr';
-} 
+}

@@ -1,17 +1,16 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useLocalization, useTranslations } from '../context/LocalizationContext';
+import {
+  useLocalization,
+  useTranslations,
+} from '../context/LocalizationContext';
 
 interface LocaleSelectorProps {
   onLocaleChange?: (localeCode: string) => void;
 }
 
 export function LocaleSelector({ onLocaleChange }: LocaleSelectorProps) {
-  const { 
-    supportedLocales, 
-    currentLocale, 
-    changeLocale
-  } = useLocalization();
+  const { supportedLocales, currentLocale, changeLocale } = useLocalization();
   const t = useTranslations();
 
   const handleLocaleChange = async (localeCode: string) => {
@@ -21,43 +20,39 @@ export function LocaleSelector({ onLocaleChange }: LocaleSelectorProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        {t('settings.locale')}
-      </Text>
-      
+      <Text style={styles.title}>{t('settings.locale')}</Text>
+
       <View style={styles.localeList}>
-        {supportedLocales.map((locale) => (
+        {supportedLocales.map(locale => (
           <TouchableOpacity
             key={locale.code}
             style={[
               styles.localeItem,
               {
-                backgroundColor: currentLocale === locale.code 
-                  ? '#007AFF' 
-                  : 'transparent',
-              }
+                backgroundColor:
+                  currentLocale === locale.code ? '#007AFF' : 'transparent',
+              },
             ]}
-            onPress={() => handleLocaleChange(locale.code)}
-          >
+            onPress={() => handleLocaleChange(locale.code)}>
             <View style={styles.localeInfo}>
-              <Text style={[
-                styles.localeName,
-                {
-                  color: currentLocale === locale.code 
-                    ? '#FFFFFF' 
-                    : '#000000',
-                }
-              ]}>
+              <Text
+                style={[
+                  styles.localeName,
+                  {
+                    color:
+                      currentLocale === locale.code ? '#FFFFFF' : '#000000',
+                  },
+                ]}>
                 {locale.nativeName}
               </Text>
-              <Text style={[
-                styles.localeCode,
-                {
-                  color: currentLocale === locale.code 
-                    ? '#FFFFFF' 
-                    : '#666666',
-                }
-              ]}>
+              <Text
+                style={[
+                  styles.localeCode,
+                  {
+                    color:
+                      currentLocale === locale.code ? '#FFFFFF' : '#666666',
+                  },
+                ]}>
                 {locale.name}
               </Text>
             </View>
@@ -110,4 +105,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
-}); 
+});

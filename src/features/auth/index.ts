@@ -10,4 +10,4 @@ export { ProfileScreen } from './screens/ProfileScreen';
 export { useAuth } from './hooks/useAuth';
 
 // Auth services
-export { authService } from './services/authService'; 
+export { authService } from './services/authService';

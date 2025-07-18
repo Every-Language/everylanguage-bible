@@ -1,46 +1,63 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from 'react';
 import { I18nManager } from 'react-native';
 import i18n, {
   SUPPORTED_LOCALES,
   saveLocalePreference,
   getCurrentLocaleInfo,
   isRTLLocale,
-  getLocaleDirection
+  getLocaleDirection,
 } from '../services/i18n/config';
 
 // Define types for context
 interface LocalizationContextType {
   // Localization functions
   t: (key: string, options?: any) => string;
-  
+
   // Current locale
   currentLocale: string;
-  currentLocaleInfo: typeof SUPPORTED_LOCALES[0];
-  
+  currentLocaleInfo: (typeof SUPPORTED_LOCALES)[0] | undefined;
+
   // Available locales
   supportedLocales: typeof SUPPORTED_LOCALES;
-  
+
   // Locale functions
   changeLocale: (localeCode: string) => Promise<void>;
-  
+
   // RTL support
   isRTL: boolean;
   direction: 'ltr' | 'rtl';
-  
+
   // Loading state
   isLoading: boolean;
 }
 
 // Create context
-const LocalizationContext = createContext<LocalizationContextType | undefined>(undefined);
+const LocalizationContext = createContext<LocalizationContextType | undefined>(
+  undefined
+);
 
 // Provider component
-export function LocalizationProvider({ children }: { children: React.ReactNode }) {
+export function LocalizationProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [isLoading, setIsLoading] = useState(true);
   const [currentLocale, setCurrentLocale] = useState(i18n.language);
-  const [currentLocaleInfo, setCurrentLocaleInfo] = useState(() => getCurrentLocaleInfo() || SUPPORTED_LOCALES[0]);
+  const [currentLocaleInfo, setCurrentLocaleInfo] = useState(
+    () => getCurrentLocaleInfo() || SUPPORTED_LOCALES[0]
+  );
   const [isRTL, setIsRTL] = useState(isRTLLocale());
-  const [direction, setDirection] = useState<'ltr' | 'rtl'>(getLocaleDirection());
+  const [direction, setDirection] = useState<'ltr' | 'rtl'>(
+    getLocaleDirection()
+  );
 
   // Initialize context
   useEffect(() => {
@@ -50,10 +67,10 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
       setCurrentLocaleInfo(getCurrentLocaleInfo() || SUPPORTED_LOCALES[0]);
       const newIsRTL = isRTLLocale(lng);
       const newDirection = getLocaleDirection(lng);
-      
+
       setIsRTL(newIsRTL);
       setDirection(newDirection);
-      
+
       // Update RTL layout if needed
       if (I18nManager.isRTL !== newIsRTL) {
         I18nManager.allowRTL(newIsRTL);
@@ -63,22 +80,22 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
 
     // Listen for locale changes
     i18n.on('languageChanged', handleLocaleChange);
-    
+
     // Set loading to false once initialized
     setIsLoading(false);
-    
+
     // Cleanup listener on unmount
     return () => {
       i18n.off('languageChanged', handleLocaleChange);
     };
   }, []);
 
-  // Handle locale changes
-  const changeLocale = async (localeCode: string) => {
+  // ✅ PERFORMANCE FIX: Use useCallback to prevent function recreation
+  const changeLocale = useCallback(async (localeCode: string) => {
     try {
       await i18n.changeLanguage(localeCode);
       await saveLocalePreference(localeCode);
-      
+
       // Update RTL settings
       const isRTL = isRTLLocale(localeCode);
       if (I18nManager.isRTL !== isRTL) {
@@ -88,19 +105,29 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
     } catch (error) {
       console.error('Failed to change locale:', error);
     }
-  };
+  }, []);
 
-  // Context value
-  const contextValue: LocalizationContextType = {
-    t: i18n.t,
-    currentLocale,
-    currentLocaleInfo,
-    supportedLocales: SUPPORTED_LOCALES,
-    changeLocale,
-    isRTL,
-    direction,
-    isLoading,
-  };
+  // ✅ PERFORMANCE FIX: Memoize context value to prevent unnecessary re-renders
+  const contextValue: LocalizationContextType = useMemo(
+    () => ({
+      t: i18n.t,
+      currentLocale,
+      currentLocaleInfo,
+      supportedLocales: SUPPORTED_LOCALES,
+      changeLocale,
+      isRTL,
+      direction,
+      isLoading,
+    }),
+    [
+      currentLocale,
+      currentLocaleInfo,
+      changeLocale,
+      isRTL,
+      direction,
+      isLoading,
+    ]
+  );
 
   return (
     <LocalizationContext.Provider value={contextValue}>
@@ -113,7 +140,9 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
 export function useLocalization() {
   const context = useContext(LocalizationContext);
   if (context === undefined) {
-    throw new Error('useLocalization must be used within a LocalizationProvider');
+    throw new Error(
+      'useLocalization must be used within a LocalizationProvider'
+    );
   }
   return context;
 }
@@ -138,4 +167,4 @@ export function useLocaleDirection() {
 export function useLocaleChanger() {
   const { changeLocale, supportedLocales } = useLocalization();
   return { changeLocale, supportedLocales };
-} 
+}

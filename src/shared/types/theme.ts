@@ -5,28 +5,28 @@ export interface ThemeColors {
   primary: string;
   secondary: string;
   accent: string;
-  
+
   // Background colors
   background: string;
   surface: string;
   surfaceVariant: string;
-  
+
   // Text colors
   text: string;
   textSecondary: string;
   textInverse: string;
-  
+
   // UI colors
   border: string;
   shadow: string;
   overlay: string;
-  
+
   // Status colors
   success: string;
   warning: string;
   error: string;
   info: string;
-  
+
   // Interactive colors
   interactive: string;
   interactiveHover: string;
@@ -89,4 +89,4 @@ export interface ThemeContextType {
   mode: ThemeMode;
   toggleTheme: () => void;
   setTheme: (mode: ThemeMode) => void;
-} 
+}

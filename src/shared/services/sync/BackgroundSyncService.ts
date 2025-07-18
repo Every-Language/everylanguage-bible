@@ -1,8 +1,9 @@
 import * as BackgroundFetch from 'expo-background-fetch';
 import * as TaskManager from 'expo-task-manager';
 import { bibleSync } from './bible/BibleSyncService';
+import { languageSync } from './language/LanguageSyncService';
 
-const BACKGROUND_SYNC_TASK = 'background-bible-sync';
+const BACKGROUND_SYNC_TASK = 'background-content-sync';
 
 export class BackgroundSyncService {
   private static instance: BackgroundSyncService;
@@ -34,17 +35,32 @@ export class BackgroundSyncService {
         }
         this.lastBackgroundCheck = now;
 
-        // For bible content, we can be more conservative
-        // First check if there are any changes before syncing
-        const updateCheck = await bibleSync.needsUpdate();
+        // Check for updates in both bible and language content
+        const [bibleUpdateCheck, languageUpdateCheck] = await Promise.all([
+          bibleSync.needsUpdate(),
+          languageSync.needsUpdate(),
+        ]);
 
-        if (updateCheck.needsUpdate) {
+        let hasNewData = false;
+
+        if (bibleUpdateCheck.needsUpdate) {
           console.log('Background sync: Bible content updates detected');
           // Use smaller batch size for background sync
           await bibleSync.syncAll({ batchSize: 100 });
+          hasNewData = true;
+        }
+
+        if (languageUpdateCheck.needsUpdate) {
+          console.log('Background sync: Language content updates detected');
+          // Use smaller batch size for background sync
+          await languageSync.syncAll({ batchSize: 100 });
+          hasNewData = true;
+        }
+
+        if (hasNewData) {
           return BackgroundFetch.BackgroundFetchResult.NewData;
         } else {
-          console.log('Background sync: Bible content is up to date');
+          console.log('Background sync: All content is up to date');
           return BackgroundFetch.BackgroundFetchResult.NoData;
         }
       } catch (error) {
@@ -71,12 +87,12 @@ export class BackgroundSyncService {
       }
 
       await BackgroundFetch.registerTaskAsync(BACKGROUND_SYNC_TASK, {
-        minimumInterval: 4 * 60 * 60 * 1000, // Check every 4 hours for bible content (less frequent)
+        minimumInterval: 4 * 60 * 60 * 1000, // Check every 4 hours for content updates
         stopOnTerminate: false,
         startOnBoot: true,
       });
 
-      console.log('Background bible sync registered successfully');
+      console.log('Background content sync registered successfully');
     } catch (error) {
       console.error('Failed to register background fetch:', error);
     }
@@ -92,13 +108,17 @@ export class BackgroundSyncService {
   }
 
   /**
-   * Check for changes in bible content (optimized for rarely changing data)
+   * Check for changes in content (bible and language data)
    */
   async checkForChanges(): Promise<boolean> {
     try {
-      // Use the optimized needsUpdate method from BibleSyncService
-      const updateCheck = await bibleSync.needsUpdate();
-      return updateCheck.needsUpdate;
+      // Check for updates in both bible and language content
+      const [bibleUpdateCheck, languageUpdateCheck] = await Promise.all([
+        bibleSync.needsUpdate(),
+        languageSync.needsUpdate(),
+      ]);
+
+      return bibleUpdateCheck.needsUpdate || languageUpdateCheck.needsUpdate;
     } catch (error) {
       console.error('Error in checkForChanges:', error);
       return false;
@@ -110,7 +130,18 @@ export class BackgroundSyncService {
    */
   async hasRemoteChanges(tableName: string): Promise<boolean> {
     try {
-      return await bibleSync.hasRemoteChanges(tableName);
+      // Check which service should handle this table
+      const languageTables = [
+        'language_entities_cache',
+        'available_versions_cache',
+        'user_saved_versions',
+      ];
+
+      if (languageTables.includes(tableName)) {
+        return await languageSync.hasRemoteChanges(tableName);
+      } else {
+        return await bibleSync.hasRemoteChanges(tableName);
+      }
     } catch (error) {
       console.error(
         `Error checking for remote changes in ${tableName}:`,
@@ -125,9 +156,18 @@ export class BackgroundSyncService {
    */
   async checkForRemoteChanges(): Promise<void> {
     try {
-      const updateCheck = await bibleSync.needsUpdate();
-      if (updateCheck.needsUpdate) {
-        console.log('Remote changes detected in tables:', updateCheck.tables);
+      const [bibleUpdateCheck, languageUpdateCheck] = await Promise.all([
+        bibleSync.needsUpdate(),
+        languageSync.needsUpdate(),
+      ]);
+
+      const allChangedTables = [
+        ...(bibleUpdateCheck.needsUpdate ? bibleUpdateCheck.tables : []),
+        ...(languageUpdateCheck.needsUpdate ? languageUpdateCheck.tables : []),
+      ];
+
+      if (allChangedTables.length > 0) {
+        console.log('Remote changes detected in tables:', allChangedTables);
       }
     } catch (error) {
       console.error('Error checking for remote changes:', error);

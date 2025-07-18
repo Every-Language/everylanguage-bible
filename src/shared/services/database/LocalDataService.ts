@@ -1,4 +1,6 @@
-import { databaseManager } from './DatabaseManager';
+import DatabaseManager from './DatabaseManager';
+
+const databaseManager = DatabaseManager.getInstance();
 import type { LocalBook, LocalChapter, LocalVerse } from './schema';
 import type { Tables } from '@everylanguage/shared-types';
 
@@ -395,20 +397,89 @@ class LocalDataService {
       return { book: null, chapters: [] };
     }
 
-    const chapters = await this.getChaptersByBookId(bookId);
-    const chaptersWithVerses = [];
+    // ✅ PERFORMANCE FIX: Use JOIN to get all chapters and verses in one query
+    // This eliminates the N+1 query problem
+    const query = `
+      SELECT 
+        c.id as chapter_id,
+        c.book_id as chapter_book_id,
+        c.chapter_number,
+        c.total_verses,
+        c.global_order as chapter_global_order,
+        c.created_at as chapter_created_at,
+        c.updated_at as chapter_updated_at,
+        c.synced_at as chapter_synced_at,
+        v.id as verse_id,
+        v.chapter_id as verse_chapter_id,
+        v.verse_number,
+        v.global_order as verse_global_order,
+        v.created_at as verse_created_at,
+        v.updated_at as verse_updated_at,
+        v.synced_at as verse_synced_at
+      FROM chapters c
+      LEFT JOIN verses v ON c.id = v.chapter_id
+      WHERE c.book_id = ?
+      ORDER BY c.chapter_number ASC, v.verse_number ASC
+    `;
 
-    for (const chapter of chapters) {
-      const verses = await this.getVersesByChapterId(chapter.id);
-      chaptersWithVerses.push({
-        chapter,
-        verses,
-      });
+    const rows = await databaseManager.executeQuery<{
+      chapter_id: string;
+      chapter_book_id: string;
+      chapter_number: number;
+      total_verses: number;
+      chapter_global_order: number | null;
+      chapter_created_at: string;
+      chapter_updated_at: string;
+      chapter_synced_at: string;
+      verse_id: string | null;
+      verse_chapter_id: string | null;
+      verse_number: number | null;
+      verse_global_order: number | null;
+      verse_created_at: string | null;
+      verse_updated_at: string | null;
+      verse_synced_at: string | null;
+    }>(query, [bookId]);
+
+    // Group results by chapter
+    const chaptersMap = new Map<
+      string,
+      { chapter: LocalChapter; verses: LocalVerse[] }
+    >();
+
+    for (const row of rows) {
+      if (!chaptersMap.has(row.chapter_id)) {
+        chaptersMap.set(row.chapter_id, {
+          chapter: {
+            id: row.chapter_id,
+            book_id: row.chapter_book_id,
+            chapter_number: row.chapter_number,
+            total_verses: row.total_verses,
+            global_order: row.chapter_global_order,
+            created_at: row.chapter_created_at,
+            updated_at: row.chapter_updated_at,
+            synced_at: row.chapter_synced_at,
+          },
+          verses: [],
+        });
+      }
+
+      // Add verse if it exists (LEFT JOIN may return null for chapters without verses)
+      if (row.verse_id && row.verse_chapter_id) {
+        chaptersMap.get(row.chapter_id)!.verses.push({
+          id: row.verse_id,
+          chapter_id: row.verse_chapter_id,
+          verse_number: row.verse_number!,
+          global_order: row.verse_global_order,
+          created_at: row.verse_created_at!,
+          updated_at: row.verse_updated_at!,
+          synced_at: row.verse_synced_at!,
+        });
+      }
     }
 
     return {
       book,
-      chapters: chaptersWithVerses,
+      chapters: Array.from(chaptersMap.values()),
     };
   }
 
@@ -423,6 +494,111 @@ class LocalDataService {
       chapter,
       verses,
     };
+  }
+
+  // ✅ PERFORMANCE: Bulk method to prevent N+1 queries when loading multiple chapters
+  async getMultipleChaptersWithVerses(chapterIds: string[]): Promise<
+    Map<
+      string,
+      {
+        chapter: LocalChapter | null;
+        verses: LocalVerse[];
+      }
+    >
+  > {
+    if (chapterIds.length === 0) {
+      return new Map();
+    }
+
+    const placeholders = chapterIds.map(() => '?').join(',');
+    const query = `
+      SELECT 
+        c.id as chapter_id,
+        c.book_id as chapter_book_id,
+        c.chapter_number,
+        c.total_verses,
+        c.global_order as chapter_global_order,
+        c.created_at as chapter_created_at,
+        c.updated_at as chapter_updated_at,
+        c.synced_at as chapter_synced_at,
+        v.id as verse_id,
+        v.chapter_id as verse_chapter_id,
+        v.verse_number,
+        v.global_order as verse_global_order,
+        v.created_at as verse_created_at,
+        v.updated_at as verse_updated_at,
+        v.synced_at as verse_synced_at
+      FROM chapters c
+      LEFT JOIN verses v ON c.id = v.chapter_id
+      WHERE c.id IN (${placeholders})
+      ORDER BY c.chapter_number ASC, v.verse_number ASC
+    `;
+
+    const rows = await databaseManager.executeQuery<{
+      chapter_id: string;
+      chapter_book_id: string;
+      chapter_number: number;
+      total_verses: number;
+      chapter_global_order: number | null;
+      chapter_created_at: string;
+      chapter_updated_at: string;
+      chapter_synced_at: string;
+      verse_id: string | null;
+      verse_chapter_id: string | null;
+      verse_number: number | null;
+      verse_global_order: number | null;
+      verse_created_at: string | null;
+      verse_updated_at: string | null;
+      verse_synced_at: string | null;
+    }>(query, chapterIds);
+
+    const result = new Map<
+      string,
+      { chapter: LocalChapter | null; verses: LocalVerse[] }
+    >();
+
+    // Initialize all requested chapters (even if not found)
+    for (const chapterId of chapterIds) {
+      result.set(chapterId, { chapter: null, verses: [] });
+    }
+
+    // Group results by chapter
+    for (const row of rows) {
+      if (!result.has(row.chapter_id)) {
+        result.set(row.chapter_id, { chapter: null, verses: [] });
+      }
+
+      const entry = result.get(row.chapter_id)!;
+
+      // Set chapter data (only once per chapter)
+      if (!entry.chapter) {
+        entry.chapter = {
+          id: row.chapter_id,
+          book_id: row.chapter_book_id,
+          chapter_number: row.chapter_number,
+          total_verses: row.total_verses,
+          global_order: row.chapter_global_order,
+          created_at: row.chapter_created_at,
+          updated_at: row.chapter_updated_at,
+          synced_at: row.chapter_synced_at,
+        };
+      }
+
+      // Add verse if it exists
+      if (row.verse_id && row.verse_chapter_id) {
+        entry.verses.push({
+          id: row.verse_id,
+          chapter_id: row.verse_chapter_id,
+          verse_number: row.verse_number!,
+          global_order: row.verse_global_order,
+          created_at: row.verse_created_at!,
+          updated_at: row.verse_updated_at!,
+          synced_at: row.verse_synced_at!,
+        });
+      }
+    }
+
+    return result;
   }
 }
 

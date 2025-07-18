@@ -23,29 +23,59 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onClose }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Profile</Text>
+        <Text style={[styles.title, { color: theme.colors.text }]}>
+          Profile
+        </Text>
         <TouchableOpacity onPress={onClose}>
-          <Text style={[styles.closeButton, { color: theme.colors.primary }]}>Close</Text>
+          <Text style={[styles.closeButton, { color: theme.colors.primary }]}>
+            Close
+          </Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
         {user && (
           <>
-            <View style={[styles.userInfo, { backgroundColor: theme.colors.surface }]}>
-              <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Email</Text>
-              <Text style={[styles.value, { color: theme.colors.text }]}>{user?.email}</Text>
+            <View
+              style={[
+                styles.userInfo,
+                { backgroundColor: theme.colors.surface },
+              ]}>
+              <Text
+                style={[styles.label, { color: theme.colors.textSecondary }]}>
+                Email
+              </Text>
+              <Text style={[styles.value, { color: theme.colors.text }]}>
+                {user?.email}
+              </Text>
             </View>
 
-            <View style={[styles.userInfo, { backgroundColor: theme.colors.surface }]}>
-              <Text style={[styles.label, { color: theme.colors.textSecondary }]}>User ID</Text>
-              <Text style={[styles.value, { color: theme.colors.text }]}>{user?.id}</Text>
+            <View
+              style={[
+                styles.userInfo,
+                { backgroundColor: theme.colors.surface },
+              ]}>
+              <Text
+                style={[styles.label, { color: theme.colors.textSecondary }]}>
+                User ID
+              </Text>
+              <Text style={[styles.value, { color: theme.colors.text }]}>
+                {user?.id}
+              </Text>
             </View>
 
-            <View style={[styles.userInfo, { backgroundColor: theme.colors.surface }]}>
-              <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Status</Text>
+            <View
+              style={[
+                styles.userInfo,
+                { backgroundColor: theme.colors.surface },
+              ]}>
+              <Text
+                style={[styles.label, { color: theme.colors.textSecondary }]}>
+                Status
+              </Text>
               <Text style={[styles.value, { color: theme.colors.text }]}>
                 {user?.email_confirmed_at ? 'Verified' : 'Unverified'}
               </Text>
@@ -64,13 +94,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onClose }) => {
         <View style={styles.buttonContainer}>
           {user ? (
             <Button
-              title="Sign Out"
+              title='Sign Out'
               onPress={handleSignOut}
-              variant="outline"
-              size="lg"
+              variant='outline'
+              size='lg'
             />
           ) : (
-            <Text style={[styles.guestText, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[styles.guestText, { color: theme.colors.textSecondary }]}>
               Sign in to sync your data across devices
             </Text>
           )}
@@ -135,4 +166,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-}); 
+});

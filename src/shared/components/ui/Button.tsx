@@ -36,7 +36,7 @@ export function Button({
 
   const buttonStyle = getButtonStyle(theme, variant);
   const shadowStyle = variant === 'primary' ? getShadowStyle(theme, 2) : {};
-  
+
   const sizeStyles = {
     sm: {
       paddingHorizontal: theme.spacing.md,
@@ -71,7 +71,7 @@ export function Button({
     if (disabled) {
       return theme.colors.interactiveDisabled;
     }
-    
+
     switch (variant) {
       case 'primary':
         return theme.colors.textInverse;
@@ -108,18 +108,12 @@ export function Button({
       style={combinedButtonStyle}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.7}
-    >
+      activeOpacity={0.7}>
       {loading ? (
-        <ActivityIndicator 
-          color={getTextColor()} 
-          size="small" 
-        />
+        <ActivityIndicator color={getTextColor()} size='small' />
       ) : (
-        <Text style={combinedTextStyle}>
-          {title}
-        </Text>
+        <Text style={combinedTextStyle}>{title}</Text>
       )}
     </TouchableOpacity>
   );
-} 
+}

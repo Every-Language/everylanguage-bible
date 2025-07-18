@@ -1,5 +1,7 @@
 import { localDataService } from '@/shared/services/database/LocalDataService';
-import { databaseManager } from '@/shared/services/database/DatabaseManager';
+import DatabaseManager from '@/shared/services/database/DatabaseManager';
+
+const databaseManager = DatabaseManager.getInstance();
 import type { Book } from '../types';
 import type { Tables } from '@everylanguage/shared-types';
 

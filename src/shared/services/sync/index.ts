@@ -13,6 +13,10 @@ export type {
 export { bibleSync } from './bible/BibleSyncService';
 export type { BibleSyncOptions } from './bible/BibleSyncService';
 
+// Export language sync service
+export { languageSync } from './language/LanguageSyncService';
+export type { LanguageSyncOptions } from './language/LanguageSyncService';
+
 // Re-export commonly used services
 export {
   BackgroundSyncService,

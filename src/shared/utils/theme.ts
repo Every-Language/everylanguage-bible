@@ -8,16 +8,16 @@ export type ThemedStyle<T> = (theme: Theme) => T;
 export type StyleType = ViewStyle | TextStyle | ImageStyle;
 
 // Create themed styles similar to StyleSheet.create but with theme support
-export function createThemedStyles<T extends StyleSheet.NamedStyles<T>>(
-  styles: { [K in keyof T]: ThemedStyle<T[K]> }
-) {
+export function createThemedStyles<
+  T extends StyleSheet.NamedStyles<T>,
+>(styles: { [K in keyof T]: ThemedStyle<T[K]> }) {
   return (theme: Theme): T => {
     const themedStyles = {} as T;
-    
+
     for (const key in styles) {
       themedStyles[key] = styles[key](theme);
     }
-    
+
     return themedStyles;
   };
 }
@@ -25,7 +25,7 @@ export function createThemedStyles<T extends StyleSheet.NamedStyles<T>>(
 // Helper function to get shadow styles based on theme
 export function getShadowStyle(theme: Theme, elevation: number = 2): ViewStyle {
   const isLight = theme.mode === 'light';
-  
+
   return {
     shadowColor: theme.colors.shadow,
     shadowOffset: {
@@ -97,12 +97,17 @@ export function getBackgroundStyle(
 }
 
 // Helper function to determine StatusBar style based on theme
-export function getStatusBarStyle(theme: Theme): 'light-content' | 'dark-content' {
+export function getStatusBarStyle(
+  theme: Theme
+): 'light-content' | 'dark-content' {
   return theme.mode === 'dark' ? 'light-content' : 'dark-content';
 }
 
 // Helper function to get themed overlay styles
-export function getOverlayStyle(theme: Theme, opacity: number = 0.5): ViewStyle {
+export function getOverlayStyle(
+  theme: Theme,
+  opacity: number = 0.5
+): ViewStyle {
   return {
     backgroundColor: theme.colors.overlay,
     opacity,
@@ -110,7 +115,10 @@ export function getOverlayStyle(theme: Theme, opacity: number = 0.5): ViewStyle 
 }
 
 // Utility to create responsive spacing
-export function getResponsiveSpacing(theme: Theme, size: keyof Theme['spacing']) {
+export function getResponsiveSpacing(
+  theme: Theme,
+  size: keyof Theme['spacing']
+) {
   return theme.spacing[size];
 }
 
@@ -180,4 +188,4 @@ export function getInputStyle(theme: Theme): TextStyle {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.text,
   };
-} 
+}

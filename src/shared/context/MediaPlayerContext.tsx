@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  ReactNode,
+} from 'react';
 
 interface MediaTrack {
   id: string;
@@ -49,13 +56,17 @@ interface MediaPlayerContextType {
   };
 }
 
-const MediaPlayerContext = createContext<MediaPlayerContextType | undefined>(undefined);
+const MediaPlayerContext = createContext<MediaPlayerContextType | undefined>(
+  undefined
+);
 
 interface MediaPlayerProviderProps {
   children: ReactNode;
 }
 
-export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ children }) => {
+export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
+  children,
+}) => {
   const [state, setState] = useState<MediaPlayerState>({
     currentTrack: null,
     isPlaying: false,
@@ -87,9 +98,9 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
   }, []);
 
   const stop = useCallback(() => {
-    setState(prev => ({ 
-      ...prev, 
-      isPlaying: false, 
+    setState(prev => ({
+      ...prev,
+      isPlaying: false,
       currentTrack: null,
       isExpanded: false,
     }));
@@ -98,7 +109,7 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
   const seekTo = useCallback((time: number) => {
     setState(prev => ({
       ...prev,
-      currentTrack: prev.currentTrack 
+      currentTrack: prev.currentTrack
         ? { ...prev.currentTrack, currentTime: time }
         : null,
     }));
@@ -127,12 +138,12 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
   const nextTrack = useCallback(() => {
     setState(prev => {
       if (prev.queue.length === 0) return prev;
-      
+
       let nextIndex = prev.currentIndex + 1;
       if (nextIndex >= prev.queue.length) {
         nextIndex = prev.repeatMode === 'all' ? 0 : prev.currentIndex;
       }
-      
+
       if (nextIndex !== prev.currentIndex) {
         return {
           ...prev,
@@ -140,7 +151,7 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
           currentTrack: prev.queue[nextIndex] || null,
         };
       }
-      
+
       return prev;
     });
   }, []);
@@ -148,12 +159,12 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
   const previousTrack = useCallback(() => {
     setState(prev => {
       if (prev.queue.length === 0) return prev;
-      
+
       let prevIndex = prev.currentIndex - 1;
       if (prevIndex < 0) {
         prevIndex = prev.repeatMode === 'all' ? prev.queue.length - 1 : 0;
       }
-      
+
       if (prevIndex !== prev.currentIndex) {
         return {
           ...prev,
@@ -161,7 +172,7 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
           currentTrack: prev.queue[prevIndex] || null,
         };
       }
-      
+
       return prev;
     });
   }, []);
@@ -171,7 +182,7 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
       ...prev,
       queue: tracks,
       currentIndex: tracks.length > 0 ? 0 : -1,
-      currentTrack: tracks.length > 0 ? (tracks[0] || null) : null,
+      currentTrack: tracks.length > 0 ? tracks[0] || null : null,
     }));
   }, []);
 
@@ -192,11 +203,12 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
   const toggleRepeat = useCallback(() => {
     setState(prev => ({
       ...prev,
-      repeatMode: prev.repeatMode === 'none' 
-        ? 'one' 
-        : prev.repeatMode === 'one' 
-          ? 'all' 
-          : 'none',
+      repeatMode:
+        prev.repeatMode === 'none'
+          ? 'one'
+          : prev.repeatMode === 'one'
+            ? 'all'
+            : 'none',
     }));
   }, []);
 
@@ -207,15 +219,39 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
   const updateProgress = useCallback((currentTime: number) => {
     setState(prev => ({
       ...prev,
-      currentTrack: prev.currentTrack 
+      currentTrack: prev.currentTrack
         ? { ...prev.currentTrack, currentTime }
         : null,
     }));
   }, []);
 
-  const contextValue: MediaPlayerContextType = {
-    state,
-    actions: {
+  // ✅ PERFORMANCE FIX: Memoize context value to prevent unnecessary re-renders
+  const contextValue: MediaPlayerContextType = useMemo(
+    () => ({
+      state,
+      actions: {
+        setCurrentTrack,
+        play,
+        pause,
+        stop,
+        seekTo,
+        setVolume,
+        setPlaybackRate,
+        expand,
+        collapse,
+        toggleExpanded,
+        nextTrack,
+        previousTrack,
+        setQueue,
+        addToQueue,
+        removeFromQueue,
+        toggleRepeat,
+        toggleShuffle,
+        updateProgress,
+      },
+    }),
+    [
+      state,
       setCurrentTrack,
       play,
       pause,
@@ -234,8 +270,8 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({ childr
       toggleRepeat,
       toggleShuffle,
       updateProgress,
-    },
-  };
+    ]
+  );
 
   return (
     <MediaPlayerContext.Provider value={contextValue}>
@@ -252,4 +288,4 @@ export const useMediaPlayer = (): MediaPlayerContextType => {
   return context;
 };
 
-export type { MediaTrack, MediaPlayerState, MediaPlayerContextType }; 
+export type { MediaTrack, MediaPlayerState, MediaPlayerContextType };

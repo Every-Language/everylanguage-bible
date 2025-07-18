@@ -21,8 +21,10 @@ export const BookList: React.FC<BookListProps> = ({
 
   if (loading) {
     return (
-      <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
-        <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+      <View
+        style={[styles.centered, { backgroundColor: theme.colors.background }]}>
+        <Text
+          style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
           Loading books...
         </Text>
       </View>
@@ -31,7 +33,8 @@ export const BookList: React.FC<BookListProps> = ({
 
   if (books.length === 0) {
     return (
-      <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
+      <View
+        style={[styles.centered, { backgroundColor: theme.colors.background }]}>
         <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
           No books found
         </Text>
@@ -51,7 +54,7 @@ export const BookList: React.FC<BookListProps> = ({
     <FlatList
       data={books}
       renderItem={renderBook}
-      keyExtractor={(item) => item.id}
+      keyExtractor={item => item.id}
       style={[styles.list, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={styles.listContent}
       showsVerticalScrollIndicator={false}
@@ -79,4 +82,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
-}); 
+});
