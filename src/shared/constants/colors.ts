@@ -72,4 +72,16 @@ export const Colors = {
   glass1: 'rgba(146, 190, 195, 0.7)', // glassy blue-green
   glass2: 'rgba(38, 72, 84, 0.7)', // glassy dark blue-green
   glass3: 'rgba(237, 229, 217, 0.7)', // glassy cream
+
+  // New theme colors for Bible books screen and chapter tiles
+  theme: {
+    bibleBooksBackground: {
+      light: '#F9F7F4',
+      dark: '#070707',
+    },
+    chapterTileBackground: {
+      light: '#EAE9E7',
+      dark: '#414141',
+    },
+  },
 } as const;

@@ -10,6 +10,10 @@ const mockUseTheme = {
     text: '#070707',
     primary: '#264854',
     secondary: '#AD915A',
+    navigationSelected: '#AC8F57',
+    navigationUnselected: '#ECE6DA',
+    navigationSelectedText: '#F9F7F4',
+    navigationUnselectedText: '#AC8F57',
   },
 };
 
@@ -91,10 +95,10 @@ describe('ToggleButtons', () => {
     const selectedButton = getByTestId('toggle-buttons-option2');
     const unselectedButton = getByTestId('toggle-buttons-option1');
 
-    // Selected button should have primary background
-    expect(selectedButton.props.style.backgroundColor).toBe('#264854');
-    // Unselected button should have transparent primary background
-    expect(unselectedButton.props.style.backgroundColor).toBe('#26485420');
+    // Selected button should have navigation selected background
+    expect(selectedButton.props.style.backgroundColor).toBe('#AC8F57');
+    // Unselected button should have navigation unselected background
+    expect(unselectedButton.props.style.backgroundColor).toBe('#ECE6DA');
   });
 
   it('handles disabled options correctly', () => {

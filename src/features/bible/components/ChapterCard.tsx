@@ -1,11 +1,6 @@
 import React, { useEffect } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  ScrollView,
-  Text,
-  StyleSheet,
-} from 'react-native';
+import { View, TouchableOpacity, ScrollView, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
@@ -15,18 +10,20 @@ import Animated, {
   useAnimatedGestureHandler,
   runOnJS,
 } from 'react-native-reanimated';
+import { Stack, Text as TamaguiText } from '@tamagui/core';
+import { Card } from '@tamagui/card';
 import { type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
 import {
+  useTheme,
   useChapterCardStore,
   useQueueStore,
   useAudioStore,
 } from '@/shared/store';
-import type { ViewMode } from '@/shared/store/chapterCardStore';
 import {
-  useTheme,
   useTranslation,
   useHorizontalSlideAnimation,
+  useMiniPlayerHeight,
 } from '@/shared/hooks';
 import { ToggleButtons, BookImage } from '@/shared/components/ui';
 import { PlayIcon, PlusIcon } from '@/shared/components/ui/icons/AudioIcons';
@@ -86,54 +83,74 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
       failOffsetY={[-20, 20]}>
       <Animated.View>
         <TouchableOpacity
-          style={[
-            styles.card,
-            {
-              backgroundColor: colors.background,
-              borderColor: colors.primary + '20',
-            },
-          ]}
-          testID={testID}
+          style={{
+            marginVertical: 4,
+            marginHorizontal: 8,
+            padding: 8,
+            backgroundColor: colors.background,
+            borderRadius: 8,
+          }}
           onPress={onSwipeToVerse}
+          testID={testID}
           activeOpacity={0.98}>
-          <View style={styles.cardContent}>
-            <View style={styles.textContainer}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flex: 1,
+            }}>
+            <View style={{ flexDirection: 'column', flex: 1, gap: 4 }}>
               <Text
-                style={[styles.chapterNumber, { color: colors.textPrimary }]}>
+                style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: colors.text,
+                }}>
                 Chapter {chapterNumber}
               </Text>
               <Text
-                style={[
-                  styles.verseCount,
-                  { color: colors.textPrimary + '80' },
-                ]}
+                style={{
+                  fontSize: 14,
+                  fontWeight: '400',
+                  color: colors.text + '80',
+                }}
                 numberOfLines={1}>
                 {verseCount} verses
               </Text>
             </View>
 
-            <View style={styles.buttonContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}>
               {/* Add to Queue Button */}
               <TouchableOpacity
                 onPress={onAddToQueue}
-                style={[
-                  styles.button,
-                  {
-                    backgroundColor: colors.primary,
-                  },
-                ]}>
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: colors.navigationSelected,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
                 <PlusIcon size={18} color={colors.background} />
               </TouchableOpacity>
 
               {/* Play Button */}
               <TouchableOpacity
                 onPress={onPlay}
-                style={[
-                  styles.button,
-                  {
-                    backgroundColor: colors.primary,
-                  },
-                ]}>
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: colors.navigationSelected,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
                 <PlayIcon size={20} color={colors.background} />
               </TouchableOpacity>
             </View>
@@ -163,57 +180,65 @@ const VerseItem: React.FC<VerseItemProps> = ({
   const { colors } = useTheme();
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.background,
-          borderColor: colors.primary + '20',
-        },
-      ]}
+    <Card
+      size='$4'
+      marginVertical='$1'
+      marginHorizontal='$2'
+      padding='$2'
+      backgroundColor={colors.background}
       testID={testID}
       onPress={onPlay}
-      activeOpacity={0.98}>
-      <View style={styles.cardContent}>
-        <View style={styles.textContainer}>
-          <Text style={[styles.verseNumber, { color: colors.textPrimary }]}>
+      pressStyle={{ scale: 0.98 }}>
+      <Stack
+        flexDirection='row'
+        alignItems='center'
+        justifyContent='space-between'
+        flex={1}>
+        <Stack flexDirection='column' flex={1} gap='$1'>
+          <TamaguiText fontSize='$4' fontWeight='600' color={colors.text}>
             Verse {verseNumber}
-          </Text>
-          <Text
-            style={[styles.verseText, { color: colors.textPrimary }]}
+          </TamaguiText>
+          <TamaguiText
+            fontSize='$3'
+            fontWeight='400'
+            color={colors.text}
             numberOfLines={2}
             ellipsizeMode='tail'>
             {verseText}
-          </Text>
-        </View>
+          </TamaguiText>
+        </Stack>
 
-        <View style={styles.buttonContainer}>
+        <Stack flexDirection='row' alignItems='center' gap='$2'>
           {/* Add to Queue Button */}
           <TouchableOpacity
             onPress={onAddToQueue}
-            style={[
-              styles.button,
-              {
-                backgroundColor: colors.primary,
-              },
-            ]}>
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: colors.navigationSelected,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
             <PlusIcon size={18} color={colors.background} />
           </TouchableOpacity>
 
           {/* Play Button */}
           <TouchableOpacity
             onPress={onPlay}
-            style={[
-              styles.button,
-              {
-                backgroundColor: colors.primary,
-              },
-            ]}>
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: colors.navigationSelected,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
             <PlayIcon size={20} color={colors.background} />
           </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
+        </Stack>
+      </Stack>
+    </Card>
   );
 };
 
@@ -323,7 +348,7 @@ const ChapterListView: React.FC<ChapterListViewProps> = ({
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        <View style={styles.chapterListContainer}>
+        <Stack paddingBottom='$4'>
           {chapters.map(chapterNumber => (
             <ChapterItem
               key={chapterNumber}
@@ -335,7 +360,7 @@ const ChapterListView: React.FC<ChapterListViewProps> = ({
               testID={`chapter-tile-${chapterNumber}`}
             />
           ))}
-        </View>
+        </Stack>
       </ScrollView>
     </View>
   );
@@ -392,7 +417,7 @@ const VerseListView: React.FC<VerseListViewProps> = ({
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        <View style={styles.verseListContainer}>
+        <Stack paddingBottom='$4'>
           {verses.map(verseNumber => (
             <VerseItem
               key={verseNumber}
@@ -403,7 +428,7 @@ const VerseListView: React.FC<VerseListViewProps> = ({
               testID={`verse-tile-${verseNumber}`}
             />
           ))}
-        </View>
+        </Stack>
       </ScrollView>
     </View>
   );
@@ -472,8 +497,10 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
   onChapterSelect,
   onVerseSelect,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const { collapsedHeight } = useMiniPlayerHeight();
 
   const {
     isOpen,
@@ -487,7 +514,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
 
   // Use the reusable horizontal slide animation hook
   const { slideAnimation, gestureHandler, updateAnimation } =
-    useHorizontalSlideAnimation<ViewMode>({
+    useHorizontalSlideAnimation({
       onModeChange: setViewMode,
       modes: ['chapters', 'verses'],
       currentMode: viewMode,
@@ -549,11 +576,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
   };
 
   // Toggle button options
-  const toggleOptions: Array<{
-    key: ViewMode;
-    label: string;
-    disabled?: boolean;
-  }> = [
+  const toggleOptions = [
     { key: 'chapters', label: t('bible.chapters', 'Chapters') },
     {
       key: 'verses',
@@ -563,216 +586,157 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
   ];
 
   return (
-    <View
-      style={[
-        styles.mainCard,
-        {
-          backgroundColor: colors.background,
-          borderColor: colors.primary,
-          borderWidth: 2,
-          shadowColor: colors.textPrimary,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 3.84,
-          elevation: 5,
-        },
-      ]}>
-      <View style={styles.cardContent}>
-        {/* Header with close button */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={closeChapterCard}
-            style={[styles.closeButton, { borderColor: colors.primary }]}
-            testID='close-button'>
-            <View style={styles.closeButtonIcon}>
+    <>
+      {/* Semi-transparent overlay background */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 999,
+        }}
+        onTouchEnd={closeChapterCard}
+      />
+
+      {/* Chapter Card */}
+      <Card
+        position='absolute'
+        top={insets.top + 10}
+        left={10}
+        right={10}
+        bottom={collapsedHeight + 10}
+        backgroundColor={colors.chapterTileBackground}
+        borderRadius={24}
+        shadowColor={colors.text}
+        shadowOffset={{ width: 0, height: 2 }}
+        shadowOpacity={0.1}
+        shadowRadius={3.84}
+        elevation={5}
+        style={{ zIndex: 1000 }}>
+        <Stack flex={1} overflow='hidden' borderRadius={24}>
+          {/* Header with close button */}
+          <View
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              zIndex: 10,
+            }}>
+            <TouchableOpacity
+              style={{
+                width: 25,
+                height: 25,
+                borderRadius: 12.5,
+                backgroundColor: isDark ? '#070707' : '#D8D2C6',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={closeChapterCard}
+              testID='close-button'>
               <View
-                style={[
-                  styles.closeLine,
-                  { backgroundColor: colors.textPrimary },
-                ]}
+                style={{
+                  position: 'absolute',
+                  width: 10,
+                  height: 1,
+                  backgroundColor: colors.text,
+                  transform: [{ rotate: '45deg' }],
+                }}
               />
               <View
-                style={[
-                  styles.closeLine,
-                  { backgroundColor: colors.textPrimary },
-                ]}
+                style={{
+                  position: 'absolute',
+                  width: 10,
+                  height: 1,
+                  backgroundColor: colors.text,
+                  transform: [{ rotate: '-45deg' }],
+                }}
               />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Book info section */}
-        <View style={styles.bookInfoSection}>
-          <BookImage
-            imagePath={selectedBook.imagePath}
-            size={110}
-            testID='book-image'
-          />
-
-          <View style={styles.titleContainer}>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>
-              {getTitle()}
-            </Text>
+            </TouchableOpacity>
           </View>
 
-          <Text style={[styles.subtitle, { color: colors.secondary }]}>
-            {getSubtitle()}
-          </Text>
-        </View>
+          {/* Book info section */}
+          <Stack
+            paddingHorizontal='$3'
+            paddingTop='$3'
+            paddingBottom='$2'
+            alignItems='center'>
+            <BookImage
+              imagePath={selectedBook.imagePath}
+              size={110}
+              testID='book-image'
+            />
 
-        {/* Toggle Buttons */}
-        <View
-          style={{
-            paddingHorizontal: Dimensions.spacing.md,
-            marginBottom: Dimensions.spacing.sm,
-          }}>
-          <ToggleButtons<ViewMode>
-            options={toggleOptions}
-            selectedKey={viewMode}
-            onSelect={setViewMode}
-            testID='chapter-verse-toggle'
-            height={24}
-            fontSize={Fonts.size.sm}
-          />
-        </View>
+            <Stack
+              flexDirection='row'
+              alignItems='center'
+              justifyContent='space-between'
+              marginTop='$2'
+              width='100%'
+              paddingHorizontal='$2'>
+              <Stack flex={1}>
+                <TamaguiText
+                  fontSize='$5'
+                  fontWeight='bold'
+                  color={colors.text}
+                  textAlign='center'>
+                  {getTitle()}
+                </TamaguiText>
+              </Stack>
+            </Stack>
 
-        {/* Content Area */}
-        <View style={{ flex: 1 }}>
-          <PanGestureHandler
-            onGestureEvent={gestureHandler}
-            simultaneousHandlers={[]}
-            shouldCancelWhenOutside={false}
-            enableTrackpadTwoFingerGesture={false}
-            activeOffsetX={[-20, 20]}
-            failOffsetY={[-20, 20]}>
-            <Animated.View style={{ flex: 1 }}>
-              <ContentSwitcher
-                viewMode={viewMode}
-                book={selectedBook}
-                chapter={selectedChapter}
-                onChapterSelect={onChapterSelect}
-                onVerseSelect={onVerseSelect}
-                onSwipeToVerse={handleSwipeToVerse}
-                onSwipeToChapters={handleSwipeToChapters}
-                slideAnimation={slideAnimation}
-              />
-            </Animated.View>
-          </PanGestureHandler>
-        </View>
-      </View>
-    </View>
+            <TamaguiText
+              fontSize='$3'
+              color={colors.secondary}
+              marginTop='$1'
+              textAlign='center'>
+              {getSubtitle()}
+            </TamaguiText>
+          </Stack>
+
+          {/* Toggle Buttons */}
+          <View
+            style={{
+              paddingHorizontal: Dimensions.spacing.md,
+              marginBottom: Dimensions.spacing.sm,
+            }}>
+            <ToggleButtons
+              options={toggleOptions}
+              selectedKey={viewMode}
+              onSelect={setViewMode}
+              testID='chapter-verse-toggle'
+              height={24}
+              fontSize={Fonts.size.sm}
+            />
+          </View>
+
+          {/* Content Area */}
+          <View style={{ flex: 1 }}>
+            <PanGestureHandler
+              onGestureEvent={gestureHandler}
+              simultaneousHandlers={[]}
+              shouldCancelWhenOutside={false}
+              enableTrackpadTwoFingerGesture={false}
+              activeOffsetX={[-20, 20]}
+              failOffsetY={[-20, 20]}>
+              <Animated.View style={{ flex: 1 }}>
+                <ContentSwitcher
+                  viewMode={viewMode}
+                  book={selectedBook}
+                  chapter={selectedChapter}
+                  onChapterSelect={onChapterSelect}
+                  onVerseSelect={onVerseSelect}
+                  onSwipeToVerse={handleSwipeToVerse}
+                  onSwipeToChapters={handleSwipeToChapters}
+                  slideAnimation={slideAnimation}
+                />
+              </Animated.View>
+            </PanGestureHandler>
+          </View>
+        </Stack>
+      </Card>
+    </>
   );
 };
-
-const styles = StyleSheet.create({
-  mainCard: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
-    bottom: 10,
-    borderRadius: 24,
-    overflow: 'hidden',
-  },
-  card: {
-    marginVertical: 4,
-    marginHorizontal: 8,
-    padding: 8,
-    borderWidth: 1,
-    borderRadius: 8,
-    flex: 1,
-  },
-  cardContent: {
-    flex: 1,
-    padding: Dimensions.spacing.md,
-  },
-  header: {
-    position: 'absolute',
-    top: Dimensions.spacing.sm,
-    right: Dimensions.spacing.sm,
-    zIndex: 10,
-  },
-  closeButton: {
-    width: 25,
-    height: 25,
-    borderRadius: 12.5,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'transparent',
-    padding: 0,
-  },
-  closeButtonIcon: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  closeLine: {
-    position: 'absolute',
-    width: 10,
-    height: 1,
-    backgroundColor: 'transparent',
-    transform: [{ rotate: '45deg' }],
-  },
-  bookInfoSection: {
-    alignItems: 'center',
-    marginTop: Dimensions.spacing.sm,
-    width: '100%',
-    paddingHorizontal: Dimensions.spacing.sm,
-  },
-  titleContainer: {
-    marginTop: Dimensions.spacing.sm,
-    width: '100%',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: Fonts.size.lg,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  subtitle: {
-    marginTop: Dimensions.spacing.xs,
-    textAlign: 'center',
-  },
-  chapterListContainer: {
-    flex: 1,
-  },
-  verseListContainer: {
-    flex: 1,
-  },
-  button: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: Dimensions.spacing.sm,
-    width: '100%',
-    paddingHorizontal: Dimensions.spacing.sm,
-  },
-  textContainer: {
-    flex: 1,
-    marginBottom: Dimensions.spacing.xs,
-  },
-  chapterNumber: {
-    fontSize: Fonts.size.base,
-    fontWeight: '600',
-  },
-  verseCount: {
-    fontSize: Fonts.size.sm,
-    fontWeight: '400',
-  },
-  verseText: {
-    fontSize: Fonts.size.sm,
-    fontWeight: '400',
-  },
-  verseNumber: {
-    fontSize: Fonts.size.base,
-    fontWeight: '600',
-  },
-});

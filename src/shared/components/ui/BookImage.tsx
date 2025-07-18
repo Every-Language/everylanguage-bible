@@ -32,6 +32,7 @@ export const BookImage: React.FC<BookImageProps> = ({
               width: size,
               height: size,
               borderRadius: Dimensions.radius.md,
+              tintColor: colors.text,
             },
             style,
           ]}

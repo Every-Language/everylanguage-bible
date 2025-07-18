@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { BibleBooksScreen } from '@/features/bible/screens/BibleBooksScreen';
+import { BibleBooksScreen, SearchScreen } from '@/features/bible/screens';
 import { ThemeDemoScreen } from '@/features/theme';
 import { MiniPlayer } from '@/features/audio/components/MiniPlayer';
 import { type Book } from '@/shared/utils';
@@ -24,6 +24,9 @@ export const MainNavigator: React.FC = () => {
     setCurrentAudio,
     initializeBibleBooks,
   } = audioStore;
+
+  // Search screen state
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
 
   // Set up John 1 as default when app starts (flow mode with empty queue)
   useEffect(() => {
@@ -245,6 +248,14 @@ export const MainNavigator: React.FC = () => {
     }
   };
 
+  const handleSearchOpen = () => {
+    setIsSearchVisible(true);
+  };
+
+  const handleSearchClose = () => {
+    setIsSearchVisible(false);
+  };
+
   return (
     <View style={styles.container}>
       {showThemeDemo ? (
@@ -254,6 +265,7 @@ export const MainNavigator: React.FC = () => {
           onChapterSelect={handleChapterSelect}
           onVerseSelect={handleVerseSelect}
           onThemeDemoPress={handleThemeDemoPress}
+          onSearchPress={handleSearchOpen}
         />
       )}
 
@@ -263,6 +275,14 @@ export const MainNavigator: React.FC = () => {
           <MiniPlayer testID='main-mini-player' />
         </View>
       )}
+
+      {/* Search Screen Overlay */}
+      <SearchScreen
+        isVisible={isSearchVisible}
+        onClose={handleSearchClose}
+        onChapterSelect={handleChapterSelect}
+        onVerseSelect={handleVerseSelect}
+      />
     </View>
   );
 };

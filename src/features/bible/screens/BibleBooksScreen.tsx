@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Dimensions as RNDimensions,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -17,8 +18,13 @@ import {
   OptionsMenu,
   ToggleButtons,
   SlideUpPanel,
+  ProfileMenu,
+  LanguageMenu,
+  SettingsMenu,
+  HelpMenu,
 } from '@/shared/components/ui';
 import { MoreIcon } from '@/shared/components/ui/icons/AudioIcons';
+import searchIcon from '../../../../assets/images/utility_icons/search.png';
 
 // Eye icon component for theme demo
 const EyeIcon: React.FC<{ size: number; color: string }> = ({
@@ -67,6 +73,7 @@ const EyeIcon: React.FC<{ size: number; color: string }> = ({
     </View>
   </View>
 );
+
 import { ChapterCard } from '../components';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
@@ -84,10 +91,18 @@ import { getBookImageSource } from '@/shared/services';
 interface BibleBooksScreenProps {
   onChapterSelect: (book: Book, chapter: number) => void;
   onVerseSelect: (book: Book, chapter: number, verse: number) => void;
+  onSearchPress?: () => void;
   onThemeDemoPress?: () => void;
 }
 
 type TestamentMode = 'old' | 'new';
+type SubMenuType =
+  | 'profile'
+  | 'language'
+  | 'settings'
+  | 'help'
+  | 'login'
+  | null;
 
 // Go to Testament Tile Component
 interface GoToTestamentTileProps {
@@ -103,15 +118,18 @@ const GoToTestamentTile: React.FC<GoToTestamentTileProps> = ({
   onPress,
   testID,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: colors.secondary + '30', // Different fill color
+      backgroundColor:
+        targetTestament === 'new'
+          ? isDark
+            ? '#AC8F57'
+            : '#ECE6DA'
+          : colors.chapterTileBackground || colors.background,
       borderRadius: 24,
       padding: Dimensions.spacing.sm,
-      borderWidth: 2,
-      borderColor: colors.primary + '20', // Same border as regular tiles
       alignItems: 'center',
       justifyContent: 'space-between',
       aspectRatio: 1, // Square tiles
@@ -211,11 +229,9 @@ const BookTile: React.FC<BookTileProps> = ({ book, onPress, testID }) => {
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: colors.background,
+      backgroundColor: colors.chapterTileBackground || colors.background,
       borderRadius: 24,
       padding: Dimensions.spacing.sm,
-      borderWidth: 2,
-      borderColor: colors.primary + '20',
       alignItems: 'center',
       justifyContent: 'center',
       aspectRatio: 1, // Square tiles
@@ -329,7 +345,7 @@ const TestamentView: React.FC<TestamentViewProps> = ({
     title: {
       fontSize: Fonts.size['2xl'],
       fontWeight: Fonts.weight.bold,
-      color: colors.primary,
+      color: colors.chapterTileBackground || colors.background,
       textAlign: 'center',
       marginBottom: Dimensions.spacing.lg,
       marginTop: Dimensions.spacing.md,
@@ -471,9 +487,10 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
 export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   onChapterSelect,
   onVerseSelect,
+  onSearchPress,
   onThemeDemoPress,
 }) => {
-  const { colors, toggleTheme } = useTheme();
+  const { colors } = useTheme();
   const { openChapterCard } = useChapterCardStore();
   const { isOpen: isHelpPanelOpen, closeHelpPanel } = useHelpPanelStore();
   const insets = useSafeAreaInsets();
@@ -481,11 +498,13 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [testamentMode, setTestamentMode] = useState<TestamentMode>('old');
   const [showOptionsPanel, setShowOptionsPanel] = useState(false);
+  const [activeSubMenu, setActiveSubMenu] = useState<SubMenuType>(null);
 
   // Use the horizontal slide animation hook
   const { slideAnimation, gestureHandler, updateAnimation } =
-    useHorizontalSlideAnimation<TestamentMode>({
-      onModeChange: setTestamentMode,
+    useHorizontalSlideAnimation({
+      onModeChange: (newMode: string) =>
+        setTestamentMode(newMode as TestamentMode),
       modes: ['old', 'new'],
       currentMode: testamentMode,
     });
@@ -530,25 +549,54 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
     setShowOptionsPanel(false);
   };
 
+  const handleOpenSubMenu = (subMenuType: SubMenuType) => {
+    setShowOptionsPanel(false);
+    setActiveSubMenu(subMenuType);
+  };
+
+  const handleCloseSubMenu = () => {
+    setActiveSubMenu(null);
+  };
+
   const handleThemeDemoPress = () => {
     onThemeDemoPress?.();
+  };
+
+  const handleSearchPress = () => {
+    if (onSearchPress) {
+      onSearchPress();
+    } else {
+      console.log('Search pressed');
+      // TODO: Implement search functionality
+    }
   };
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: colors.bibleBooksBackground || colors.background,
     },
     header: {
       paddingTop: insets.top + Dimensions.spacing.md,
       paddingHorizontal: Dimensions.spacing.xl,
-      paddingBottom: Dimensions.spacing.sm,
+      //paddingBottom: Dimensions.spacing.xs,
+      backgroundColor: colors.background + '00', // 50% opacity (80 = 128/255)
+      //borderBottomWidth: 1,
+      //borderBottomColor: colors.secondary + '20', // Very subtle border
     },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: Dimensions.spacing.md,
+      justifyContent: 'center',
+      marginBottom: Dimensions.spacing.sm,
+      position: 'relative',
+    },
+    headerToggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      //paddingHorizontal: Dimensions.spacing.xs,
+      marginBottom: Dimensions.spacing.sm,
     },
     title: {
       fontSize: Fonts.size['3xl'],
@@ -556,25 +604,37 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       color: colors.text,
       textAlign: 'center',
     },
-    headerButton: {
-      backgroundColor: colors.primary,
-      paddingHorizontal: Dimensions.spacing.md,
-      paddingVertical: Dimensions.spacing.sm,
-      borderRadius: Dimensions.radius.lg,
-      minWidth: 44,
-      minHeight: 44,
+    titleButton: {
+      // No background color - transparent button
+      paddingHorizontal: Dimensions.spacing.sm,
+      paddingVertical: Dimensions.spacing.xs,
+      borderRadius: Dimensions.radius.sm,
+    },
+    optionsButton: {
+      position: 'absolute',
+      right: 0,
+      backgroundColor: '#AC8F57',
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    toggleContainer: {
-      paddingHorizontal: Dimensions.spacing.md,
-      marginBottom: Dimensions.spacing.sm,
+    searchButton: {
+      position: 'absolute',
+      right: 40,
+      backgroundColor: '#AC8F57',
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     loadingContainer: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.background,
+      backgroundColor: colors.bibleBooksBackground || colors.background,
     },
     loadingText: {
       marginTop: Dimensions.spacing.md,
@@ -597,7 +657,7 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   const newTestamentBooks = books.filter(book => book.testament === 'new');
 
   // Toggle button options
-  const toggleOptions: Array<{ key: TestamentMode; label: string }> = [
+  const toggleOptions = [
     { key: 'old', label: 'Old Testament' },
     { key: 'new', label: 'New Testament' },
   ];
@@ -607,35 +667,57 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <TouchableOpacity
-            style={styles.headerButton}
+            style={styles.titleButton}
+            onPress={() => {
+              // Handle Bible title press - could be used for navigation or other actions
+              console.log('Bible title pressed');
+            }}
+            accessibilityRole='button'
+            accessibilityLabel='Bible title'
+            testID='bible-title-button'
+            activeOpacity={0.7}>
+            <Text style={styles.title}>Bible</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={handleSearchPress}
+            accessibilityLabel='Search'
+            accessibilityRole='button'
+            testID='search-button'>
+            <Image
+              source={searchIcon}
+              style={{ width: 16, height: 16, tintColor: '#FFFFFF' }}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.searchButton}
             onPress={handleThemeDemoPress}
             accessibilityLabel='Theme demo'
             accessibilityRole='button'
             testID='theme-demo-button'>
-            <EyeIcon size={18} color={colors.background} />
+            <EyeIcon size={16} color='#FFFFFF' />
           </TouchableOpacity>
-          <Text style={styles.title}>Bible</Text>
           <TouchableOpacity
-            style={styles.headerButton}
+            style={styles.optionsButton}
             onPress={handleOptionsPress}
             accessibilityLabel='Options menu'
             accessibilityRole='button'
             testID='options-button'>
-            <MoreIcon size={18} color={colors.background} />
+            <MoreIcon size={16} color='#FFFFFF' />
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Toggle Buttons */}
-      <View style={styles.toggleContainer}>
-        <ToggleButtons<TestamentMode>
-          options={toggleOptions}
-          selectedKey={testamentMode}
-          onSelect={setTestamentMode}
-          testID='testament-toggle'
-          height={28}
-          fontSize={Fonts.size.sm}
-        />
+        {/* Toggle Buttons in Header */}
+        <View style={styles.headerToggleRow}>
+          <ToggleButtons
+            options={toggleOptions}
+            selectedKey={testamentMode}
+            onSelect={(key: string) => setTestamentMode(key as TestamentMode)}
+            testID='testament-toggle'
+            height={28}
+            fontSize={Fonts.size.sm}
+          />
+        </View>
       </View>
 
       {/* Content Area with Swipe Support */}
@@ -667,7 +749,31 @@ export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
       <OptionsMenu
         isVisible={showOptionsPanel}
         onClose={handleCloseOptions}
-        onThemeToggle={toggleTheme}
+        onNavigateToSubMenu={handleOpenSubMenu}
+      />
+
+      {/* Profile Menu */}
+      <ProfileMenu
+        isVisible={activeSubMenu === 'profile'}
+        onClose={handleCloseSubMenu}
+      />
+
+      {/* Language Menu */}
+      <LanguageMenu
+        isVisible={activeSubMenu === 'language'}
+        onClose={handleCloseSubMenu}
+      />
+
+      {/* Settings Menu */}
+      <SettingsMenu
+        isVisible={activeSubMenu === 'settings'}
+        onClose={handleCloseSubMenu}
+      />
+
+      {/* Help Menu */}
+      <HelpMenu
+        isVisible={activeSubMenu === 'help'}
+        onClose={handleCloseSubMenu}
       />
 
       {/* Help Panel - Test SlideUpPanel */}

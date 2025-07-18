@@ -43,13 +43,13 @@ export const ToggleButtons = <T extends string>({
             height: height,
             backgroundColor:
               selectedKey === option.key
-                ? colors.primary
-                : colors.primary + '20',
+                ? colors.navigationSelected
+                : colors.navigationUnselected,
             borderRadius: Dimensions.radius.md,
             justifyContent: 'center',
             alignItems: 'center',
             borderWidth: 1,
-            borderColor: colors.primary,
+            borderColor: colors.navigationSelected,
             opacity: option.disabled ? 0.5 : 1,
           }}
           onPress={() => {
@@ -64,7 +64,9 @@ export const ToggleButtons = <T extends string>({
               fontSize: fontSize,
               fontWeight: Fonts.weight.medium,
               color:
-                selectedKey === option.key ? colors.background : colors.primary,
+                selectedKey === option.key
+                  ? colors.navigationSelectedText
+                  : colors.navigationUnselectedText,
             }}>
             {option.label}
           </Text>

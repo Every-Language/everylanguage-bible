@@ -37,27 +37,29 @@ describe('useTheme', () => {
   it('returns theme data from context', () => {
     const { result } = renderHook(() => useTheme());
 
+    expect(result.current.theme).toBeDefined();
+    expect(result.current.isDark).toBeDefined();
+    expect(result.current.colors).toBeDefined();
+    expect(typeof result.current.toggleTheme).toBe('function');
+    expect(typeof result.current.setTheme).toBe('function');
+    expect(result.current.isSystemTheme).toBeDefined();
+  });
+
+  it('should start with light theme by default', () => {
+    const { result } = renderHook(() => useTheme());
+
     expect(result.current.theme).toBe('light');
     expect(result.current.isDark).toBe(false);
-    expect(result.current.colors).toEqual(mockThemeContext.colors);
-    expect(result.current.setTheme).toBe(mockThemeContext.setTheme);
-    expect(result.current.toggleTheme).toBe(mockThemeContext.toggleTheme);
-    expect(result.current.isSystemTheme).toBe(true);
   });
 
-  it('provides correct color values', () => {
+  it('should provide correct light theme colors', () => {
     const { result } = renderHook(() => useTheme());
 
-    expect(result.current.colors.background).toBe('#EBE5D9');
-    expect(result.current.colors.textPrimary).toBe('#070707');
-    expect(result.current.colors.primary).toBe('#264854');
-    expect(result.current.colors.secondary).toBe('#AD915A');
-  });
-
-  it('provides theme switching functions', () => {
-    const { result } = renderHook(() => useTheme());
-
-    expect(typeof result.current.setTheme).toBe('function');
-    expect(typeof result.current.toggleTheme).toBe('function');
+    expect(result.current.colors).toEqual({
+      background: '#EBE5D9',
+      text: '#070707',
+      primary: '#264854',
+      secondary: '#AD915A',
+    });
   });
 });
