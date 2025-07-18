@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Keyboard } from 'react-native';
 import { BibleScreen } from '@/features/bible/screens';
+import { PlaylistsScreen } from '@/features/playlists';
+import { SearchScreen } from '@/features/search';
 import { ChapterCard } from '@/features/bible/components';
 import { ThemeDemoScreen } from '@/features/theme';
 import { PlayerOverlay } from '@/features/audio/components/PlayerOverlay';
@@ -16,10 +18,13 @@ const getRecordingId = (book: Book, chapter: number): string => {
   return `${bookId}-${chapter}`;
 };
 
+type CurrentScreen = 'bible' | 'playlists' | 'search';
+
 export const MainNavigator: React.FC = () => {
   const { colors } = useTheme();
   const audioStore = useAudioStore();
   const [showThemeDemo, setShowThemeDemo] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<CurrentScreen>('bible');
   const {
     currentRecording,
     currentChapter,
@@ -255,6 +260,7 @@ export const MainNavigator: React.FC = () => {
 
   // Options menu handlers
   const handleOptionsOpen = () => {
+    Keyboard.dismiss();
     setShowOptionsPanel(true);
   };
 
@@ -291,21 +297,50 @@ export const MainNavigator: React.FC = () => {
     setActiveSubMenu(null);
   };
 
+  const handleBiblePress = () => {
+    setCurrentScreen('bible');
+  };
+
+  const handlePlaylistsPress = () => {
+    setCurrentScreen('playlists');
+  };
+
+  const handleSearchPress = () => {
+    setCurrentScreen('search');
+  };
+
   return (
     <>
       <MainHeaderWrapper
         onTitlePress={() => console.log('Bible title pressed')}
-        onBiblePress={() => console.log('Bible button pressed')}
-        onPlaylistsPress={() => console.log('Playlists button pressed')}
+        onBiblePress={handleBiblePress}
+        onPlaylistsPress={handlePlaylistsPress}
+        onSearchPress={handleSearchPress}
         onOptionsPress={handleOptionsOpen}>
         <View style={styles.container}>
           {showThemeDemo ? (
             <ThemeDemoScreen onBack={handleThemeDemoBack} />
-          ) : (
+          ) : currentScreen === 'bible' ? (
             <BibleScreen
               _onChapterSelect={handleChapterSelect}
               _onVerseSelect={handleVerseSelect}
               _onThemeDemoPress={handleThemeDemoPress}
+              showOptionsPanel={showOptionsPanel}
+              onOptionsClose={handleOptionsClose}
+              onOpenSubMenu={handleOpenSubMenu}
+              activeSubMenu={activeSubMenu}
+              onCloseSubMenu={handleCloseSubMenu}
+            />
+          ) : currentScreen === 'search' ? (
+            <SearchScreen
+              showOptionsPanel={showOptionsPanel}
+              onOptionsClose={handleOptionsClose}
+              onOpenSubMenu={handleOpenSubMenu}
+              activeSubMenu={activeSubMenu}
+              onCloseSubMenu={handleCloseSubMenu}
+            />
+          ) : (
+            <PlaylistsScreen
               showOptionsPanel={showOptionsPanel}
               onOptionsClose={handleOptionsClose}
               onOpenSubMenu={handleOpenSubMenu}

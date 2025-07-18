@@ -17,6 +17,7 @@ export const MainHeaderWrapper: React.FC<MainHeaderWrapperProps> = ({
   onTitlePress,
   onBiblePress,
   onPlaylistsPress,
+  onSearchPress,
   onOptionsPress,
   testID,
 }) => {
@@ -37,6 +38,7 @@ export const MainHeaderWrapper: React.FC<MainHeaderWrapperProps> = ({
       onTitlePress={onTitlePress}
       onBiblePress={onBiblePress}
       onPlaylistsPress={onPlaylistsPress}
+      onSearchPress={onSearchPress}
       onOptionsPress={onOptionsPress}>
       <View style={styles.container} testID={testID}>
         <MainHeader testID='main-header' />

@@ -32,7 +32,7 @@ export const ToggleButtons = <T extends string>({
     <View
       style={{
         flexDirection: 'row',
-        gap: Dimensions.spacing.md,
+        gap: Dimensions.spacing.sm,
       }}
       testID={testID}>
       {options.map(option => (

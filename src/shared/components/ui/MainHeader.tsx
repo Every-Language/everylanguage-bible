@@ -18,9 +18,11 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
   const insets = useSafeAreaInsets();
   const {
     bottomContent,
+    currentScreen,
     onTitlePress,
     onBiblePress,
     onPlaylistsPress,
+    onSearchPress,
     onOptionsPress,
     buttonStates,
   } = useHeader();
@@ -50,7 +52,11 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
   };
 
   const handleSearchPress = () => {
-    console.log('Search button pressed');
+    if (onSearchPress) {
+      onSearchPress();
+    } else {
+      console.log('Search button pressed');
+    }
   };
 
   const handleOptionsPress = () => {
@@ -62,15 +68,80 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
   };
 
   // Determine button appearance based on current screen
-  const getButtonStyle = (defaultStyle: any) => {
-    // Future: Add screen-specific styling logic here
-    return defaultStyle;
+  const getButtonStyle = (
+    buttonType: 'bible' | 'playlists' | 'search' | 'options',
+    defaultStyle: any
+  ) => {
+    let isActive = false;
+
+    // Determine if this button should be active based on current screen
+    switch (buttonType) {
+      case 'bible':
+        isActive = currentScreen === 'bible-books';
+        break;
+      case 'playlists':
+        isActive = currentScreen === 'playlists';
+        break;
+      case 'search':
+        isActive = currentScreen === 'search';
+        break;
+      case 'options':
+        // Options button is never highlighted as requested
+        isActive = false;
+        break;
+    }
+
+    return {
+      ...defaultStyle,
+      backgroundColor: isActive
+        ? colors.navigationSelected
+        : colors.navigationUnselected,
+    };
+  };
+
+  // Get icon tint color based on whether button is active
+  const getIconTintColor = (
+    buttonType: 'bible' | 'playlists' | 'search' | 'options'
+  ) => {
+    let isActive = false;
+
+    switch (buttonType) {
+      case 'bible':
+        isActive = currentScreen === 'bible-books';
+        break;
+      case 'playlists':
+        isActive = currentScreen === 'playlists';
+        break;
+      case 'search':
+        isActive = currentScreen === 'search';
+        break;
+      case 'options':
+        isActive = false;
+        break;
+    }
+
+    return isActive
+      ? colors.navigationSelectedText
+      : colors.navigationUnselectedText;
+  };
+
+  // Get the title based on current screen
+  const getTitle = () => {
+    switch (currentScreen) {
+      case 'playlists':
+        return 'Playlists';
+      case 'search':
+        return 'Search';
+      case 'bible-books':
+      default:
+        return 'Bible';
+    }
   };
 
   const styles = StyleSheet.create({
     container: {
       paddingTop: insets.top + Dimensions.spacing.xs,
-      paddingHorizontal: Dimensions.spacing.xl,
+      paddingHorizontal: Dimensions.spacing.md,
       backgroundColor: colors.bibleBooksBackground || colors.background,
     },
     headerRow: {
@@ -94,7 +165,6 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
     bibleButton: {
       position: 'absolute',
       left: 0,
-      backgroundColor: '#AC8F57',
       width: 32,
       height: 32,
       borderRadius: 16,
@@ -104,7 +174,6 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
     playlistsButton: {
       position: 'absolute',
       left: 40,
-      backgroundColor: '#AC8F57',
       width: 32,
       height: 32,
       borderRadius: 16,
@@ -114,7 +183,6 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
     searchButton: {
       position: 'absolute',
       right: 40,
-      backgroundColor: '#AC8F57',
       width: 32,
       height: 32,
       borderRadius: 16,
@@ -124,7 +192,6 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
     optionsButton: {
       position: 'absolute',
       right: 0,
-      backgroundColor: '#AC8F57',
       width: 32,
       height: 32,
       borderRadius: 16,
@@ -150,34 +217,42 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
           accessibilityLabel='Bible title'
           testID='bible-title-button'
           activeOpacity={0.7}>
-          <Text style={styles.title}>Bible</Text>
+          <Text style={styles.title}>{getTitle()}</Text>
         </TouchableOpacity>
 
         {/* Left side buttons */}
         {buttonStates?.bibleVisible !== false && (
           <TouchableOpacity
-            style={getButtonStyle(styles.bibleButton)}
+            style={getButtonStyle('bible', styles.bibleButton)}
             onPress={handleBiblePress}
             accessibilityLabel='Bible'
             accessibilityRole='button'
             testID='bible-button'>
             <Image
               source={bibleIcon}
-              style={{ width: 16, height: 20, tintColor: '#FFFFFF' }}
+              style={{
+                width: 16,
+                height: 20,
+                tintColor: getIconTintColor('bible'),
+              }}
             />
           </TouchableOpacity>
         )}
 
         {buttonStates?.playlistsVisible !== false && (
           <TouchableOpacity
-            style={getButtonStyle(styles.playlistsButton)}
+            style={getButtonStyle('playlists', styles.playlistsButton)}
             onPress={handlePlaylistsPress}
             accessibilityLabel='Playlists'
             accessibilityRole='button'
             testID='playlists-button'>
             <Image
               source={playlistIcon}
-              style={{ width: 15, height: 19, tintColor: '#FFFFFF' }}
+              style={{
+                width: 15,
+                height: 19,
+                tintColor: getIconTintColor('playlists'),
+              }}
             />
           </TouchableOpacity>
         )}
@@ -185,26 +260,30 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
         {/* Right side buttons */}
         {buttonStates?.searchVisible !== false && (
           <TouchableOpacity
-            style={getButtonStyle(styles.searchButton)}
+            style={getButtonStyle('search', styles.searchButton)}
             onPress={handleSearchPress}
             accessibilityLabel='Search'
             accessibilityRole='button'
             testID='search-button'>
             <Image
               source={searchIcon}
-              style={{ width: 16, height: 16, tintColor: '#FFFFFF' }}
+              style={{
+                width: 16,
+                height: 16,
+                tintColor: getIconTintColor('search'),
+              }}
             />
           </TouchableOpacity>
         )}
 
         {buttonStates?.optionsVisible !== false && (
           <TouchableOpacity
-            style={getButtonStyle(styles.optionsButton)}
+            style={getButtonStyle('options', styles.optionsButton)}
             onPress={handleOptionsPress}
             accessibilityLabel='Options menu'
             accessibilityRole='button'
             testID='options-button'>
-            <MoreIcon size={16} color='#FFFFFF' />
+            <MoreIcon size={16} color={getIconTintColor('options')} />
           </TouchableOpacity>
         )}
       </View>

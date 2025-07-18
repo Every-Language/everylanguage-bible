@@ -7,7 +7,7 @@ import React, {
   ReactNode,
 } from 'react';
 
-export type ScreenType = 'bible-books' | 'other';
+export type ScreenType = 'bible-books' | 'playlists' | 'search' | 'other';
 
 export interface ButtonStates {
   bibleVisible?: boolean;
@@ -29,6 +29,7 @@ export interface HeaderContextType {
   onTitlePress?: (() => void) | undefined;
   onBiblePress?: (() => void) | undefined;
   onPlaylistsPress?: (() => void) | undefined;
+  onSearchPress?: (() => void) | undefined;
   onOptionsPress?: (() => void) | undefined;
 
   // Button appearance/visibility based on screen
@@ -43,6 +44,7 @@ export interface HeaderProviderProps {
   onTitlePress?: (() => void) | undefined;
   onBiblePress?: (() => void) | undefined;
   onPlaylistsPress?: (() => void) | undefined;
+  onSearchPress?: (() => void) | undefined;
   onOptionsPress?: (() => void) | undefined;
 }
 
@@ -51,6 +53,7 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({
   onTitlePress,
   onBiblePress,
   onPlaylistsPress,
+  onSearchPress,
   onOptionsPress,
 }) => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('bible-books');
@@ -75,6 +78,7 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({
       onTitlePress,
       onBiblePress,
       onPlaylistsPress,
+      onSearchPress,
       onOptionsPress,
       buttonStates,
       setButtonStates: setButtonStatesCallback,
@@ -87,6 +91,7 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({
       onTitlePress,
       onBiblePress,
       onPlaylistsPress,
+      onSearchPress,
       onOptionsPress,
       buttonStates,
       setButtonStatesCallback,
