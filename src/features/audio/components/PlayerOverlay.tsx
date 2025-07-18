@@ -46,7 +46,7 @@ import { VerseDisplayData } from '@/types/audio';
 import { QueueItemComponent } from './QueueItemComponent';
 import { ToggleButtons } from '@/shared/components/ui';
 
-interface MiniPlayerProps {
+interface PlayerOverlayProps {
   testID?: string;
   onExpand?: () => void;
   onClose?: () => void; // Close/hide the player
@@ -921,7 +921,7 @@ const ExpandedMediaContent: React.FC<ExpandedMediaContentProps> = ({
   );
 };
 
-export const MiniPlayer: React.FC<MiniPlayerProps> = ({
+export const PlayerOverlay: React.FC<PlayerOverlayProps> = ({
   testID,
   onExpand: _onExpand,
   onClose: _onClose,
@@ -1378,7 +1378,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
         <Animated.View style={styles.expandContractTouchArea}>
           <TouchableOpacity
             onPress={handleExpandContractPress}
-            testID='mini-player-expand-contract-bar'
+            testID='player-overlay-expand-contract-bar'
             accessibilityLabel={
               isExpanded ? t('audio.contractPlayer') : t('audio.expandPlayer')
             }
@@ -1469,7 +1469,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               totalTime={totalTime}
               onSeek={seek}
               seekable={totalTime > 0}
-              testID='mini-player-progress'
+              testID='player-overlay-progress'
               verseMarkers={currentVerseDisplayData.map(verse => ({
                 verseNumber: verse.verseNumber,
                 startTime: verse.startTime,
@@ -1486,7 +1486,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                   styles.circularButton,
                   { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
                 ]}
-                testID='mini-player-previous-chapter'
+                testID='player-overlay-previous-chapter'
                 accessibilityLabel={t('audio.previousChapter')}>
                 <PreviousChapterIcon size={20} color='#AC8F57' />
               </TouchableOpacity>
@@ -1498,7 +1498,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                   styles.circularButton,
                   { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
                 ]}
-                testID='mini-player-previous-verse'
+                testID='player-overlay-previous-verse'
                 accessibilityLabel={t('audio.previousVerse')}>
                 <PreviousVerseIcon size={20} color='#AC8F57' />
               </TouchableOpacity>
@@ -1511,7 +1511,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                   styles.primaryButton,
                   { backgroundColor: '#AC8F57' },
                 ]}
-                testID='mini-player-play-pause'
+                testID='player-overlay-play-pause'
                 accessibilityLabel={
                   isPlaying ? t('audio.pause') : t('audio.play')
                 }>
@@ -1529,7 +1529,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                   styles.circularButton,
                   { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
                 ]}
-                testID='mini-player-next-verse'
+                testID='player-overlay-next-verse'
                 accessibilityLabel={t('audio.nextVerse')}>
                 <NextVerseIcon size={20} color='#AC8F57' />
               </TouchableOpacity>
@@ -1541,7 +1541,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                   styles.circularButton,
                   { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
                 ]}
-                testID='mini-player-next-chapter'
+                testID='player-overlay-next-chapter'
                 accessibilityLabel={t('audio.nextChapter')}>
                 <NextChapterIcon size={20} color='#AC8F57' />
               </TouchableOpacity>
@@ -1566,7 +1566,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             totalTime={totalTime}
             onSeek={seek}
             seekable={totalTime > 0}
-            testID='mini-player-progress'
+            testID='player-overlay-progress'
             verseMarkers={currentVerseDisplayData.map(
               (verse: VerseDisplayData) => ({
                 verseNumber: verse.verseNumber,
@@ -1585,7 +1585,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 styles.circularButton,
                 { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
               ]}
-              testID='mini-player-previous-chapter'
+              testID='player-overlay-previous-chapter'
               accessibilityLabel={t('audio.previousChapter')}>
               <PreviousChapterIcon size={20} color='#AC8F57' />
             </TouchableOpacity>
@@ -1597,7 +1597,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 styles.circularButton,
                 { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
               ]}
-              testID='mini-player-previous-verse'
+              testID='player-overlay-previous-verse'
               accessibilityLabel={t('audio.previousVerse')}>
               <PreviousVerseIcon size={20} color='#AC8F57' />
             </TouchableOpacity>
@@ -1610,7 +1610,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 styles.primaryButton,
                 { backgroundColor: '#AC8F57' },
               ]}
-              testID='mini-player-play-pause'
+              testID='player-overlay-play-pause'
               accessibilityLabel={
                 isPlaying ? t('audio.pause') : t('audio.play')
               }>
@@ -1628,7 +1628,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 styles.circularButton,
                 { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
               ]}
-              testID='mini-player-next-verse'
+              testID='player-overlay-next-verse'
               accessibilityLabel={t('audio.nextVerse')}>
               <NextVerseIcon size={20} color='#AC8F57' />
             </TouchableOpacity>
@@ -1640,7 +1640,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 styles.circularButton,
                 { backgroundColor: isDark ? '#414141' : '#D8D2C6' },
               ]}
-              testID='mini-player-next-chapter'
+              testID='player-overlay-next-chapter'
               accessibilityLabel={t('audio.nextChapter')}>
               <NextChapterIcon size={20} color='#AC8F57' />
             </TouchableOpacity>

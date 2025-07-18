@@ -121,7 +121,7 @@ describe('MainNavigator', () => {
 
   it('shows mini player when current recording exists', () => {
     const { getByTestId } = render(<MainNavigator />);
-    expect(getByTestId('main-mini-player')).toBeTruthy();
+    expect(getByTestId('main-player-overlay')).toBeTruthy();
   });
 
   it('initializes with default audio on mount', async () => {
@@ -170,7 +170,7 @@ describe('MainNavigator', () => {
     mockAudioStore.currentRecording = null;
 
     const { queryByTestId } = render(<MainNavigator />);
-    expect(queryByTestId('main-mini-player')).toBeNull();
+    expect(queryByTestId('main-player-overlay')).toBeNull();
 
     // Restore original value
     mockAudioStore.currentRecording = originalRecording;

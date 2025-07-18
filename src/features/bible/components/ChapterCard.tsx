@@ -23,7 +23,7 @@ import {
 import {
   useTranslation,
   useHorizontalSlideAnimation,
-  useMiniPlayerHeight,
+  usePlayerOverlayHeight,
 } from '@/shared/hooks';
 import { ToggleButtons, BookImage } from '@/shared/components/ui';
 import { PlayIcon, PlusIcon } from '@/shared/components/ui/icons/AudioIcons';
@@ -500,7 +500,7 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { collapsedHeight } = useMiniPlayerHeight();
+  const { collapsedHeight } = usePlayerOverlayHeight();
 
   const {
     isOpen,

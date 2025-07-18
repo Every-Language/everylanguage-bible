@@ -1,5 +1,7 @@
-export { useTheme, useTamaguiThemeHook } from './useTamaguiTheme';
 export { useTranslation } from './useTranslation';
-export { useResponsive } from './useResponsive';
-export { useMiniPlayerHeight } from './useMiniPlayerHeight';
+export { useTheme } from './useTheme';
+export { usePlayerOverlayHeight } from './usePlayerOverlayHeight';
 export { useHorizontalSlideAnimation } from './useHorizontalSlideAnimation';
+export { useResponsive } from './useResponsive';
+// Direct access to Tamagui theme hook for advanced usage
+export { useTheme as useTamaguiThemeHook } from './useTamaguiTheme';

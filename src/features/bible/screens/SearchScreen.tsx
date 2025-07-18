@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { loadBibleBooks, type Book } from '@/shared/utils';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
-import { useMiniPlayerHeight } from '@/shared/hooks';
+import { usePlayerOverlayHeight } from '@/shared/hooks';
 import { getBookImageSource } from '@/shared/services';
 import searchIcon from '../../../../assets/images/utility_icons/search.png';
 
@@ -42,7 +42,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
 }) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { collapsedHeight } = useMiniPlayerHeight();
+  const { collapsedHeight } = usePlayerOverlayHeight();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [books, setBooks] = useState<Book[]>([]);

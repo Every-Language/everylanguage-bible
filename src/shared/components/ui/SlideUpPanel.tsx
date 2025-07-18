@@ -77,7 +77,7 @@ export const SlideUpPanel: React.FC<SlideUpPanelProps> = ({
     }
   }, [isVisible, translateY, backdropOpacity, screenHeight]);
 
-  // Drag gesture handler - similar to MiniPlayer
+  // Drag gesture handler - similar to PlayerOverlay
   const dragGestureHandler =
     useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
       onStart: (_, context) => {
@@ -146,7 +146,7 @@ export const SlideUpPanel: React.FC<SlideUpPanelProps> = ({
     opacity: backdropOpacity.value,
   }));
 
-  // Drag bar style with feedback like MiniPlayer
+  // Drag bar style with feedback like PlayerOverlay
   const animatedBarStyle = useAnimatedStyle(() => {
     const dragProgress = Math.min(1, translateY.value / (screenHeight * 0.1));
     return {

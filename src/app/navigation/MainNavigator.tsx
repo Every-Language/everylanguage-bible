@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { BibleBooksScreen, SearchScreen } from '@/features/bible/screens';
 import { ThemeDemoScreen } from '@/features/theme';
-import { MiniPlayer } from '@/features/audio/components/MiniPlayer';
+import { PlayerOverlay } from '@/features/audio/components/PlayerOverlay';
 import { type Book } from '@/shared/utils';
 import { useAudioStore, useTheme, useQueueStore } from '@/shared/store';
 
@@ -69,7 +69,7 @@ export const MainNavigator: React.FC = () => {
       flex: 1,
       backgroundColor: colors.background,
     },
-    miniPlayerContainer: {
+    playerOverlayContainer: {
       position: 'absolute',
       bottom: 0,
       left: 0,
@@ -269,10 +269,10 @@ export const MainNavigator: React.FC = () => {
         />
       )}
 
-      {/* Mini Player Overlay - Show when we have a current recording */}
+      {/* Player Overlay - Show when we have a current recording */}
       {currentRecording && (
-        <View style={styles.miniPlayerContainer}>
-          <MiniPlayer testID='main-mini-player' />
+        <View style={styles.playerOverlayContainer}>
+          <PlayerOverlay testID='main-player-overlay' />
         </View>
       )}
 

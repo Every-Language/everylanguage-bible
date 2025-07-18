@@ -1,1 +1,1 @@
-export { MiniPlayer } from './MiniPlayer';
+export { PlayerOverlay } from './PlayerOverlay';

@@ -33,7 +33,7 @@ export const Dimensions = {
       width: 60,
       height: 60,
     },
-    miniPlayerImage: {
+    playerOverlayImage: {
       width: 80,
       height: 80,
     },
@@ -78,7 +78,7 @@ export const Dimensions = {
   // Layout
   layout: {
     tabBarHeight: 83,
-    miniPlayerHeight: 210, // Final height for modern player
+    playerOverlayHeight: 210, // Final height for modern player
     booksPerRow: 3,
     chaptersPerRow: 5,
   },

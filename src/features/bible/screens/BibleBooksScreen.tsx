@@ -83,7 +83,7 @@ import {
   useHelpPanelStore,
 } from '@/shared/store';
 import {
-  useMiniPlayerHeight,
+  usePlayerOverlayHeight,
   useHorizontalSlideAnimation,
 } from '@/shared/hooks';
 import { getBookImageSource } from '@/shared/services';
@@ -325,7 +325,7 @@ const TestamentView: React.FC<TestamentViewProps> = ({
   onGoToNewTestament,
 }) => {
   const { colors } = useTheme();
-  const { collapsedHeight } = useMiniPlayerHeight();
+  const { collapsedHeight } = usePlayerOverlayHeight();
 
   // Calculate screen width for equal spacing
   const screenWidth = RNDimensions.get('window').width;
