@@ -1,6 +1,15 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { BibleBooksScreen } from '../BibleBooksScreen';
+
+// Mock functions
+const mockOnChapterSelect = jest.fn();
+const mockOnVerseSelect = jest.fn();
+
+// Helper function to render with providers
+const renderWithProvider = (component: React.ReactElement) => {
+  return render(component);
+};
 
 // Mock the theme hook
 jest.mock('@/shared/hooks', () => ({
