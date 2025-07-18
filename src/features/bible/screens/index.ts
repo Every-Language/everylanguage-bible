@@ -1,1 +1,1 @@
-export { BibleBooksScreen } from './BibleBooksScreen';
+export { BibleView } from './BibleView';

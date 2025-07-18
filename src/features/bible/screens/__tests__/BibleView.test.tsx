@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { BibleBooksScreen } from '../BibleBooksScreen';
+import { BibleView } from '../BibleView';
 
 // Mock functions
 const mockOnChapterSelect = jest.fn();
@@ -74,18 +74,18 @@ jest.mock('@/shared/components/ui/BookImage', () => ({
   ),
 }));
 
-describe('BibleBooksScreen', () => {
+describe('BibleView', () => {
   const defaultProps = {
     _onChapterSelect: jest.fn(),
     _onVerseSelect: jest.fn(),
   };
 
   it('renders without crashing', () => {
-    expect(() => render(<BibleBooksScreen {...defaultProps} />)).not.toThrow();
+    expect(() => render(<BibleView {...defaultProps} />)).not.toThrow();
   });
 
   it('displays book cards', () => {
-    const { getByText } = render(<BibleBooksScreen {...defaultProps} />);
+    const { getByText } = render(<BibleView {...defaultProps} />);
 
     expect(getByText('Genesis')).toBeTruthy();
     expect(getByText('Exodus')).toBeTruthy();
@@ -94,10 +94,7 @@ describe('BibleBooksScreen', () => {
   it('handles book selection', () => {
     const mockOnChapterSelect = jest.fn();
     const { getByText } = render(
-      <BibleBooksScreen
-        {...defaultProps}
-        _onChapterSelect={mockOnChapterSelect}
-      />
+      <BibleView {...defaultProps} _onChapterSelect={mockOnChapterSelect} />
     );
 
     fireEvent.press(getByText('Genesis'));
@@ -108,7 +105,7 @@ describe('BibleBooksScreen', () => {
 
   it('renders Bible title as a button', async () => {
     const { getByTestId } = renderWithProvider(
-      <BibleBooksScreen
+      <BibleView
         _onChapterSelect={mockOnChapterSelect}
         _onVerseSelect={mockOnVerseSelect}
       />
@@ -131,7 +128,7 @@ describe('BibleBooksScreen', () => {
     const mockOnCloseSubMenu = jest.fn();
 
     const { getByTestId } = renderWithProvider(
-      <BibleBooksScreen
+      <BibleView
         _onChapterSelect={mockOnChapterSelect}
         _onVerseSelect={mockOnVerseSelect}
         showOptionsPanel={true}
