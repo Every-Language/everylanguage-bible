@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { BibleBooksScreen, SearchScreen } from '@/features/bible/screens';
+import { BibleBooksScreen } from '@/features/bible/screens';
 import { ChapterCard } from '@/features/bible/components';
 import { ThemeDemoScreen } from '@/features/theme';
 import { PlayerOverlay } from '@/features/audio/components/PlayerOverlay';
@@ -26,9 +26,6 @@ export const MainNavigator: React.FC = () => {
     setCurrentAudio,
     initializeBibleBooks,
   } = audioStore;
-
-  // Search screen state
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
 
   // Options menu state
   const [showOptionsPanel, setShowOptionsPanel] = useState(false);
@@ -256,14 +253,6 @@ export const MainNavigator: React.FC = () => {
     }
   };
 
-  const handleSearchOpen = () => {
-    setIsSearchVisible(true);
-  };
-
-  const handleSearchClose = () => {
-    setIsSearchVisible(false);
-  };
-
   // Options menu handlers
   const handleOptionsOpen = () => {
     setShowOptionsPanel(true);
@@ -308,7 +297,6 @@ export const MainNavigator: React.FC = () => {
         onTitlePress={() => console.log('Bible title pressed')}
         onBiblePress={() => console.log('Bible button pressed')}
         onPlaylistsPress={() => console.log('Playlists button pressed')}
-        onSearchPress={handleSearchOpen}
         onOptionsPress={handleOptionsOpen}>
         <View style={styles.container}>
           {showThemeDemo ? (
@@ -317,7 +305,6 @@ export const MainNavigator: React.FC = () => {
             <BibleBooksScreen
               _onChapterSelect={handleChapterSelect}
               _onVerseSelect={handleVerseSelect}
-              _onSearchPress={handleSearchOpen}
               _onThemeDemoPress={handleThemeDemoPress}
               showOptionsPanel={showOptionsPanel}
               onOptionsClose={handleOptionsClose}
@@ -333,14 +320,6 @@ export const MainNavigator: React.FC = () => {
               <PlayerOverlay testID='main-player-overlay' />
             </View>
           )}
-
-          {/* Search Screen Overlay */}
-          <SearchScreen
-            isVisible={isSearchVisible}
-            onClose={handleSearchClose}
-            onChapterSelect={handleChapterSelect}
-            onVerseSelect={handleVerseSelect}
-          />
         </View>
       </MainHeaderWrapper>
 

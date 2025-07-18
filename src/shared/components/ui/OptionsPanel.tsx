@@ -143,7 +143,7 @@ export const OptionsPanel: React.FC<OptionsPanelProps> = ({
             paddingVertical: Dimensions.spacing.md,
             minHeight: 48,
           }}
-          onPress={onClose}
+          onPress={() => console.log('Search pressed')}
           accessibilityLabel='Search'
           accessibilityRole='button'
           testID='options-search'>

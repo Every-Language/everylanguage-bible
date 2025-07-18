@@ -21,7 +21,6 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
     onTitlePress,
     onBiblePress,
     onPlaylistsPress,
-    onSearchPress,
     onOptionsPress,
     buttonStates,
   } = useHeader();
@@ -51,11 +50,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({ testID }) => {
   };
 
   const handleSearchPress = () => {
-    if (onSearchPress) {
-      onSearchPress();
-    } else {
-      console.log('Search button pressed');
-    }
+    console.log('Search button pressed');
   };
 
   const handleOptionsPress = () => {

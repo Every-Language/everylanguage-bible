@@ -41,7 +41,6 @@ import { getBookImageSource } from '@/shared/services';
 interface BibleBooksScreenProps {
   _onChapterSelect?: (book: Book, chapter: number) => void; // Moved to MainNavigator
   _onVerseSelect?: (book: Book, chapter: number, verse: number) => void; // Moved to MainNavigator
-  _onSearchPress?: () => void; // Prefixed with _ since it's not used in this context
   _onThemeDemoPress?: () => void; // Prefixed with _ since it's not used in this context
   // Options menu props
   showOptionsPanel?: boolean;
@@ -444,7 +443,6 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
 export const BibleBooksScreen: React.FC<BibleBooksScreenProps> = ({
   _onChapterSelect,
   _onVerseSelect,
-  _onSearchPress,
   _onThemeDemoPress,
   showOptionsPanel = false,
   onOptionsClose,
