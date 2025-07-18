@@ -1,3 +1,5 @@
+export { MainHeader } from './MainHeader';
+export { MainHeaderWrapper } from './MainHeaderWrapper';
 export { BookCard } from './BookCard';
 export { BookImage } from './BookImage';
 export { CodeEntryModal } from './CodeEntryModal';

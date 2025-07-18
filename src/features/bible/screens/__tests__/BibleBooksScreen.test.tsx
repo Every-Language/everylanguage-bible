@@ -76,8 +76,8 @@ jest.mock('@/shared/components/ui/BookImage', () => ({
 
 describe('BibleBooksScreen', () => {
   const defaultProps = {
-    onChapterSelect: jest.fn(),
-    onVerseSelect: jest.fn(),
+    _onChapterSelect: jest.fn(),
+    _onVerseSelect: jest.fn(),
   };
 
   it('renders without crashing', () => {
@@ -96,7 +96,7 @@ describe('BibleBooksScreen', () => {
     const { getByText } = render(
       <BibleBooksScreen
         {...defaultProps}
-        onChapterSelect={mockOnChapterSelect}
+        _onChapterSelect={mockOnChapterSelect}
       />
     );
 
@@ -109,8 +109,8 @@ describe('BibleBooksScreen', () => {
   it('renders Bible title as a button', async () => {
     const { getByTestId } = renderWithProvider(
       <BibleBooksScreen
-        onChapterSelect={mockOnChapterSelect}
-        onVerseSelect={mockOnVerseSelect}
+        _onChapterSelect={mockOnChapterSelect}
+        _onVerseSelect={mockOnVerseSelect}
       />
     );
 
@@ -123,5 +123,26 @@ describe('BibleBooksScreen', () => {
       // The button should not crash when pressed
       expect(bibleTitleButton).toBeTruthy();
     });
+  });
+
+  it('handles options menu props correctly', () => {
+    const mockOnOptionsClose = jest.fn();
+    const mockOnOpenSubMenu = jest.fn();
+    const mockOnCloseSubMenu = jest.fn();
+
+    const { getByTestId } = renderWithProvider(
+      <BibleBooksScreen
+        _onChapterSelect={mockOnChapterSelect}
+        _onVerseSelect={mockOnVerseSelect}
+        showOptionsPanel={true}
+        onOptionsClose={mockOnOptionsClose}
+        onOpenSubMenu={mockOnOpenSubMenu}
+        onCloseSubMenu={mockOnCloseSubMenu}
+        activeSubMenu={null}
+      />
+    );
+
+    // The options menu should be rendered when showOptionsPanel is true
+    expect(getByTestId('options-menu')).toBeTruthy();
   });
 });

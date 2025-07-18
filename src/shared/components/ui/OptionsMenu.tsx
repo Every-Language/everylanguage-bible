@@ -17,7 +17,13 @@ interface OptionsMenuProps {
   isVisible: boolean;
   onClose: () => void;
   onNavigateToSubMenu?: (
-    subMenuType: 'login' | 'profile' | 'language' | 'settings' | 'help'
+    subMenuType:
+      | 'login'
+      | 'profile'
+      | 'language'
+      | 'settings'
+      | 'help'
+      | 'theme-demo'
   ) => void;
 }
 
@@ -32,7 +38,13 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
 
   //we will edit this to only have one of {login/profile} at the same time once we set up auth
   const handleSubMenuNavigation = (
-    subMenuType: 'login' | 'profile' | 'language' | 'settings' | 'help'
+    subMenuType:
+      | 'login'
+      | 'profile'
+      | 'language'
+      | 'settings'
+      | 'help'
+      | 'theme-demo'
   ) => {
     if (subMenuType === 'login') {
       setIsLoginMenuVisible(true);
@@ -115,6 +127,12 @@ export const OptionsMenu: React.FC<OptionsMenuProps> = ({
         icon: calculatorIcon,
         label: 'Calculator',
         onPress: handleCalculatorPress,
+      },
+      {
+        key: 'theme-demo',
+        icon: helpIcon, // Using helpIcon as placeholder since BaseMenu expects ImageSourcePropType
+        label: 'Theme Demo',
+        onPress: () => handleSubMenuNavigation('theme-demo'),
       },
       {
         key: 'settings',

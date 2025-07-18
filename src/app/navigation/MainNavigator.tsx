@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { BibleBooksScreen, SearchScreen } from '@/features/bible/screens';
+import { ChapterCard } from '@/features/bible/components';
 import { ThemeDemoScreen } from '@/features/theme';
 import { PlayerOverlay } from '@/features/audio/components/PlayerOverlay';
+import { MainHeaderWrapper } from '@/shared';
 import { type Book } from '@/shared/utils';
 import { useAudioStore, useTheme, useQueueStore } from '@/shared/store';
 
@@ -27,6 +29,12 @@ export const MainNavigator: React.FC = () => {
 
   // Search screen state
   const [isSearchVisible, setIsSearchVisible] = useState(false);
+
+  // Options menu state
+  const [showOptionsPanel, setShowOptionsPanel] = useState(false);
+  const [activeSubMenu, setActiveSubMenu] = useState<
+    'profile' | 'language' | 'settings' | 'help' | 'login' | 'theme-demo' | null
+  >(null);
 
   // Set up John 1 as default when app starts (flow mode with empty queue)
   useEffect(() => {
@@ -147,12 +155,12 @@ export const MainNavigator: React.FC = () => {
     }
   };
 
-  const handleThemeDemoPress = () => {
-    setShowThemeDemo(true);
-  };
-
   const handleThemeDemoBack = () => {
     setShowThemeDemo(false);
+  };
+
+  const handleThemeDemoPress = () => {
+    setShowThemeDemo(true);
   };
 
   const handleVerseSelect = async (
@@ -256,33 +264,91 @@ export const MainNavigator: React.FC = () => {
     setIsSearchVisible(false);
   };
 
+  // Options menu handlers
+  const handleOptionsOpen = () => {
+    setShowOptionsPanel(true);
+  };
+
+  const handleOptionsClose = () => {
+    setShowOptionsPanel(false);
+  };
+
+  const handleOpenSubMenu = (
+    subMenuType:
+      | 'profile'
+      | 'language'
+      | 'settings'
+      | 'help'
+      | 'login'
+      | 'theme-demo'
+      | null
+  ) => {
+    setShowOptionsPanel(false);
+
+    if (subMenuType === null) {
+      return;
+    }
+
+    if (subMenuType === 'theme-demo') {
+      // Handle theme demo navigation
+      handleThemeDemoPress();
+      return;
+    }
+
+    setActiveSubMenu(subMenuType);
+  };
+
+  const handleCloseSubMenu = () => {
+    setActiveSubMenu(null);
+  };
+
   return (
-    <View style={styles.container}>
-      {showThemeDemo ? (
-        <ThemeDemoScreen onBack={handleThemeDemoBack} />
-      ) : (
-        <BibleBooksScreen
-          onChapterSelect={handleChapterSelect}
-          onVerseSelect={handleVerseSelect}
-          onThemeDemoPress={handleThemeDemoPress}
-          onSearchPress={handleSearchOpen}
-        />
-      )}
+    <>
+      <MainHeaderWrapper
+        onTitlePress={() => console.log('Bible title pressed')}
+        onBiblePress={() => console.log('Bible button pressed')}
+        onPlaylistsPress={() => console.log('Playlists button pressed')}
+        onSearchPress={handleSearchOpen}
+        onOptionsPress={handleOptionsOpen}>
+        <View style={styles.container}>
+          {showThemeDemo ? (
+            <ThemeDemoScreen onBack={handleThemeDemoBack} />
+          ) : (
+            <BibleBooksScreen
+              _onChapterSelect={handleChapterSelect}
+              _onVerseSelect={handleVerseSelect}
+              _onSearchPress={handleSearchOpen}
+              _onThemeDemoPress={handleThemeDemoPress}
+              showOptionsPanel={showOptionsPanel}
+              onOptionsClose={handleOptionsClose}
+              onOpenSubMenu={handleOpenSubMenu}
+              activeSubMenu={activeSubMenu}
+              onCloseSubMenu={handleCloseSubMenu}
+            />
+          )}
 
-      {/* Player Overlay - Show when we have a current recording */}
-      {currentRecording && (
-        <View style={styles.playerOverlayContainer}>
-          <PlayerOverlay testID='main-player-overlay' />
+          {/* Player Overlay - Show when we have a current recording */}
+          {currentRecording && (
+            <View style={styles.playerOverlayContainer}>
+              <PlayerOverlay testID='main-player-overlay' />
+            </View>
+          )}
+
+          {/* Search Screen Overlay */}
+          <SearchScreen
+            isVisible={isSearchVisible}
+            onClose={handleSearchClose}
+            onChapterSelect={handleChapterSelect}
+            onVerseSelect={handleVerseSelect}
+          />
         </View>
-      )}
+      </MainHeaderWrapper>
 
-      {/* Search Screen Overlay */}
-      <SearchScreen
-        isVisible={isSearchVisible}
-        onClose={handleSearchClose}
+      {/* Chapter Card - renders above header and content */}
+      <ChapterCard
         onChapterSelect={handleChapterSelect}
         onVerseSelect={handleVerseSelect}
       />
-    </View>
+    </>
   );
 };
