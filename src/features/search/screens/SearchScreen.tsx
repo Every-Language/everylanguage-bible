@@ -10,14 +10,7 @@ import {
   Keyboard,
   Image,
 } from 'react-native';
-import {
-  OptionsMenu,
-  ProfileMenu,
-  LanguageMenu,
-  SettingsMenu,
-  HelpMenu,
-  useHeader,
-} from '@/shared';
+import { useHeader } from '@/shared';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
 import { usePlayerOverlayHeight } from '@/shared/hooks';
@@ -27,21 +20,9 @@ import type { AudioRecording } from '@/types';
 // Import the search icon
 import searchIcon from '../../../../assets/images/utility_icons/search.png';
 
-// Sub menu types - match the OptionsMenu expected types
-type SubMenuType =
-  | 'profile'
-  | 'language'
-  | 'settings'
-  | 'help'
-  | 'login'
-  | 'theme-demo';
-
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface SearchScreenProps {
-  showOptionsPanel?: boolean;
-  onOptionsClose?: () => void;
-  onOpenSubMenu?: (subMenuType: SubMenuType) => void;
-  activeSubMenu?: SubMenuType;
-  onCloseSubMenu?: () => void;
+  // No props needed - options menu handled by MainNavigator
 }
 
 interface SearchResultItemProps {
@@ -130,13 +111,7 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
   );
 };
 
-export const SearchScreen: React.FC<SearchScreenProps> = ({
-  showOptionsPanel = false,
-  onOptionsClose,
-  onOpenSubMenu,
-  activeSubMenu = null,
-  onCloseSubMenu,
-}) => {
+export const SearchScreen: React.FC<SearchScreenProps> = () => {
   const { colors } = useTheme();
   const { setCurrentScreen, setBottomContent } = useHeader();
   const { collapsedHeight } = usePlayerOverlayHeight();
@@ -409,36 +384,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
         )}
       </View>
 
-      {/* Options Menu */}
-      <OptionsMenu
-        isVisible={showOptionsPanel}
-        onClose={onOptionsClose || (() => {})}
-        onNavigateToSubMenu={onOpenSubMenu || (() => {})}
-      />
-
-      {/* Profile Menu */}
-      <ProfileMenu
-        isVisible={activeSubMenu === 'profile'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
-
-      {/* Language Menu */}
-      <LanguageMenu
-        isVisible={activeSubMenu === 'language'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
-
-      {/* Settings Menu */}
-      <SettingsMenu
-        isVisible={activeSubMenu === 'settings'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
-
-      {/* Help Menu */}
-      <HelpMenu
-        isVisible={activeSubMenu === 'help'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
+      {/* Options menu now handled by MainNavigator */}
     </View>
   );
 };

@@ -6,7 +6,14 @@ import { SearchScreen } from '@/features/search';
 import { ChapterCard } from '@/features/bible/components';
 import { ThemeDemoScreen } from '@/features/theme';
 import { PlayerOverlay } from '@/features/audio/components/PlayerOverlay';
-import { MainHeaderWrapper } from '@/shared';
+import {
+  MainHeaderWrapper,
+  OptionsMenu,
+  ProfileMenu,
+  LanguageMenu,
+  SettingsMenu,
+  HelpMenu,
+} from '@/shared';
 import { type Book } from '@/shared/utils';
 import { useAudioStore, useTheme, useQueueStore } from '@/shared/store';
 
@@ -325,28 +332,11 @@ export const MainNavigator: React.FC = () => {
               _onChapterSelect={handleChapterSelect}
               _onVerseSelect={handleVerseSelect}
               _onThemeDemoPress={handleThemeDemoPress}
-              showOptionsPanel={showOptionsPanel}
-              onOptionsClose={handleOptionsClose}
-              onOpenSubMenu={handleOpenSubMenu}
-              activeSubMenu={activeSubMenu}
-              onCloseSubMenu={handleCloseSubMenu}
             />
           ) : currentScreen === 'search' ? (
-            <SearchScreen
-              showOptionsPanel={showOptionsPanel}
-              onOptionsClose={handleOptionsClose}
-              onOpenSubMenu={handleOpenSubMenu}
-              activeSubMenu={activeSubMenu}
-              onCloseSubMenu={handleCloseSubMenu}
-            />
+            <SearchScreen />
           ) : (
-            <PlaylistsScreen
-              showOptionsPanel={showOptionsPanel}
-              onOptionsClose={handleOptionsClose}
-              onOpenSubMenu={handleOpenSubMenu}
-              activeSubMenu={activeSubMenu}
-              onCloseSubMenu={handleCloseSubMenu}
-            />
+            <PlaylistsScreen />
           )}
 
           {/* Player Overlay - Show when we have a current recording */}
@@ -362,6 +352,37 @@ export const MainNavigator: React.FC = () => {
       <ChapterCard
         onChapterSelect={handleChapterSelect}
         onVerseSelect={handleVerseSelect}
+      />
+
+      {/* Options Menu - renders above header and content */}
+      <OptionsMenu
+        isVisible={showOptionsPanel}
+        onClose={handleOptionsClose}
+        onNavigateToSubMenu={handleOpenSubMenu}
+      />
+
+      {/* Profile Menu */}
+      <ProfileMenu
+        isVisible={activeSubMenu === 'profile'}
+        onClose={handleCloseSubMenu}
+      />
+
+      {/* Language Menu */}
+      <LanguageMenu
+        isVisible={activeSubMenu === 'language'}
+        onClose={handleCloseSubMenu}
+      />
+
+      {/* Settings Menu */}
+      <SettingsMenu
+        isVisible={activeSubMenu === 'settings'}
+        onClose={handleCloseSubMenu}
+      />
+
+      {/* Help Menu */}
+      <HelpMenu
+        isVisible={activeSubMenu === 'help'}
+        onClose={handleCloseSubMenu}
       />
     </>
   );

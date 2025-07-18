@@ -13,16 +13,7 @@ import {
   ScrollView as GestureScrollView,
 } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import {
-  OptionsMenu,
-  ToggleButtons,
-  SlideUpPanel,
-  ProfileMenu,
-  LanguageMenu,
-  SettingsMenu,
-  HelpMenu,
-  useHeader,
-} from '@/shared';
+import { ToggleButtons, SlideUpPanel, useHeader } from '@/shared';
 
 // ChapterCard moved to MainNavigator level
 import { loadBibleBooks, type Book } from '@/shared/utils';
@@ -42,23 +33,9 @@ interface BibleScreenProps {
   _onChapterSelect?: (book: Book, chapter: number) => void; // Moved to MainNavigator
   _onVerseSelect?: (book: Book, chapter: number, verse: number) => void; // Moved to MainNavigator
   _onThemeDemoPress?: () => void; // Prefixed with _ since it's not used in this context
-  // Options menu props
-  showOptionsPanel?: boolean;
-  onOptionsClose?: () => void;
-  onOpenSubMenu?: (subMenuType: SubMenuType) => void;
-  activeSubMenu?: SubMenuType;
-  onCloseSubMenu?: () => void;
 }
 
 type TestamentMode = 'old' | 'new';
-type SubMenuType =
-  | 'profile'
-  | 'language'
-  | 'settings'
-  | 'help'
-  | 'login'
-  | 'theme-demo'
-  | null;
 
 // Go to Testament Tile Component
 interface GoToTestamentTileProps {
@@ -444,11 +421,6 @@ export const BibleScreen: React.FC<BibleScreenProps> = ({
   _onChapterSelect,
   _onVerseSelect,
   _onThemeDemoPress,
-  showOptionsPanel = false,
-  onOptionsClose,
-  onOpenSubMenu,
-  activeSubMenu = null,
-  onCloseSubMenu,
 }) => {
   const { colors } = useTheme();
   const { openChapterCard } = useChapterCardStore();
@@ -589,37 +561,6 @@ export const BibleScreen: React.FC<BibleScreenProps> = ({
       </PanGestureHandler>
 
       {/* Chapter Card moved to MainNavigator level */}
-
-      {/* Options Menu */}
-      <OptionsMenu
-        isVisible={showOptionsPanel}
-        onClose={onOptionsClose || (() => {})}
-        onNavigateToSubMenu={onOpenSubMenu || (() => {})}
-      />
-
-      {/* Profile Menu */}
-      <ProfileMenu
-        isVisible={activeSubMenu === 'profile'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
-
-      {/* Language Menu */}
-      <LanguageMenu
-        isVisible={activeSubMenu === 'language'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
-
-      {/* Settings Menu */}
-      <SettingsMenu
-        isVisible={activeSubMenu === 'settings'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
-
-      {/* Help Menu */}
-      <HelpMenu
-        isVisible={activeSubMenu === 'help'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
 
       {/* Help Panel - Test SlideUpPanel */}
       <SlideUpPanel

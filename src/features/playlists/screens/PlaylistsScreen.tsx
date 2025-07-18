@@ -6,15 +6,7 @@ import {
   ScrollView as GestureScrollView,
 } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import {
-  OptionsMenu,
-  ToggleButtons,
-  ProfileMenu,
-  LanguageMenu,
-  SettingsMenu,
-  HelpMenu,
-  useHeader,
-} from '@/shared';
+import { ToggleButtons, useHeader } from '@/shared';
 
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
@@ -32,23 +24,10 @@ interface PlaylistItem {
   iconPath: string; // Path to bible book icon
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface PlaylistsScreenProps {
-  // Options menu props
-  showOptionsPanel?: boolean;
-  onOptionsClose?: () => void;
-  onOpenSubMenu?: (subMenuType: SubMenuType) => void;
-  activeSubMenu?: SubMenuType;
-  onCloseSubMenu?: () => void;
+  // No props needed - options menu handled by MainNavigator
 }
-
-type SubMenuType =
-  | 'profile'
-  | 'language'
-  | 'settings'
-  | 'help'
-  | 'login'
-  | 'theme-demo'
-  | null;
 
 type PlaylistMode = 'my-playlists' | 'study-bible' | 'meeting-pattern';
 
@@ -321,13 +300,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
   );
 };
 
-export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({
-  showOptionsPanel = false,
-  onOptionsClose,
-  onOpenSubMenu,
-  activeSubMenu = null,
-  onCloseSubMenu,
-}) => {
+export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = () => {
   const { colors } = useTheme();
   const { setCurrentScreen, setBottomContent } = useHeader();
   const [playlistMode, setPlaylistMode] =
@@ -417,36 +390,7 @@ export const PlaylistsScreen: React.FC<PlaylistsScreenProps> = ({
         </Animated.View>
       </PanGestureHandler>
 
-      {/* Options Menu */}
-      <OptionsMenu
-        isVisible={showOptionsPanel}
-        onClose={onOptionsClose || (() => {})}
-        onNavigateToSubMenu={onOpenSubMenu || (() => {})}
-      />
-
-      {/* Profile Menu */}
-      <ProfileMenu
-        isVisible={activeSubMenu === 'profile'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
-
-      {/* Language Menu */}
-      <LanguageMenu
-        isVisible={activeSubMenu === 'language'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
-
-      {/* Settings Menu */}
-      <SettingsMenu
-        isVisible={activeSubMenu === 'settings'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
-
-      {/* Help Menu */}
-      <HelpMenu
-        isVisible={activeSubMenu === 'help'}
-        onClose={onCloseSubMenu || (() => {})}
-      />
+      {/* Options menu now handled by MainNavigator */}
     </View>
   );
 };
