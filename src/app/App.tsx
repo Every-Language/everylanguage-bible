@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeProvider } from '@/shared/context/ThemeContext';
 import { LocalizationProvider } from '@/shared/context/LocalizationContext';
 import { SyncProvider } from '@/shared/context/SyncContext';
@@ -69,7 +69,7 @@ const MainContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View
+      <SafeAreaView
         style={[styles.centered, { backgroundColor: theme.colors.background }]}
       />
     );
@@ -78,7 +78,7 @@ const MainContent: React.FC = () => {
   return (
     <>
       {/* Main App Content - will be under the modal */}
-      <View
+      <SafeAreaView
         style={[
           styles.container,
           { backgroundColor: theme.colors.background },
@@ -154,7 +154,7 @@ const MainContent: React.FC = () => {
 
         {/* Media Player Sheet */}
         <MediaPlayerSheet />
-      </View>
+      </SafeAreaView>
 
       {/* Profile/Auth Modal - rendered outside main content to appear on top */}
       <SlideUpModal visible={showProfileModal} onClose={handleModalClose}>

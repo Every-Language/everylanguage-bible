@@ -10,11 +10,34 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.everylanguage.elbible",
       "infoPlist": {
-        "UIBackgroundModes": ["background-fetch", "background-processing"]
+        "UIBackgroundModes": [
+          "background-fetch",
+          "background-processing",
+          "audio"
+        ],
+        "NSMicrophoneUsageDescription": "This app needs access to microphone for audio playback controls.",
+        "AVAudioSession": {
+          "Category": "playback",
+          "Mode": "default",
+          "Options": [
+            "allowBluetooth",
+            "allowBluetoothA2DP",
+            "allowAirPlay",
+            "defaultToSpeaker"
+          ]
+        }
       }
     },
     "android": {
-      "package": "com.everylanguage.elbible"
+      "package": "com.everylanguage.elbible",
+      "permissions": [
+        "android.permission.WAKE_LOCK",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET"
+      ],
+      "foregroundServiceType": ["mediaPlayback"],
+      "allowBackup": true
     },
     "web": {},
     "plugins": [

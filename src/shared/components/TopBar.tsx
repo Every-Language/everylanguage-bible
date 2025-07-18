@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { SyncStatusPill } from './SyncStatusPill';
@@ -43,76 +37,67 @@ export const TopBar: React.FC<TopBarProps> = ({
   const { currentAudioVersion, currentTextVersion } = useCurrentVersions();
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: theme.colors.background },
-        ]}>
-        <View style={styles.leftSection}>
-          {title && (
-            <Text style={[styles.title, { color: theme.colors.text }]}>
-              {title}
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.rightSection}>
-          {showLanguageSelection && (
-            <>
-              <View style={styles.versionSelector}>
-                <AudioVersionSelector
-                  currentVersion={currentAudioVersion}
-                  onPress={onAudioVersionPress || (() => {})}
-                  size='sm'
-                  variant='compact'
-                />
-              </View>
-              <View style={styles.versionSelector}>
-                <TextVersionSelector
-                  currentVersion={currentTextVersion}
-                  onPress={onTextVersionPress || (() => {})}
-                  size='sm'
-                  variant='compact'
-                />
-              </View>
-            </>
-          )}
-
-          {showSyncStatus && (
-            <SyncStatusPill {...(onSyncPress && { onPress: onSyncPress })} />
-          )}
-
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name='search' size={20} color={theme.colors.text} />
-          </TouchableOpacity>
-
-          {showThemeToggle && (
-            <TouchableOpacity style={styles.iconButton} onPress={toggleTheme}>
-              <Ionicons
-                name={mode === 'light' ? 'moon' : 'sunny'}
-                size={20}
-                color={theme.colors.text}
-              />
-            </TouchableOpacity>
-          )}
-
-          {showProfile && (
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={onProfilePress}>
-              <Ionicons name='person' size={20} color={theme.colors.text} />
-            </TouchableOpacity>
-          )}
-        </View>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={styles.leftSection}>
+        {title && (
+          <Text style={[styles.title, { color: theme.colors.text }]}>
+            {title}
+          </Text>
+        )}
       </View>
-    </SafeAreaView>
+
+      <View style={styles.rightSection}>
+        {showLanguageSelection && (
+          <>
+            <View style={styles.versionSelector}>
+              <AudioVersionSelector
+                currentVersion={currentAudioVersion}
+                onPress={onAudioVersionPress || (() => {})}
+                size='sm'
+                variant='compact'
+              />
+            </View>
+            <View style={styles.versionSelector}>
+              <TextVersionSelector
+                currentVersion={currentTextVersion}
+                onPress={onTextVersionPress || (() => {})}
+                size='sm'
+                variant='compact'
+              />
+            </View>
+          </>
+        )}
+
+        {showSyncStatus && (
+          <SyncStatusPill {...(onSyncPress && { onPress: onSyncPress })} />
+        )}
+
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name='search' size={20} color={theme.colors.text} />
+        </TouchableOpacity>
+
+        {showThemeToggle && (
+          <TouchableOpacity style={styles.iconButton} onPress={toggleTheme}>
+            <Ionicons
+              name={mode === 'light' ? 'moon' : 'sunny'}
+              size={20}
+              color={theme.colors.text}
+            />
+          </TouchableOpacity>
+        )}
+
+        {showProfile && (
+          <TouchableOpacity style={styles.iconButton} onPress={onProfilePress}>
+            <Ionicons name='person' size={20} color={theme.colors.text} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {},
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
