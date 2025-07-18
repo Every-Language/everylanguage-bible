@@ -109,7 +109,7 @@ describe('MainNavigator', () => {
     jest.clearAllMocks();
   });
 
-  it('renders BibleView by default', async () => {
+  it('renders BibleScreen by default', async () => {
     const { getByText } = render(<MainNavigator />);
 
     await waitFor(() => {
@@ -150,16 +150,16 @@ describe('MainNavigator', () => {
       fireEvent.press(chapterTile);
     });
 
-    // The actual chapter selection is handled by the BibleView component
+    // The actual chapter selection is handled by the BibleScreen component
     // which calls the onChapterSelect prop. We can't directly test this interaction
-    // in the MainNavigator test as it's an implementation detail of BibleView
+    // in the MainNavigator test as it's an implementation detail of BibleScreen
   });
 
   it('provides verse selection handler', () => {
     render(<MainNavigator />);
 
     // The component provides a handleVerseSelect function
-    // This is tested indirectly through the BibleView component
+    // This is tested indirectly through the BibleScreen component
     expect(mockAudioStore.seek).toBeDefined();
     expect(mockAudioStore.play).toBeDefined();
   });

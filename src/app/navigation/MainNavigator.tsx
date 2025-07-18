@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { BibleView } from '@/features/bible/screens';
+import { BibleScreen } from '@/features/bible/screens';
 import { ChapterCard } from '@/features/bible/components';
 import { ThemeDemoScreen } from '@/features/theme';
 import { PlayerOverlay } from '@/features/audio/components/PlayerOverlay';
@@ -302,7 +302,7 @@ export const MainNavigator: React.FC = () => {
           {showThemeDemo ? (
             <ThemeDemoScreen onBack={handleThemeDemoBack} />
           ) : (
-            <BibleView
+            <BibleScreen
               _onChapterSelect={handleChapterSelect}
               _onVerseSelect={handleVerseSelect}
               _onThemeDemoPress={handleThemeDemoPress}

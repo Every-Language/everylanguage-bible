@@ -38,7 +38,7 @@ import {
 } from '@/shared/hooks';
 import { getBookImageSource } from '@/shared/services';
 
-interface BibleViewProps {
+interface BibleScreenProps {
   _onChapterSelect?: (book: Book, chapter: number) => void; // Moved to MainNavigator
   _onVerseSelect?: (book: Book, chapter: number, verse: number) => void; // Moved to MainNavigator
   _onThemeDemoPress?: () => void; // Prefixed with _ since it's not used in this context
@@ -440,7 +440,7 @@ const ContentSwitcher: React.FC<ContentSwitcherProps> = ({
   );
 };
 
-export const BibleView: React.FC<BibleViewProps> = ({
+export const BibleScreen: React.FC<BibleScreenProps> = ({
   _onChapterSelect,
   _onVerseSelect,
   _onThemeDemoPress,

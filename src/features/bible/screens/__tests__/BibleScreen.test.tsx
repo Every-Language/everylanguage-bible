@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { BibleView } from '../BibleView';
+import { BibleScreen } from '../BibleScreen';
 
 // Mock functions
 const mockOnChapterSelect = jest.fn();
@@ -74,18 +74,18 @@ jest.mock('@/shared/components/ui/BookImage', () => ({
   ),
 }));
 
-describe('BibleView', () => {
+describe('BibleScreen', () => {
   const defaultProps = {
     _onChapterSelect: jest.fn(),
     _onVerseSelect: jest.fn(),
   };
 
   it('renders without crashing', () => {
-    expect(() => render(<BibleView {...defaultProps} />)).not.toThrow();
+    expect(() => render(<BibleScreen {...defaultProps} />)).not.toThrow();
   });
 
   it('displays book cards', () => {
-    const { getByText } = render(<BibleView {...defaultProps} />);
+    const { getByText } = render(<BibleScreen {...defaultProps} />);
 
     expect(getByText('Genesis')).toBeTruthy();
     expect(getByText('Exodus')).toBeTruthy();
@@ -94,7 +94,7 @@ describe('BibleView', () => {
   it('handles book selection', () => {
     const mockOnChapterSelect = jest.fn();
     const { getByText } = render(
-      <BibleView {...defaultProps} _onChapterSelect={mockOnChapterSelect} />
+      <BibleScreen {...defaultProps} _onChapterSelect={mockOnChapterSelect} />
     );
 
     fireEvent.press(getByText('Genesis'));
@@ -105,7 +105,7 @@ describe('BibleView', () => {
 
   it('renders Bible title as a button', async () => {
     const { getByTestId } = renderWithProvider(
-      <BibleView
+      <BibleScreen
         _onChapterSelect={mockOnChapterSelect}
         _onVerseSelect={mockOnVerseSelect}
       />
@@ -128,7 +128,7 @@ describe('BibleView', () => {
     const mockOnCloseSubMenu = jest.fn();
 
     const { getByTestId } = renderWithProvider(
-      <BibleView
+      <BibleScreen
         _onChapterSelect={mockOnChapterSelect}
         _onVerseSelect={mockOnVerseSelect}
         showOptionsPanel={true}
