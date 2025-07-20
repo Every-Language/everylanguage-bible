@@ -132,7 +132,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
   const handleViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0 && !isScrolling) {
-        const newIndex = viewableItems[0].index ?? 0;
+        const newIndex = viewableItems[0]?.index ?? 0;
         setCurrentIndex(newIndex);
       }
     },
