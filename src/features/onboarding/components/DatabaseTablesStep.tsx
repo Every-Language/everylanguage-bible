@@ -597,9 +597,12 @@ export const DatabaseTablesStep: React.FC<DatabaseTablesStepProps> = ({
             const chapters = await db.getAllAsync<{
               book_name: string;
               chapter_number: number;
-              verse_count: number;
+              total_verses: number;
             }>(
-              `SELECT book_name, chapter_number, verse_count FROM ${table.name} LIMIT 3`
+              `SELECT b.name as book_name, c.chapter_number, c.total_verses 
+               FROM ${table.name} c
+               LEFT JOIN books b ON c.book_id = b.id 
+               LIMIT 3`
             );
             table.sampleData = chapters;
           }
