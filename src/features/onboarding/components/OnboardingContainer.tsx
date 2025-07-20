@@ -152,7 +152,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
         onScrollBeginDrag={handleScrollBeginDrag}
         onScrollEndDrag={handleScrollEndDrag}
         scrollEventThrottle={16}
-        getItemLayout={(data, index) => ({
+        getItemLayout={(_, index) => ({
           length: screenWidth,
           offset: screenWidth * index,
           index,

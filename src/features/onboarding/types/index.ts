@@ -41,6 +41,20 @@ export interface OnboardingContextType {
   retryDatabaseInitialization: () => Promise<void>;
 }
 
+export interface OnboardingSlideState {
+  isCompleted: boolean;
+  selectedLanguage?: string;
+  importedBibles?: string[];
+}
+
+export interface OnboardingSlideContextType {
+  state: OnboardingSlideState;
+  completeOnboarding: () => void;
+  setSelectedLanguage: (language: string) => void;
+  setImportedBibles: (bibles: string[]) => void;
+  resetOnboarding: () => void;
+}
+
 export interface OnboardingStepProps {
   step: OnboardingStepData;
   isActive: boolean;

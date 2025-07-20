@@ -1,147 +1,74 @@
 # Onboarding Feature
 
-A comprehensive onboarding experience for the Bible app that welcomes new users and introduces them to key features.
+The onboarding feature has been redesigned to use a slide-based navigation system with three main screens.
+
+## Structure
+
+### Screens
+
+1. **OnboardingMainScreen** - The main welcome screen with two navigation cards
+2. **MotherTongueSearchScreen** - Language selection screen
+3. **ImportBibleScreen** - Bible content import screen
+
+### Components
+
+- **OnboardingSlideContainer** - Manages navigation between the three screens
+- **OnboardingScreen** - Main wrapper component
+
+### Hooks
+
+- **useOnboardingSlides** - Manages state for the slide-based onboarding flow
+
+## Navigation Flow
+
+```
+OnboardingMainScreen
+├── MotherTongueSearchScreen (via "Choose Your Language" card)
+└── ImportBibleScreen (via "Import Bible Content" card)
+```
+
+Both sub-screens have back buttons that return to the main screen.
 
 ## Features
 
-- **Multi-step onboarding flow** with beautiful animations
-- **Persistent state management** using AsyncStorage
-- **Database initialization** with progress tracking
-- **Customizable content** with icons, titles, and descriptions
-- **Smooth navigation** with pagination dots
-- **Skip functionality** for users who want to jump straight in
-- **Theme-aware design** that adapts to light/dark modes
+### OnboardingMainScreen
 
-## Components
+- Welcome message
+- Two interactive cards for navigation
+- Skip option to complete onboarding
 
-### OnboardingScreen
+### MotherTongueSearchScreen
 
-The main screen that orchestrates the entire onboarding flow.
+- Searchable language list
+- Language selection with visual feedback
+- Continue button to return to main screen
 
-### OnboardingContainer
+### ImportBibleScreen
 
-Manages the horizontal scrolling between onboarding steps and renders the appropriate step component based on the step type.
-
-### OnboardingStep
-
-Individual step component with animations and content display for regular onboarding steps.
-
-### DatabaseInitStep
-
-Specialized step component for database initialization with progress tracking and error handling.
-
-### DatabaseTablesStep
-
-Step component that shows database setup completion and table information.
-
-### OnboardingPagination
-
-Progress indicator with interactive dots for navigation.
+- Bible version selection (text and audio)
+- Import progress indicator
+- Multiple version selection support
 
 ## Usage
-
-### Basic Integration
 
 ```tsx
 import { OnboardingScreen } from '@/features/onboarding';
 
-const App = () => {
-  const [showOnboarding, setShowOnboarding] = useState(true);
-
-  const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
-  };
-
-  if (showOnboarding) {
-    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
-  }
-
-  return <MainApp />;
-};
+<OnboardingScreen
+  onComplete={() => {
+    // Handle onboarding completion
+  }}
+/>;
 ```
-
-### Customizing Onboarding Steps
-
-You can customize the onboarding steps by modifying the `defaultSteps` array in `useOnboarding.ts`:
-
-```tsx
-const defaultSteps: OnboardingStepData[] = [
-  {
-    id: 'database-init',
-    title: 'Database Initialization',
-    subtitle: 'Setting up your Bible app',
-    description:
-      "We're preparing your Bible app with all the features you need...",
-    icon: '📖',
-    isDatabaseStep: true,
-  },
-  // Add more steps...
-];
-```
-
-### Resetting Onboarding
-
-To reset the onboarding state (useful for testing or allowing users to replay):
-
-```tsx
-import { useOnboarding } from '@/features/onboarding';
-
-const { resetOnboarding } = useOnboarding();
-
-const handleReset = () => {
-  resetOnboarding();
-  // Show onboarding again
-};
-```
-
-## Default Steps
-
-The onboarding includes 6 default steps:
-
-1. **Database Initialization** - Sets up the local database
-2. **Local Database** - Shows database tables and structure
-3. **Read Scripture** - Multiple translations available
-4. **Listen to Audio** - Audio Bible versions
-5. **Study Tools** - Bookmarking and organization
-6. **Stay Connected** - Sync across devices
-
-## Styling
-
-The onboarding feature uses the app's theme system and automatically adapts to light/dark modes. All colors, spacing, and typography are consistent with the app's design system.
 
 ## State Management
 
-Onboarding state is persisted using AsyncStorage with the key `@bible_app_onboarding`. The state includes:
+The onboarding state is persisted using AsyncStorage and includes:
 
-- `isCompleted`: Whether the user has completed onboarding
-- `currentStep`: The current step index
-- `steps`: Array of onboarding step data
+- Completion status
+- Selected language
+- Imported Bible versions
 
-## Database Integration
+## Styling
 
-The onboarding feature integrates with the app's database system:
-
-- **Auto-initialization**: Database initialization starts automatically when the database step becomes active
-- **Progress tracking**: Real-time progress updates during database setup
-- **Error handling**: Graceful error handling with retry functionality
-- **Skip option**: Users can skip database setup if needed
-
-## Accessibility
-
-The onboarding feature includes:
-
-- Proper semantic markup
-- Touch targets that meet accessibility guidelines
-- Clear visual indicators for current step
-- Skip functionality for users who want to proceed quickly
-- Screen reader friendly content
-
-## Architecture
-
-The onboarding feature follows a clean architecture pattern:
-
-- **Types**: Well-defined TypeScript interfaces
-- **Hooks**: Custom hooks for state management
-- **Components**: Reusable, composable components
-- **Screens**: Screen-level components for navigation
-- **Services**: Integration with database and storage services
+All screens use the app's theme system and are responsive to light/dark mode changes.

@@ -1,7 +1,7 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/shared/context/ThemeContext';
-import { OnboardingContainer } from '../components/OnboardingContainer';
+import { OnboardingSlideContainer } from '../components/OnboardingSlideContainer';
 
 interface OnboardingScreenProps {
   onComplete: () => void;
@@ -18,7 +18,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         flex: 1,
         backgroundColor: theme.colors.background,
       }}>
-      <OnboardingContainer onComplete={onComplete} />
+      <OnboardingSlideContainer onComplete={onComplete} />
     </SafeAreaView>
   );
 };
