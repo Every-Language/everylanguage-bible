@@ -23,9 +23,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+/**
+ * MediaPlayerSheet - A bottom sheet modal for media playback controls
+ *
+ * Safe Area Considerations:
+ * - Uses useSafeAreaInsets to respect device safe areas
+ * - Minimum collapsed height includes bottom safe area padding
+ * - Controls container has proper bottom padding for safe area
+ * - Expanded height accounts for top safe area
+ * - MediaControls component handles its own safe area padding
+ */
+
 // Fixed height allocations for expanded view
 const EXPANDED_TRACK_DETAILS_HEIGHT = SCREEN_HEIGHT * 0.15; // 15% of screen height
-const EXPANDED_TABS_HEIGHT = SCREEN_HEIGHT * 0.7; // 65% of screen height
+const EXPANDED_TABS_HEIGHT = SCREEN_HEIGHT * 0.7; // 70% of screen height
 
 // Custom Blurred Background Component
 const BlurredBackground: React.FC<BottomSheetBackgroundProps> = ({
@@ -142,11 +153,12 @@ const MediaPlayerContent: React.FC = () => {
       Extrapolation.CLAMP
     );
 
-    // Hide tabs completely in collapsed mode by setting height to 0
+    // Calculate height with proper safe area consideration
+    const availableHeight = EXPANDED_TABS_HEIGHT - insets.bottom;
     const height = interpolate(
       animatedIndex.value,
       [0, 0.3, 1],
-      [0, EXPANDED_TABS_HEIGHT * 0.3, EXPANDED_TABS_HEIGHT - insets.bottom],
+      [0, availableHeight * 0.3, availableHeight],
       Extrapolation.CLAMP
     );
 
@@ -221,13 +233,13 @@ const MediaPlayerContent: React.FC = () => {
           <TextAndQueueTabs />
         </Animated.View>
 
-        {/* Controls Section - Positioned responsively */}
+        {/* Controls Section - Positioned responsively with proper safe area */}
         <Animated.View
           style={[
             styles.controlsContainer,
             controlsContainerStyle,
             {
-              paddingBottom: insets.bottom,
+              paddingBottom: Math.max(insets.bottom, 20), // Increased minimum padding for better safe area handling
             },
           ]}>
           <MediaControls showAlbumArt={false} compact={true} />
@@ -240,9 +252,15 @@ const MediaPlayerContent: React.FC = () => {
 export const MediaPlayerSheet: React.FC = () => {
   const { state, actions } = useMediaPlayer();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const insets = useSafeAreaInsets();
 
-  // Snap points: collapsed (25%), expanded (100vh)
-  const snapPoints = useMemo(() => ['25%', '100%'], []);
+  // Snap points: collapsed (25%), expanded (100vh) - account for safe areas
+  const snapPoints = useMemo(() => {
+    // Calculate snap points with safe area consideration
+    const collapsedHeight = Math.max(SCREEN_HEIGHT * 0.25, 160 + insets.bottom); // Further increased minimum height for better safe area handling
+
+    return [`${(collapsedHeight / SCREEN_HEIGHT) * 100}%`, '100%'];
+  }, [insets.bottom]);
 
   // Handle sheet changes for state management only
   const handleSheetChanges = useCallback(
@@ -300,7 +318,11 @@ export const MediaPlayerSheet: React.FC = () => {
         animateOnMount={true}
         keyboardBehavior='fillParent'
         keyboardBlurBehavior='restore'
-        android_keyboardInputMode='adjustResize'>
+        android_keyboardInputMode='adjustResize'
+        enableHandlePanningGesture={true}
+        enableContentPanningGesture={true}
+        style={{ marginBottom: 0 }} // Ensure no extra margin that could interfere with safe area
+      >
         <BottomSheetView style={styles.content}>
           <MediaPlayerContent />
         </BottomSheetView>
@@ -378,6 +400,6 @@ const styles = StyleSheet.create({
   controlsContainer: {
     justifyContent: 'center',
     paddingHorizontal: 8,
-    minHeight: 100,
+    minHeight: 160, // Increased minimum height for better safe area handling
   },
 });

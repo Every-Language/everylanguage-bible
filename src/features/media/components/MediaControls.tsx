@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 
@@ -15,6 +16,7 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
 }) => {
   const { theme } = useTheme();
   const { state, actions } = useMediaPlayer();
+  const insets = useSafeAreaInsets();
 
   const handlePlayPause = () => {
     if (state.isPlaying) {
@@ -64,7 +66,12 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
   if (!state.currentTrack) return null;
 
   return (
-    <View style={[styles.container, compact && styles.compactContainer]}>
+    <View
+      style={[
+        styles.container,
+        compact && styles.compactContainer,
+        { paddingBottom: compact ? Math.max(insets.bottom, 8) : 8 }, // Ensure proper bottom padding in compact mode
+      ]}>
       {/* Progress Bar */}
       <View style={styles.progressBarContainer}>
         <View

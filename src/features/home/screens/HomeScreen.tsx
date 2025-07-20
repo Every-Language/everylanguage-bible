@@ -15,6 +15,7 @@ import { AudioVersion, TextVersion } from '@/features/languages/types';
 import { HomeTabNavigator, HomeContainer } from '../components';
 import { useHomeNavigation } from '../hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const HomeScreen: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -76,7 +77,7 @@ export const HomeScreen: React.FC = () => {
   }
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1 }}>
       {/* Main App Content */}
       <View
         style={[
@@ -139,7 +140,7 @@ export const HomeScreen: React.FC = () => {
         onVersionSelect={handleTextVersionSelect}
         title='Select Text Version'
       />
-    </>
+    </SafeAreaView>
   );
 };
 

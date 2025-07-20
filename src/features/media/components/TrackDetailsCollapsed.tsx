@@ -52,9 +52,10 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 50,
+    height: 60, // Increased height for better spacing
     justifyContent: 'center',
     marginTop: 10,
+    paddingHorizontal: 8, // Add horizontal padding for better spacing
   },
   collapsedContent: {
     flexDirection: 'row',
