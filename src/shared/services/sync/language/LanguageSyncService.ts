@@ -507,7 +507,7 @@ class LanguageSyncService implements BaseSyncService {
   ): Promise<void> {
     await databaseManager.transaction(async () => {
       for (const entity of entities) {
-        await databaseManager.execSingle(
+        await databaseManager.executeQuery(
           `
           INSERT OR REPLACE INTO language_entities_cache (
             id, name, level, parent_id, created_at, updated_at, synced_at
@@ -533,7 +533,7 @@ class LanguageSyncService implements BaseSyncService {
     await databaseManager.transaction(async () => {
       // Insert audio versions
       for (const version of audioVersions) {
-        await databaseManager.execSingle(
+        await databaseManager.executeQuery(
           `
           INSERT OR REPLACE INTO available_versions_cache (
             id, version_type, language_entity_id, version_id, version_name,
@@ -554,7 +554,7 @@ class LanguageSyncService implements BaseSyncService {
 
       // Insert text versions
       for (const version of textVersions) {
-        await databaseManager.execSingle(
+        await databaseManager.executeQuery(
           `
           INSERT OR REPLACE INTO available_versions_cache (
             id, version_type, language_entity_id, version_id, version_name,

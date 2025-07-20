@@ -9,3 +9,6 @@ export * from './playlists';
 
 // Media feature
 export * from './media';
+
+// Home feature
+export * from './home';

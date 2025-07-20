@@ -468,7 +468,7 @@ class BibleSyncService implements BaseSyncService {
         book.updated_at || new Date().toISOString(),
       ]);
 
-      await databaseManager.execSingle(query, params);
+      await databaseManager.executeQuery(query, params);
     });
   }
 
@@ -498,7 +498,7 @@ class BibleSyncService implements BaseSyncService {
         chapter.updated_at || new Date().toISOString(),
       ]);
 
-      await databaseManager.execSingle(query, params);
+      await databaseManager.executeQuery(query, params);
     });
   }
 
@@ -532,7 +532,7 @@ class BibleSyncService implements BaseSyncService {
           verse.updated_at || new Date().toISOString(),
         ]);
 
-        await databaseManager.execSingle(query, params);
+        await databaseManager.executeQuery(query, params);
       });
     }
   }
