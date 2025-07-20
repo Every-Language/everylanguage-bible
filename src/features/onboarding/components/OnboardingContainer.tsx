@@ -5,6 +5,7 @@ import { DatabaseTablesStep } from './DatabaseTablesStep';
 import { OnboardingStep } from './OnboardingStep';
 import { OnboardingPagination } from './OnboardingPagination';
 import { useOnboarding } from '../hooks/useOnboarding';
+import { OnboardingStepData } from '../types';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -20,114 +21,86 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
   const [isScrolling, setIsScrolling] = useState(false);
 
   const {
+    state,
+    nextStep,
     isDatabaseInitializing,
     databaseProgress,
     initializeDatabase,
     retryDatabaseInitialization,
   } = useOnboarding();
 
-  const onboardingSteps = [
-    {
-      id: 'database-init',
-      component: (
-        <DatabaseInitStep
-          isActive={currentIndex === 0}
-          onNext={() => handleNext()}
-          onSkip={() => handleSkip()}
-          databaseProgress={databaseProgress}
-          isDatabaseInitializing={isDatabaseInitializing}
-          onInitializeDatabase={initializeDatabase}
-          onRetryDatabase={retryDatabaseInitialization}
-        />
-      ),
-    },
-    {
-      id: 'database-tables',
-      component: (
-        <DatabaseTablesStep
-          isActive={currentIndex === 1}
-          onNext={() => handleNext()}
-          onSkip={() => handleSkip()}
-          isLastStep={false}
-        />
-      ),
-    },
-    {
-      id: 'welcome',
-      component: (
-        <OnboardingStep
-          isActive={currentIndex === 2}
-          onNext={() => handleNext()}
-          onSkip={() => handleSkip()}
-          isLastStep={false}
-          step={{
-            id: 'welcome',
-            icon: '📖',
-            title: 'Welcome to Your Bible App',
-            subtitle: 'Your personal scripture companion',
-            description:
-              'Discover a world of Bible study tools, audio readings, and personalized features designed to deepen your spiritual journey.',
-          }}
-        />
-      ),
-    },
-    {
-      id: 'features',
-      component: (
-        <OnboardingStep
-          isActive={currentIndex === 3}
-          onNext={() => handleNext()}
-          onSkip={() => handleSkip()}
-          isLastStep={false}
-          step={{
-            id: 'features',
-            icon: '✨',
-            title: 'Powerful Features',
-            subtitle: 'Everything you need to study',
-            description:
-              'Read multiple translations, listen to audio versions, create playlists, and sync your progress across devices.',
-          }}
-        />
-      ),
-    },
-    {
-      id: 'get-started',
-      component: (
-        <OnboardingStep
-          isActive={currentIndex === 4}
-          onNext={() => handleNext()}
-          onSkip={() => handleSkip()}
-          isLastStep={true}
-          step={{
-            id: 'get-started',
-            icon: '🚀',
-            title: "You're All Set!",
-            subtitle: 'Ready to begin your journey',
-            description:
-              'Your Bible app is ready to use. Start exploring scripture, listening to audio, and building your spiritual library.',
-          }}
-        />
-      ),
-    },
-  ];
+  const renderStepComponent = useCallback(
+    (step: OnboardingStepData, index: number) => {
+      const isActive = currentIndex === index;
+      const isLastStep = index === state.steps.length - 1;
 
-  const handleNext = useCallback(() => {
-    if (currentIndex < onboardingSteps.length - 1) {
-      const nextIndex = currentIndex + 1;
-      setCurrentIndex(nextIndex);
-      setIsScrolling(true);
-      flatListRef.current?.scrollToIndex({
-        index: nextIndex,
-        animated: true,
-      });
-    } else {
-      onComplete();
-    }
-  }, [currentIndex, onboardingSteps.length, onComplete]);
+      if (step.isDatabaseStep) {
+        if (step.id === 'database-init') {
+          return (
+            <DatabaseInitStep
+              step={step}
+              isActive={isActive}
+              onNext={nextStep}
+              onSkip={onComplete}
+              isLastStep={isLastStep}
+              databaseProgress={databaseProgress}
+              isDatabaseInitializing={isDatabaseInitializing}
+              onInitializeDatabase={initializeDatabase}
+              onRetryDatabase={retryDatabaseInitialization}
+            />
+          );
+        } else if (step.id === 'database-tables') {
+          return (
+            <DatabaseTablesStep
+              step={step}
+              isActive={isActive}
+              onNext={nextStep}
+              onSkip={onComplete}
+              isLastStep={isLastStep}
+            />
+          );
+        }
+      }
 
-  const handleSkip = useCallback(() => {
-    onComplete();
-  }, [onComplete]);
+      return (
+        <OnboardingStep
+          step={step}
+          isActive={isActive}
+          onNext={nextStep}
+          onSkip={onComplete}
+          isLastStep={isLastStep}
+        />
+      );
+    },
+    [
+      currentIndex,
+      state.steps.length,
+      nextStep,
+      onComplete,
+      databaseProgress,
+      isDatabaseInitializing,
+      initializeDatabase,
+      retryDatabaseInitialization,
+    ]
+  );
+
+  // const handleNext = useCallback(() => {
+  //   if (currentIndex < state.steps.length - 1) {
+  //     const nextIndex = currentIndex + 1;
+  //     setCurrentIndex(nextIndex);
+  //     setIsScrolling(true);
+  //     flatListRef.current?.scrollToIndex({
+  //       index: nextIndex,
+  //       animated: true,
+  //     });
+  //   } else {
+  //     onComplete();
+  //   }
+  // }, [currentIndex, state.steps.length, onComplete]);
+
+  // const handleSkip = useCallback(() => {
+  //   onComplete();
+  // }, [onComplete]);
 
   const handleViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -150,15 +123,23 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
     }, 100);
   }, []);
 
-  const renderItem = ({ item }: { item: any }) => (
-    <View style={{ width: screenWidth }}>{item.component}</View>
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: OnboardingStepData;
+    index: number;
+  }) => (
+    <View style={{ width: screenWidth }}>
+      {renderStepComponent(item, index)}
+    </View>
   );
 
   return (
     <View style={{ flex: 1 }}>
       <FlatList
         ref={flatListRef}
-        data={onboardingSteps}
+        data={state.steps}
         renderItem={renderItem}
         keyExtractor={item => item.id}
         horizontal
@@ -179,7 +160,7 @@ export const OnboardingContainer: React.FC<OnboardingContainerProps> = ({
       />
 
       <OnboardingPagination
-        totalSteps={onboardingSteps.length}
+        totalSteps={state.steps.length}
         currentStep={currentIndex}
         onStepPress={(index: number) => {
           setCurrentIndex(index);

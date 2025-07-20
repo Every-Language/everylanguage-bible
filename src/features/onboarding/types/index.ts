@@ -5,6 +5,7 @@ export interface OnboardingStepData {
   description: string;
   icon: string;
   image?: string;
+  isDatabaseStep?: boolean;
 }
 
 export interface OnboardingState {
@@ -23,7 +24,7 @@ export interface DatabaseProgress {
     | 'error';
   message: string;
   progress: number;
-  error?: string;
+  error?: string | undefined;
 }
 
 export interface OnboardingContextType {
@@ -33,4 +34,24 @@ export interface OnboardingContextType {
   completeOnboarding: () => void;
   resetOnboarding: () => void;
   goToStep: (stepIndex: number) => void;
+  loadOnboardingState: () => Promise<void>;
+  databaseProgress: DatabaseProgress | null;
+  isDatabaseInitializing: boolean;
+  initializeDatabase: () => Promise<void>;
+  retryDatabaseInitialization: () => Promise<void>;
+}
+
+export interface OnboardingStepProps {
+  step: OnboardingStepData;
+  isActive: boolean;
+  onNext: () => void;
+  onSkip: () => void;
+  isLastStep: boolean;
+}
+
+export interface DatabaseStepProps extends OnboardingStepProps {
+  databaseProgress: DatabaseProgress | null;
+  isDatabaseInitializing: boolean;
+  onInitializeDatabase: () => Promise<void>;
+  onRetryDatabase: () => Promise<void>;
 }

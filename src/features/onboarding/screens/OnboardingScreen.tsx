@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { OnboardingContainer } from '../components/OnboardingContainer';
-import { useOnboarding } from '../hooks/useOnboarding';
 
 interface OnboardingScreenProps {
   onComplete: () => void;
@@ -12,11 +11,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   onComplete,
 }) => {
   const { theme } = useTheme();
-  const { loadOnboardingState } = useOnboarding();
-
-  useEffect(() => {
-    loadOnboardingState();
-  }, [loadOnboardingState]);
 
   return (
     <SafeAreaView

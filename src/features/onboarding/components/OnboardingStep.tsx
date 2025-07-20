@@ -8,17 +8,9 @@ import {
 } from 'react-native';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { Button } from '@/shared/components/ui/Button';
-import { OnboardingStepData } from '../types';
+import { OnboardingStepProps } from '../types';
 
 const { width: screenWidth } = Dimensions.get('window');
-
-interface OnboardingStepProps {
-  step: OnboardingStepData;
-  isActive: boolean;
-  onNext: () => void;
-  onSkip: () => void;
-  isLastStep: boolean;
-}
 
 // Sub-component for the icon section
 const IconSection: React.FC<{ theme: any; icon: string }> = ({

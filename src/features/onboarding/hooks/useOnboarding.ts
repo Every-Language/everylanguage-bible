@@ -1,6 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OnboardingState, OnboardingStepData } from '../types';
+import {
+  OnboardingState,
+  OnboardingStepData,
+  DatabaseProgress,
+} from '../types';
 import DatabaseManager, {
   DatabaseInitProgress,
 } from '@/shared/services/database/DatabaseManager';
@@ -15,6 +19,7 @@ const defaultSteps: OnboardingStepData[] = [
     description:
       "We're preparing your Bible app with all the features you need to read, listen, and study scripture.",
     icon: '📖',
+    isDatabaseStep: true,
   },
   {
     id: 'database-tables',
@@ -23,6 +28,7 @@ const defaultSteps: OnboardingStepData[] = [
     description:
       'Your Bible app stores content locally so you can read and study even without an internet connection.',
     icon: '🗄️',
+    isDatabaseStep: true,
   },
   {
     id: 'read',
@@ -67,11 +73,18 @@ const initialState: OnboardingState = {
 export const useOnboarding = () => {
   const [state, setState] = useState<OnboardingState>(initialState);
   const [databaseProgress, setDatabaseProgress] =
-    useState<DatabaseInitProgress | null>(null);
+    useState<DatabaseProgress | null>(null);
   const [isDatabaseInitializing, setIsDatabaseInitializing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load onboarding state on mount
+  useEffect(() => {
+    loadOnboardingState();
+  }, []);
 
   const loadOnboardingState = useCallback(async () => {
     try {
+      setIsLoading(true);
       const stored = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
       if (stored) {
         const parsedState = JSON.parse(stored);
@@ -79,6 +92,9 @@ export const useOnboarding = () => {
       }
     } catch (error) {
       console.error('Failed to load onboarding state:', error);
+      // Keep default state if loading fails
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -149,6 +165,8 @@ export const useOnboarding = () => {
 
   const resetOnboarding = useCallback(() => {
     setState(initialState);
+    setDatabaseProgress(null);
+    setIsDatabaseInitializing(false);
     saveOnboardingState(initialState);
   }, [saveOnboardingState]);
 
@@ -156,11 +174,22 @@ export const useOnboarding = () => {
     if (isDatabaseInitializing) return;
 
     setIsDatabaseInitializing(true);
+    setDatabaseProgress({
+      stage: 'opening',
+      message: 'Initializing database...',
+      progress: 0,
+    } as DatabaseProgress);
+
     const databaseManager = DatabaseManager.getInstance();
 
     try {
-      databaseManager.setProgressCallback(progress => {
-        setDatabaseProgress(progress);
+      databaseManager.setProgressCallback((progress: DatabaseInitProgress) => {
+        setDatabaseProgress({
+          stage: progress.stage,
+          message: progress.message,
+          progress: progress.progress,
+          error: progress.error,
+        });
       });
 
       console.log('useOnboarding: Database initialization started');
@@ -169,7 +198,6 @@ export const useOnboarding = () => {
 
       // Small delay to show completion
       setTimeout(() => {
-        console.log('useOnboarding: Setting database progress to complete');
         setDatabaseProgress({
           stage: 'complete',
           message: 'Database ready!',
@@ -196,6 +224,7 @@ export const useOnboarding = () => {
 
   return {
     state,
+    isLoading,
     nextStep,
     previousStep,
     completeOnboarding,
