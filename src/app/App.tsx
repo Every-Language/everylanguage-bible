@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from 'react-native';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider } from '@/shared/context/ThemeContext';
+import { ThemeProvider, useTheme } from '@/shared/context/ThemeContext';
 import { LocalizationProvider } from '@/shared/context/LocalizationContext';
 import { SyncProvider } from '@/shared/context/SyncContext';
 import { MediaPlayerProvider } from '@/shared/context/MediaPlayerContext';
@@ -14,6 +14,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DatabaseManager from '@/shared/services/database/DatabaseManager';
 
 const ONBOARDING_STORAGE_KEY = '@bible_app_onboarding';
+
+const StatusBarWrapper: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <StatusBar
+      barStyle={theme.mode === 'dark' ? 'light-content' : 'dark-content'}
+      backgroundColor={theme.colors.background}
+    />
+  );
+};
 
 const MainContent: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
@@ -169,8 +180,8 @@ const App: React.FC = () => {
             <AuthProvider>
               <MediaPlayerProvider>
                 <GestureHandlerRootView style={{ flex: 1 }}>
+                  <StatusBarWrapper />
                   <MainContent />
-                  <StatusBar style='auto' />
                 </GestureHandlerRootView>
               </MediaPlayerProvider>
             </AuthProvider>

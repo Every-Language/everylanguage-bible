@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { OnboardingContainer } from '../components/OnboardingContainer';
@@ -25,10 +24,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         flex: 1,
         backgroundColor: theme.colors.background,
       }}>
-      <StatusBar
-        barStyle={theme.mode === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.colors.background}
-      />
       <OnboardingContainer onComplete={onComplete} />
     </SafeAreaView>
   );
