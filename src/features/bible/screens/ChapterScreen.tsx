@@ -205,6 +205,8 @@ export const ChapterScreen: React.FC = () => {
       onPress={handleChapterPress}
       onQueue={handleQueueChapter}
       onPlay={handlePlayChapter}
+      isAvailable={chapter.total_verses > 0} // Available if it has verses
+      isCloudAvailable={true} // Always available in cloud since it's in our database
     />
   );
 
