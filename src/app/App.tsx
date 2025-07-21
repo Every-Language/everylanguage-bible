@@ -7,13 +7,13 @@ import { ThemeProvider, useTheme } from '@/shared/context/ThemeContext';
 import { LocalizationProvider } from '@/shared/context/LocalizationContext';
 import { SyncProvider } from '@/shared/context/SyncContext';
 import { MediaPlayerProvider } from '@/shared/context/MediaPlayerContext';
+import {
+  OnboardingProvider,
+  useOnboarding,
+} from '@/shared/context/OnboardingContext';
 import { AuthProvider } from '@/features/auth';
 import { HomeScreen } from '@/features/home';
 import { OnboardingScreen } from '@/features/onboarding/screens/OnboardingScreen';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import DatabaseManager from '@/shared/services/database/DatabaseManager';
-
-const ONBOARDING_STORAGE_KEY = '@bible_app_onboarding';
 
 const StatusBarWrapper: React.FC = () => {
   const { theme } = useTheme();
@@ -27,7 +27,12 @@ const StatusBarWrapper: React.FC = () => {
 };
 
 const MainContent: React.FC = () => {
-  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+  const {
+    showOnboarding,
+    checkOnboardingStatus,
+    completeOnboarding,
+    resetOnboarding,
+  } = useOnboarding();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,13 +45,7 @@ const MainContent: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      // Initialize database first
-      console.log('App: Initializing database...');
-      const databaseManager = DatabaseManager.getInstance();
-      await databaseManager.initialize();
-      console.log('App: Database initialized successfully');
-
-      // Check onboarding status
+      // Check onboarding status first
       await checkOnboardingStatus();
     } catch (error) {
       console.error('App: Failed to initialize:', error);
@@ -58,38 +57,13 @@ const MainContent: React.FC = () => {
     }
   };
 
-  const checkOnboardingStatus = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
-      if (stored) {
-        const onboardingState = JSON.parse(stored);
-        setShowOnboarding(!onboardingState.isCompleted);
-      } else {
-        setShowOnboarding(true);
-      }
-    } catch (error) {
-      console.error('Failed to check onboarding status:', error);
-      setShowOnboarding(true);
-    }
-  };
-
-  const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
+  const handleOnboardingComplete = async () => {
+    await completeOnboarding();
   };
 
   const handleRetry = () => {
     setError(null);
     initializeApp();
-  };
-
-  // Development helper: Reset onboarding (remove in production)
-  const resetOnboarding = async () => {
-    try {
-      await AsyncStorage.removeItem(ONBOARDING_STORAGE_KEY);
-      setShowOnboarding(true);
-    } catch (error) {
-      console.error('Failed to reset onboarding:', error);
-    }
   };
 
   // Loading state
@@ -104,7 +78,7 @@ const MainContent: React.FC = () => {
         }}>
         <ActivityIndicator size='large' color='#007AFF' />
         <Text style={{ marginTop: 16, fontSize: 16, color: '#666' }}>
-          Initializing Bible App...
+          Loading Bible App...
         </Text>
       </View>
     );
@@ -176,16 +150,18 @@ const App: React.FC = () => {
     <SafeAreaProvider>
       <LocalizationProvider>
         <ThemeProvider>
-          <SyncProvider>
-            <AuthProvider>
-              <MediaPlayerProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <StatusBarWrapper />
-                  <MainContent />
-                </GestureHandlerRootView>
-              </MediaPlayerProvider>
-            </AuthProvider>
-          </SyncProvider>
+          <OnboardingProvider>
+            <SyncProvider>
+              <AuthProvider>
+                <MediaPlayerProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <StatusBarWrapper />
+                    <MainContent />
+                  </GestureHandlerRootView>
+                </MediaPlayerProvider>
+              </AuthProvider>
+            </SyncProvider>
+          </OnboardingProvider>
         </ThemeProvider>
       </LocalizationProvider>
     </SafeAreaProvider>

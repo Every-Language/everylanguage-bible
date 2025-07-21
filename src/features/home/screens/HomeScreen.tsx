@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { useOnboarding } from '@/shared/context/OnboardingContext';
 import { TopBar } from '@/shared/components/TopBar';
 import { SlideUpModal } from '@/shared/components/ui/SlideUpModal';
 import { MediaPlayerSheet } from '@/features/media/components/MediaPlayerSheet';
@@ -14,12 +15,12 @@ import {
 import { AudioVersion, TextVersion } from '@/features/languages/types';
 import { HomeTabNavigator, HomeContainer } from '../components';
 import { useHomeNavigation } from '../hooks';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const HomeScreen: React.FC = () => {
   const { user, isLoading } = useAuth();
   const { theme } = useTheme();
+  const { resetOnboarding } = useOnboarding();
   const { activeTab, switchTab } = useHomeNavigation('Bible');
 
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -55,17 +56,6 @@ export const HomeScreen: React.FC = () => {
   const handleTextVersionSelect = (version: AudioVersion | TextVersion) => {
     console.log('Selected text version:', version);
     setShowTextVersionModal(false);
-  };
-
-  // Development helper: Reset onboarding
-  const resetOnboarding = async () => {
-    try {
-      await AsyncStorage.removeItem('@bible_app_onboarding');
-      console.log('Onboarding reset successfully');
-      // You could add a toast or alert here
-    } catch (error) {
-      console.error('Failed to reset onboarding:', error);
-    }
   };
 
   if (isLoading) {

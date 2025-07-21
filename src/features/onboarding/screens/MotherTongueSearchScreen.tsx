@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,10 @@ import {
   FlatList,
   SafeAreaView,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { useNetworkConnectivity } from '@/shared/hooks/useNetworkConnectivity';
+import { NoInternetModal, SyncProgressModal } from '@/shared/components';
 
 interface MotherTongueSearchScreenProps {
   onBack: () => void;
@@ -41,10 +44,13 @@ export const MotherTongueSearchScreen: React.FC<
   MotherTongueSearchScreenProps
 > = ({ onBack, onComplete }) => {
   const { theme } = useTheme();
+  const { isConnected, isInternetReachable } = useNetworkConnectivity();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(
     null
   );
+  const [showNoInternetModal, setShowNoInternetModal] = useState(false);
+  const [showSyncProgressModal, setShowSyncProgressModal] = useState(false);
 
   const filteredLanguages = sampleLanguages.filter(
     lang =>
@@ -52,15 +58,39 @@ export const MotherTongueSearchScreen: React.FC<
       lang.nativeName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Check for internet connectivity when component mounts
+  useEffect(() => {
+    const hasInternetAccess = isConnected && (isInternetReachable ?? true);
+    if (!hasInternetAccess) {
+      setShowNoInternetModal(true);
+    } else {
+      setShowNoInternetModal(false);
+    }
+  }, [isConnected, isInternetReachable]);
+
   const handleLanguageSelect = (language: Language) => {
     setSelectedLanguage(language);
   };
 
   const handleContinue = () => {
     if (selectedLanguage) {
-      // Here you would typically save the selected language
-      onComplete();
+      // Show sync progress modal instead of immediately completing
+      setShowSyncProgressModal(true);
     }
+  };
+
+  const handleRetryConnection = () => {
+    // Re-check internet connection
+    const hasInternetAccess = isConnected && (isInternetReachable ?? true);
+    if (hasInternetAccess) {
+      setShowNoInternetModal(false);
+    }
+    // The useEffect will also re-check and update the modal state
+  };
+
+  const handleGetStarted = () => {
+    // Navigate to home screen when sync is complete
+    onComplete();
   };
 
   const renderLanguageItem = ({ item }: { item: Language }) => (
@@ -98,9 +128,15 @@ export const MotherTongueSearchScreen: React.FC<
       style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <MaterialIcons
+            name='arrow-back'
+            size={24}
+            color={theme.colors.primary}
+            style={styles.backIcon}
+          />
           <Text
             style={[styles.backButtonText, { color: theme.colors.primary }]}>
-            ← Back
+            Back
           </Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -111,22 +147,52 @@ export const MotherTongueSearchScreen: React.FC<
         </Text>
       </View>
 
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={[
-            styles.searchInput,
-            {
-              backgroundColor: theme.colors.surface,
-              color: theme.colors.text,
-              borderColor: theme.colors.border,
-            },
-          ]}
-          placeholder='Search languages...'
-          placeholderTextColor={theme.colors.textSecondary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
+      <TouchableOpacity
+        style={styles.searchContainer}
+        onPress={() => {
+          // Only show modal if there's no internet connection
+          if (!isConnected || !(isInternetReachable ?? true)) {
+            setShowNoInternetModal(true);
+          }
+        }}
+        activeOpacity={0.7}>
+        <View style={styles.searchInputContainer}>
+          <TextInput
+            style={[
+              styles.searchInput,
+              {
+                backgroundColor: theme.colors.surface,
+                color:
+                  isConnected && (isInternetReachable ?? true)
+                    ? theme.colors.text
+                    : theme.colors.textSecondary,
+                borderColor:
+                  isConnected && (isInternetReachable ?? true)
+                    ? theme.colors.border
+                    : theme.colors.error,
+              },
+            ]}
+            placeholder={
+              isConnected && (isInternetReachable ?? true)
+                ? 'Search languages...'
+                : 'No internet connection'
+            }
+            placeholderTextColor={theme.colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            editable={isConnected && (isInternetReachable ?? true)}
+          />
+          {!isConnected ||
+            (!(isInternetReachable ?? true) && (
+              <MaterialIcons
+                name='wifi-off'
+                size={20}
+                color={theme.colors.error}
+                style={styles.searchIcon}
+              />
+            ))}
+        </View>
+      </TouchableOpacity>
 
       <FlatList
         data={filteredLanguages}
@@ -157,6 +223,21 @@ export const MotherTongueSearchScreen: React.FC<
           </Text>
         </TouchableOpacity>
       </View>
+
+      <NoInternetModal
+        visible={
+          showNoInternetModal &&
+          (!isConnected || !(isInternetReachable ?? true))
+        }
+        onRetry={handleRetryConnection}
+        onClose={() => setShowNoInternetModal(false)}
+      />
+
+      <SyncProgressModal
+        visible={showSyncProgressModal}
+        onClose={() => setShowSyncProgressModal(false)}
+        onGetStarted={handleGetStarted}
+      />
     </SafeAreaView>
   );
 };
@@ -171,6 +252,11 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backIcon: {
+    marginRight: 8,
   },
   backButtonText: {
     fontSize: 16,
@@ -189,12 +275,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
+  searchInputContainer: {
+    position: 'relative',
+  },
   searchInput: {
     height: 50,
     borderRadius: 12,
     paddingHorizontal: 16,
+    paddingRight: 50,
     fontSize: 16,
     borderWidth: 1,
+  },
+  searchIcon: {
+    position: 'absolute',
+    right: 16,
+    top: 15,
   },
   languageList: {
     flex: 1,

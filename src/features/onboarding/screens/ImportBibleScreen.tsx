@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 
 interface ImportBibleScreenProps {
@@ -201,9 +202,15 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
       style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <MaterialIcons
+            name='arrow-back'
+            size={24}
+            color={theme.colors.primary}
+            style={styles.backIcon}
+          />
           <Text
             style={[styles.backButtonText, { color: theme.colors.primary }]}>
-            ← Back
+            Back
           </Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -303,6 +310,11 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backIcon: {
+    marginRight: 8,
   },
   backButtonText: {
     fontSize: 16,

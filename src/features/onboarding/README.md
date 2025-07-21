@@ -1,6 +1,6 @@
 # Onboarding Feature
 
-The onboarding feature has been redesigned to use a slide-based navigation system with three main screens.
+The onboarding feature uses a slide-based navigation system with three main screens.
 
 ## Structure
 
@@ -34,8 +34,8 @@ Both sub-screens have back buttons that return to the main screen.
 ### OnboardingMainScreen
 
 - Welcome message
+- Database initialization and verification
 - Two interactive cards for navigation
-- Skip option to complete onboarding
 
 ### MotherTongueSearchScreen
 

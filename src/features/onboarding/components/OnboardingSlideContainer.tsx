@@ -47,14 +47,14 @@ export const OnboardingSlideContainer: React.FC<
         return (
           <MotherTongueSearchScreen
             onBack={handleBackToMain}
-            onComplete={handleBackToMain}
+            onComplete={handleComplete}
           />
         );
       case 'importBible':
         return (
           <ImportBibleScreen
             onBack={handleBackToMain}
-            onComplete={handleBackToMain}
+            onComplete={handleComplete}
           />
         );
       default:

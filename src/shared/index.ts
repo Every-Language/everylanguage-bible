@@ -13,6 +13,7 @@ export * from './constants/theme';
 export * from './context/ThemeContext';
 export * from './context/LocalizationContext';
 export * from './context/SyncContext';
+export * from './context/OnboardingContext';
 
 // Export types
 export * from './types/auth';
