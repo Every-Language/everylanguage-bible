@@ -13,11 +13,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   const { theme } = useTheme();
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.background,
-      }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <OnboardingSlideContainer onComplete={onComplete} />
     </SafeAreaView>
   );
