@@ -43,7 +43,7 @@
     "core-js": "^3.44.0",
     "expo": "53.0.19",
     "expo-audio": "~0.4.8",
-    "expo-background-fetch": "~13.1.6",
+    "expo-background-task": "^0.2.8",
     "expo-blur": "^14.1.5",
     "expo-constants": "~17.1.6",
     "expo-device": "~7.1.4",

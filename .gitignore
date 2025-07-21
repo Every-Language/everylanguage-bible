@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+# Secret keys
+.keys/
+
 # Expo
 .expo/
 dist/

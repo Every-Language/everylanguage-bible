@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,11 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useCurrentVersions } from '../../languages/hooks';
+import { localDataService } from '../../../shared/services/database/LocalDataService';
+import type { LocalVerseText } from '../../../shared/services/database/schema';
+import type { Verse } from '../../bible/types';
 
 interface TextAndQueueTabsProps {
   // Optional prop to control the tab from parent if needed
@@ -18,77 +23,212 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
   initialTab = 'text',
 }) => {
   const { theme } = useTheme();
+  const { state } = useMediaPlayer();
+  const { currentTextVersion } = useCurrentVersions();
   const [activeTab, setActiveTab] = useState<'text' | 'queue'>(initialTab);
+  const [verses, setVerses] = useState<Verse[]>([]);
+  const [verseTexts, setVerseTexts] = useState<Map<string, LocalVerseText>>(
+    new Map()
+  );
+  const [loadingVerses, setLoadingVerses] = useState(false);
+
+  // Extract chapter ID from current track
+  // Track ID format is "book-book-chapter" (e.g., "gen-gen-1")
+  // We need to get the last two parts and join them: "gen-1"
+  const extractChapterId = (
+    trackId: string | undefined
+  ): string | undefined => {
+    if (!trackId) return undefined;
+    const parts = trackId.split('-');
+    if (parts.length >= 3) {
+      // Take the last two parts and join them
+      return `${parts[parts.length - 2]}-${parts[parts.length - 1]}`;
+    }
+    return undefined;
+  };
+
+  const chapterId = extractChapterId(state.currentTrack?.id);
+
+  // Load verses when chapter changes
+  useEffect(() => {
+    const loadVerses = async () => {
+      console.log('🎵 Media Player - Loading verses for chapterId:', chapterId);
+      console.log('🎵 Media Player - Current track:', state.currentTrack);
+
+      if (!chapterId) {
+        console.log('🎵 Media Player - No chapterId, setting verses to empty');
+        setVerses([]);
+        return;
+      }
+
+      try {
+        setLoadingVerses(true);
+        const versesData = await localDataService.getVersesForUI(chapterId);
+        console.log(
+          '🎵 Media Player - Loaded verses:',
+          versesData.length,
+          'verses'
+        );
+        setVerses(versesData);
+      } catch (error) {
+        console.error('🎵 Media Player - Error loading verses:', error);
+        setVerses([]);
+      } finally {
+        setLoadingVerses(false);
+      }
+    };
+
+    loadVerses();
+  }, [chapterId]);
+
+  // Load verse texts when text version changes
+  useEffect(() => {
+    const loadVerseTexts = async () => {
+      console.log(
+        '🎵 Media Player - Loading verse texts for chapterId:',
+        chapterId
+      );
+      console.log(
+        '🎵 Media Player - Current text version:',
+        currentTextVersion
+      );
+
+      if (!chapterId || !currentTextVersion) {
+        console.log(
+          '🎵 Media Player - No chapterId or textVersion, setting verse texts to empty'
+        );
+        setVerseTexts(new Map());
+        return;
+      }
+
+      try {
+        const textsMap = await localDataService.getVerseTextsForChapter(
+          chapterId,
+          currentTextVersion.id
+        );
+        console.log(
+          '🎵 Media Player - Loaded verse texts:',
+          textsMap.size,
+          'texts for version:',
+          currentTextVersion.name
+        );
+        console.log(
+          '🎵 Media Player - First few verse text IDs:',
+          Array.from(textsMap.keys()).slice(0, 3)
+        );
+        setVerseTexts(textsMap);
+      } catch (error) {
+        console.error('🎵 Media Player - Error loading verse texts:', error);
+        setVerseTexts(new Map());
+      }
+    };
+
+    loadVerseTexts();
+  }, [chapterId, currentTextVersion?.id]);
 
   const renderTextContent = () => {
-    const mockVerses = [
-      {
-        id: 1,
-        text: 'In the beginning, was the word, and the word was with God, and the word was God',
-        current: true,
-      },
-      { id: 2, text: 'He was with God in the beginning', current: false },
-      {
-        id: 3,
-        text: 'Through Him all things were created. Without Him, nothing was created that has been created',
-        current: false,
-      },
-      {
-        id: 4,
-        text: 'In him was life, and that life was the light of all mankind.',
-        current: false,
-      },
-      {
-        id: 5,
-        text: 'The light shines in the darkness, and the darkness has not overcome it.',
-        current: false,
-      },
-      {
-        id: 6,
-        text: 'There was a man sent from God whose name was John.',
-        current: false,
-      },
-      {
-        id: 7,
-        text: 'He came as a witness to testify concerning that light, so that through him all might believe.',
-        current: false,
-      },
-      {
-        id: 8,
-        text: 'He himself was not the light; he came only as a witness to the light.',
-        current: false,
-      },
-      {
-        id: 9,
-        text: 'Through Him all things were created. Without Him, nothing was created that has been created',
-        current: false,
-      },
-      {
-        id: 10,
-        text: 'In him was life, and that life was the light of all mankind.',
-        current: false,
-      },
-      {
-        id: 11,
-        text: 'The light shines in the darkness, and the darkness has not overcome it.',
-        current: false,
-      },
-      {
-        id: 12,
-        text: 'There was a man sent from God whose name was John.',
-        current: false,
-      },
-      {
-        id: 13,
-        text: 'He came as a witness to testify concerning that light, so that through him all might believe.',
-        current: false,
-      },
-      {
-        id: 14,
-        text: 'He himself was not the light; he came only as a witness to the light.',
-        current: false,
-      },
-    ];
+    if (loadingVerses) {
+      return (
+        <View style={styles.contentScrollView}>
+          <Text
+            style={{
+              color: theme.colors.textSecondary,
+              fontSize: 16,
+              textAlign: 'center',
+              paddingTop: 40,
+            }}>
+            Loading verses...
+          </Text>
+        </View>
+      );
+    }
+
+    const hasVerses = verses.length > 0;
+
+    if (!hasVerses) {
+      return (
+        <View style={styles.contentScrollView}>
+          <Text
+            style={{
+              color: theme.colors.textSecondary,
+              fontSize: 16,
+              textAlign: 'center',
+              paddingTop: 40,
+            }}>
+            {currentTextVersion
+              ? `No verses available for this chapter`
+              : 'Select a text version to view verse text'}
+          </Text>
+        </View>
+      );
+    }
+
+    // Check if current text version has no data
+    const showNoDataWarning =
+      currentTextVersion &&
+      'verseCount' in currentTextVersion &&
+      currentTextVersion.verseCount === 0;
+
+    if (showNoDataWarning) {
+      return (
+        <ScrollView
+          style={styles.contentScrollView}
+          contentContainerStyle={{ padding: 16 }}
+          showsVerticalScrollIndicator={false}>
+          {/* Text Version Badge */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: 12,
+              borderRadius: 8,
+              marginBottom: 20,
+              backgroundColor: theme.colors.surface,
+            }}>
+            <MaterialIcons name='book' size={16} color={theme.colors.primary} />
+            <View style={{ marginLeft: 8 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: '600' }}>
+                {currentTextVersion.name}
+              </Text>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                {currentTextVersion.languageName}
+              </Text>
+            </View>
+          </View>
+
+          {/* No Data Warning */}
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <MaterialIcons
+              name='warning'
+              size={48}
+              color={theme.colors.error || '#ff4444'}
+            />
+            <Text
+              style={{
+                color: theme.colors.error || '#ff4444',
+                fontSize: 18,
+                fontWeight: '600',
+                textAlign: 'center',
+                marginTop: 12,
+              }}>
+              No Text Data Available
+            </Text>
+            <Text
+              style={{
+                color: theme.colors.textSecondary,
+                fontSize: 14,
+                textAlign: 'center',
+                marginTop: 8,
+                lineHeight: 20,
+              }}>
+              The selected text version &ldquo;{currentTextVersion.name}&rdquo;
+              doesn&apos;t have any verse texts available yet. Try selecting a
+              different text version or contact support.
+            </Text>
+          </View>
+        </ScrollView>
+      );
+    }
 
     return (
       <ScrollView
@@ -98,38 +238,45 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
         alwaysBounceVertical={true}
         contentInsetAdjustmentBehavior='never'>
         <View style={styles.versesContainer}>
-          {mockVerses.map(verse => (
-            <View key={verse.id} style={styles.verseContainer}>
-              <View style={styles.verseHeader}>
-                <Text
-                  style={[
-                    styles.verseNumber,
-                    { color: theme.colors.textSecondary },
-                  ]}>
-                  VERSE {verse.id}
+          {verses.map(verse => {
+            const verseText = verseTexts.get(verse.id);
+            return (
+              <View key={verse.id} style={styles.verseContainer}>
+                <View style={styles.verseHeader}>
+                  <Text
+                    style={[
+                      styles.verseNumber,
+                      { color: theme.colors.textSecondary },
+                    ]}>
+                    VERSE {verse.verse_number}
+                  </Text>
+                  {currentTextVersion && (
+                    <Text
+                      style={{
+                        color: theme.colors.primary,
+                        fontSize: 12,
+                        fontWeight: '600',
+                      }}>
+                      {currentTextVersion.name}
+                    </Text>
+                  )}
+                  <TouchableOpacity>
+                    <MaterialIcons
+                      name='info-outline'
+                      size={16}
+                      color={theme.colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.verseText, { color: theme.colors.text }]}>
+                  {verseText?.verse_text ||
+                    (currentTextVersion
+                      ? `Text not available for ${currentTextVersion.name}`
+                      : 'No text version selected')}
                 </Text>
-                <TouchableOpacity>
-                  <MaterialIcons
-                    name='info-outline'
-                    size={16}
-                    color={theme.colors.textSecondary}
-                  />
-                </TouchableOpacity>
               </View>
-              <Text
-                style={[
-                  styles.verseText,
-                  {
-                    color: verse.current
-                      ? theme.colors.text
-                      : theme.colors.textSecondary,
-                    opacity: verse.current ? 1 : 0.6,
-                  },
-                ]}>
-                {verse.text}
-              </Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
     );

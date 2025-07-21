@@ -11,6 +11,7 @@ import { AuthProvider, AuthScreen, ProfileScreen } from '@/features/auth';
 import { BibleContainerScreen } from '@/features/bible';
 import { PlaylistsScreen } from '@/features/playlists';
 import { TopBar } from '@/shared/components/TopBar';
+import { MenuModal } from '@/shared/components/MenuModal';
 import { SlideUpModal } from '@/shared/components/ui/SlideUpModal';
 import { MediaPlayerSheet } from '@/features/media/components/MediaPlayerSheet';
 import { VersionSelectionModal } from '@/features/languages/components';
@@ -31,13 +32,19 @@ const MainContent: React.FC = () => {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('Bible');
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showMenuModal, setShowMenuModal] = useState(false);
 
   // Language selection modal state
   const [showAudioVersionModal, setShowAudioVersionModal] = useState(false);
   const [showTextVersionModal, setShowTextVersionModal] = useState(false);
 
   // Language selection hooks
-  const { currentAudioVersion, currentTextVersion } = useCurrentVersions();
+  const {
+    currentAudioVersion,
+    currentTextVersion,
+    setAudioVersion,
+    setTextVersion,
+  } = useCurrentVersions();
   const { savedAudioVersions, savedTextVersions } = useSavedVersions();
 
   const handleProfilePress = () => {
@@ -46,6 +53,14 @@ const MainContent: React.FC = () => {
 
   const handleModalClose = () => {
     setShowProfileModal(false);
+  };
+
+  const handleMenuPress = () => {
+    setShowMenuModal(true);
+  };
+
+  const handleMenuClose = () => {
+    setShowMenuModal(false);
   };
 
   // Language selection handlers
@@ -59,11 +74,13 @@ const MainContent: React.FC = () => {
 
   const handleAudioVersionSelect = (version: AudioVersion | TextVersion) => {
     console.log('Selected audio version:', version);
+    setAudioVersion(version as AudioVersion);
     setShowAudioVersionModal(false);
   };
 
   const handleTextVersionSelect = (version: AudioVersion | TextVersion) => {
     console.log('Selected text version:', version);
+    setTextVersion(version as TextVersion);
     setShowTextVersionModal(false);
   };
 
@@ -85,7 +102,7 @@ const MainContent: React.FC = () => {
         ]}>
         <TopBar
           showLanguageSelection={true}
-          onProfilePress={handleProfilePress}
+          onMenuPress={handleMenuPress}
           onAudioVersionPress={handleAudioVersionPress}
           onTextVersionPress={handleTextVersionPress}
         />
@@ -155,6 +172,13 @@ const MainContent: React.FC = () => {
         {/* Media Player Sheet */}
         <MediaPlayerSheet />
       </View>
+
+      {/* Menu Modal - rendered outside main content to appear on top */}
+      <MenuModal
+        visible={showMenuModal}
+        onClose={handleMenuClose}
+        onProfilePress={handleProfilePress}
+      />
 
       {/* Profile/Auth Modal - rendered outside main content to appear on top */}
       <SlideUpModal visible={showProfileModal} onClose={handleModalClose}>

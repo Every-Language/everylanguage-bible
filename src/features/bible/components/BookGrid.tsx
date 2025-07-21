@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, StyleSheet, RefreshControlProps } from 'react-native';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { BookCard } from './BookCard';
 import type { Book } from '../types';
@@ -9,6 +9,7 @@ interface BookGridProps {
   selectedBook: Book | null;
   onBookSelect: (book: Book) => void;
   loading?: boolean;
+  refreshControl?: React.ReactElement<RefreshControlProps>;
 }
 
 export const BookGrid: React.FC<BookGridProps> = ({
@@ -16,6 +17,7 @@ export const BookGrid: React.FC<BookGridProps> = ({
   selectedBook,
   onBookSelect,
   loading: _loading = false,
+  refreshControl,
 }) => {
   const { theme } = useTheme();
 
@@ -40,6 +42,7 @@ export const BookGrid: React.FC<BookGridProps> = ({
         contentContainerStyle={styles.gridContent}
         columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
       />
     </View>
   );

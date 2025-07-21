@@ -6,20 +6,17 @@ import type { Book } from '../types';
 import type { Tables } from '@everylanguage/shared-types';
 
 export const bibleService = {
-  /**
-   * Ensure database is ready before performing operations
-   */
   async ensureDatabaseReady(): Promise<void> {
-    if (!databaseManager.isReady()) {
+    try {
+      await databaseManager.waitForReady(5000); // 5 second timeout
+    } catch (error) {
+      console.error('Database readiness check failed:', error);
       throw new Error(
-        'Database not initialized. Please wait for the app to finish loading.'
+        'Database not ready. Please wait for the app to finish loading or try restarting.'
       );
     }
   },
 
-  /**
-   * Fetch all books from the local database
-   */
   async fetchBooks(): Promise<Book[]> {
     try {
       await this.ensureDatabaseReady();
@@ -32,9 +29,6 @@ export const bibleService = {
     }
   },
 
-  /**
-   * Fetch a specific book by ID
-   */
   async fetchBookById(id: string): Promise<Book | null> {
     try {
       await this.ensureDatabaseReady();
@@ -50,9 +44,6 @@ export const bibleService = {
     }
   },
 
-  /**
-   * Fetch books by testament (OT/NT) - replacing bible version concept
-   */
   async fetchBooksByTestament(testament: 'OT' | 'NT'): Promise<Book[]> {
     try {
       await this.ensureDatabaseReady();
@@ -65,9 +56,6 @@ export const bibleService = {
     }
   },
 
-  /**
-   * Search books by name
-   */
   async searchBooks(query: string): Promise<Book[]> {
     try {
       await this.ensureDatabaseReady();
@@ -80,9 +68,6 @@ export const bibleService = {
     }
   },
 
-  /**
-   * Get books count by testament
-   */
   async getBooksCount(testament?: 'OT' | 'NT'): Promise<number> {
     try {
       await this.ensureDatabaseReady();
@@ -94,9 +79,6 @@ export const bibleService = {
     }
   },
 
-  /**
-   * Check if local data is available
-   */
   async isDataAvailable(): Promise<boolean> {
     try {
       await this.ensureDatabaseReady();
@@ -107,9 +89,6 @@ export const bibleService = {
     }
   },
 
-  /**
-   * Fetch chapters for a specific book
-   */
   async fetchChaptersByBookId(bookId: string): Promise<Tables<'chapters'>[]> {
     try {
       await this.ensureDatabaseReady();
@@ -122,9 +101,6 @@ export const bibleService = {
     }
   },
 
-  /**
-   * Fetch a specific chapter by ID
-   */
   async fetchChapterById(
     chapterId: string
   ): Promise<Tables<'chapters'> | null> {
@@ -141,9 +117,6 @@ export const bibleService = {
     }
   },
 
-  /**
-   * Get chapters count for a book
-   */
   async getChaptersCount(bookId: string): Promise<number> {
     try {
       await this.ensureDatabaseReady();

@@ -1,5 +1,6 @@
 // Components
 export { TopBar } from './components/TopBar';
+export { MenuModal } from './components/MenuModal';
 export { SyncStatus } from './components/SyncStatus';
 export { SyncStatusPill } from './components/SyncStatusPill';
 export { LocaleSelector } from './components/LocaleSelector';

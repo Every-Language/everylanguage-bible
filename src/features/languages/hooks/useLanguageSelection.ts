@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useLanguageSelectionStore } from '../store/languageSelectionStore';
+import { useLanguageSelectionStore } from '../store';
 import {
   UseLanguageSelectionReturn,
   UseCurrentVersionsReturn,
@@ -74,7 +74,45 @@ export const useLanguageSelection = (): UseLanguageSelectionReturn => {
   }, [store]);
 
   return {
-    state: store,
+    state: {
+      // Current selections
+      currentAudioVersion: store.currentAudioVersion,
+      currentTextVersion: store.currentTextVersion,
+
+      // Saved versions
+      savedAudioVersions: store.savedAudioVersions,
+      savedTextVersions: store.savedTextVersions,
+
+      // Language hierarchy
+      languageHierarchy: store.languageHierarchy,
+      currentLanguagePath: store.currentLanguagePath,
+      expandedNodes: store.expandedNodes,
+
+      // Search
+      searchQuery: store.searchQuery,
+      searchResults: store.searchResults,
+
+      // Available versions
+      availableAudioVersions: store.availableAudioVersions,
+      availableTextVersions: store.availableTextVersions,
+
+      // Loading states
+      isLoadingHierarchy: store.isLoadingHierarchy,
+      isLoadingVersions: store.isLoadingVersions,
+      isSearching: store.isSearching,
+
+      // Combined error state (any slice errors)
+      error:
+        store.hierarchyError ||
+        store.versionsError ||
+        store.syncError ||
+        store.persistError ||
+        null,
+
+      // Sync state
+      lastSyncAt: store.lastSyncAt,
+      syncInProgress: store.syncInProgress,
+    },
     selectAudioVersion,
     selectTextVersion,
     addToSavedVersions,
@@ -97,7 +135,8 @@ export const useCurrentVersions = (): UseCurrentVersionsReturn => {
     currentTextVersion,
     isLoadingHierarchy,
     isLoadingVersions,
-    error,
+    hierarchyError,
+    versionsError,
     setCurrentAudioVersion,
     setCurrentTextVersion,
   } = useLanguageSelectionStore();
@@ -120,7 +159,7 @@ export const useCurrentVersions = (): UseCurrentVersionsReturn => {
     currentAudioVersion,
     currentTextVersion,
     isLoading: isLoadingHierarchy || isLoadingVersions,
-    error,
+    error: hierarchyError || versionsError || null,
     setAudioVersion,
     setTextVersion,
   };
@@ -135,7 +174,7 @@ export const useSavedVersions = (): UseSavedVersionsReturn => {
     savedAudioVersions,
     savedTextVersions,
     isLoadingVersions,
-    error,
+    versionsError,
     addSavedVersion,
     removeSavedVersion,
     loadSavedVersions,
@@ -174,7 +213,7 @@ export const useSavedVersions = (): UseSavedVersionsReturn => {
     savedAudioVersions,
     savedTextVersions,
     isLoading: isLoadingVersions,
-    error,
+    error: versionsError,
     addVersion,
     removeVersion,
     isVersionSaved,
@@ -195,7 +234,7 @@ export const useLanguageHierarchy = () => {
     searchResults,
     isLoadingHierarchy,
     isSearching,
-    error,
+    hierarchyError,
     loadLanguageHierarchy,
     expandLanguageNode,
     collapseLanguageNode,
@@ -232,7 +271,7 @@ export const useLanguageHierarchy = () => {
     searchResults,
     isLoadingHierarchy,
     isSearching,
-    error,
+    error: hierarchyError,
     loadLanguageHierarchy,
     toggleNodeExpansion,
     isNodeExpanded,
@@ -253,7 +292,7 @@ export const useAvailableVersions = (languageEntityId?: string) => {
     availableAudioVersions,
     availableTextVersions,
     isLoadingVersions,
-    error,
+    hierarchyError,
     loadAvailableVersions,
   } = useLanguageSelectionStore();
 
@@ -271,7 +310,7 @@ export const useAvailableVersions = (languageEntityId?: string) => {
     availableAudioVersions,
     availableTextVersions,
     isLoading: isLoadingVersions,
-    error,
+    error: hierarchyError,
     loadVersions,
   };
 };
@@ -281,8 +320,13 @@ export const useAvailableVersions = (languageEntityId?: string) => {
  * Handles cloud synchronization functionality
  */
 export const useLanguageSync = () => {
-  const { lastSyncAt, syncInProgress, error, syncWithCloud, clearError } =
-    useLanguageSelectionStore();
+  const {
+    lastSyncAt,
+    syncInProgress,
+    syncError,
+    syncWithCloud,
+    clearSyncError,
+  } = useLanguageSelectionStore();
 
   const performSync = useCallback(async () => {
     await syncWithCloud();
@@ -291,8 +335,9 @@ export const useLanguageSync = () => {
   return {
     lastSyncAt,
     syncInProgress,
-    error,
+    error: syncError,
+    isLoading: syncInProgress,
     performSync,
-    clearError,
+    clearError: clearSyncError,
   };
 };

@@ -17,6 +17,7 @@ import {
   TextVersion,
 } from '../types';
 import { LanguageHierarchyBrowser } from './LanguageHierarchyBrowser';
+import { useLanguageSelection } from '../hooks/useLanguageSelection';
 
 // Individual Version List Item Component
 const VersionListItem: React.FC<VersionListItemProps> = ({
@@ -74,9 +75,15 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
               <Text
                 style={[
                   styles.metaText,
-                  { color: theme.colors.textSecondary },
+                  {
+                    color:
+                      version.verseCount === 0
+                        ? theme.colors.error || '#ff4444'
+                        : theme.colors.textSecondary,
+                  },
                 ]}>
                 {version.verseCount} verses • {version.source}
+                {version.verseCount === 0 && ' • ⚠️ No data'}
               </Text>
             )}
           </View>
@@ -129,6 +136,8 @@ export const VersionSelectionModal: React.FC<VersionSelectionModalProps> = ({
   title,
 }) => {
   const { theme } = useTheme();
+  const { addToSavedVersions, removeFromSavedVersions } =
+    useLanguageSelection();
   const [showLanguageBrowser, setShowLanguageBrowser] = useState(false);
   const [isLoading] = useState(false);
 
@@ -155,19 +164,77 @@ export const VersionSelectionModal: React.FC<VersionSelectionModalProps> = ({
   }, []);
 
   const handleVersionAdd = useCallback(
-    (version: AudioVersion | TextVersion, _type: 'audio' | 'text') => {
-      // This would add the version to saved versions and then select it
-      onVersionSelect(version);
-      setShowLanguageBrowser(false);
-      onClose();
+    async (version: AudioVersion | TextVersion, type: 'audio' | 'text') => {
+      try {
+        // First add the version to saved versions
+        await addToSavedVersions(version, type);
+
+        // Then select it as the current version
+        onVersionSelect(version);
+
+        setShowLanguageBrowser(false);
+        onClose();
+      } catch (error) {
+        console.error('Error adding version:', error);
+        // Still select the version even if saving fails
+        onVersionSelect(version);
+        setShowLanguageBrowser(false);
+        onClose();
+      }
     },
-    [onVersionSelect, onClose]
+    [addToSavedVersions, onVersionSelect, onClose]
   );
 
-  const handleRemoveVersion = useCallback((versionId: string) => {
-    // TODO: Implement remove version functionality
-    console.log('Remove version:', versionId);
-  }, []);
+  const handleRemoveVersion = useCallback(
+    async (versionId: string) => {
+      try {
+        await removeFromSavedVersions(versionId, versionType);
+        console.log(`Removed ${versionType} version:`, versionId);
+      } catch (error) {
+        console.error('Error removing version:', error);
+      }
+    },
+    [removeFromSavedVersions, versionType]
+  );
+
+  const handleDebugTextVersions = useCallback(async () => {
+    console.log('🔍 DEBUG: Checking text versions for verse data...');
+    console.log(
+      '🔍 DEBUG: Current saved versions:',
+      savedVersions.map(v => ({
+        name: v.name,
+        languageName: v.languageName,
+        verseCount: 'verseCount' in v ? v.verseCount : 'N/A',
+        source: 'source' in v ? v.source : 'N/A',
+      }))
+    );
+
+    // Check which versions have actual verse data
+    const versionsWithData = savedVersions.filter(
+      v => 'verseCount' in v && v.verseCount > 0
+    );
+
+    console.log(
+      '🔍 DEBUG: Versions with verse data:',
+      versionsWithData.map(v => ({
+        name: v.name,
+        verseCount: 'verseCount' in v ? v.verseCount : 0,
+      }))
+    );
+
+    if (versionsWithData.length === 0) {
+      console.log('🔍 DEBUG: ❌ No text versions have verse data available!');
+      console.log(
+        '🔍 DEBUG: This is why you\'re seeing "Text not available for MCV"'
+      );
+    } else {
+      console.log(
+        '🔍 DEBUG: ✅ Found',
+        versionsWithData.length,
+        'text versions with data'
+      );
+    }
+  }, [savedVersions]);
 
   const renderCurrentVersion = () => {
     if (!currentVersion) {
@@ -312,6 +379,17 @@ export const VersionSelectionModal: React.FC<VersionSelectionModalProps> = ({
             fullWidth
             disabled={isLoading}
           />
+
+          {/* DEBUG: Add button to check available data */}
+          {versionType === 'text' && (
+            <Button
+              title='🔍 Debug: Check Text Versions'
+              onPress={handleDebugTextVersions}
+              variant='secondary'
+              fullWidth
+              style={{ marginTop: 8 }}
+            />
+          )}
         </View>
       </>
     );

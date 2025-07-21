@@ -1,14 +1,9 @@
 import { supabase } from '../../api/supabase';
 import DatabaseManager from '../../database/DatabaseManager';
+import { SyncMetadata } from '../../database/schema';
+import { BaseSyncService, SyncResult, SyncOptions, SyncConfig } from '../types';
 
 const databaseManager = DatabaseManager.getInstance();
-import type {
-  SyncOptions,
-  SyncResult,
-  BaseSyncService,
-  BibleSyncMetadata,
-  SyncConfig,
-} from '../types';
 
 export interface LanguageSyncOptions extends SyncOptions {
   forceFullSync?: boolean;
@@ -29,6 +24,18 @@ interface RemoteLanguageEntity {
 
 // Note: RemoteProject and RemoteTextVersion interfaces are defined inline where used
 // to avoid linter warnings about unused interfaces
+
+// Enhanced error types for better error handling
+export class LanguageSyncError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly details?: any
+  ) {
+    super(message);
+    this.name = 'LanguageSyncError';
+  }
+}
 
 class LanguageSyncService implements BaseSyncService {
   private static instance: LanguageSyncService;
@@ -274,7 +281,7 @@ class LanguageSyncService implements BaseSyncService {
         ? '1970-01-01T00:00:00.000Z'
         : await this.getLastSync('available_versions_cache');
 
-      // First sync audio versions (projects)
+      // First sync audio versions
       const audioVersions = await this.fetchAudioVersions(lastSync, batchSize);
 
       // Then sync text versions
@@ -301,16 +308,20 @@ class LanguageSyncService implements BaseSyncService {
       );
 
       if (latestTimestamp > 0) {
-        await this.updateLastSync(
-          'available_versions_cache',
-          new Date(latestTimestamp).toISOString()
-        );
+        const newLastSync = new Date(latestTimestamp).toISOString();
+        await this.updateLastSync('available_versions_cache', newLastSync);
       }
       await this.updateSyncStatus('available_versions_cache', 'idle');
 
-      console.log(
-        `Synced ${totalVersions} available versions (${audioVersions.length} audio, ${textVersions.length} text)`
-      );
+      // Update language availability data after syncing versions
+      try {
+        const { availabilityService } = await import(
+          '../../../../features/languages/services/availabilityService'
+        );
+        await availabilityService.updateLanguageAvailability();
+      } catch (error) {
+        console.error('Failed to update language availability data:', error);
+      }
 
       return {
         success: true,
@@ -344,19 +355,26 @@ class LanguageSyncService implements BaseSyncService {
     const mobileBatchSize = Math.min(batchSize, 500);
 
     while (hasMoreData) {
+      // Fetch audio_versions that have at least one published media file
       let query = supabase
-        .from('projects')
+        .from('audio_versions')
         .select(
           `
           id,
           name,
-          target_language_entity_id,
+          language_entity_id,
           created_at,
-          updated_at
+          updated_at,
+          media_files!inner(
+            id,
+            publish_status
+          )
         `
         )
         .gte('updated_at', lastSync)
         .is('deleted_at', null)
+        .eq('media_files.publish_status', 'published')
+        .is('media_files.deleted_at', null)
         .order('updated_at', { ascending: true })
         .order('id', { ascending: true })
         .limit(mobileBatchSize);
@@ -365,36 +383,58 @@ class LanguageSyncService implements BaseSyncService {
         query = query.gt('id', lastFetchedId);
       }
 
-      const { data: remoteProjects, error } = await query;
+      const { data: remoteAudioVersions, error } = await query;
 
       if (error) {
         throw new Error(`Failed to fetch audio versions: ${error.message}`);
       }
 
-      if (!remoteProjects || remoteProjects.length === 0) {
+      if (!remoteAudioVersions || remoteAudioVersions.length === 0) {
         hasMoreData = false;
         break;
       }
 
-      // Transform projects into audio versions format
-      const transformedVersions = remoteProjects.map(project => ({
-        id: project.id,
-        version_type: 'audio' as const,
-        language_entity_id: project.target_language_entity_id,
-        version_id: project.id,
-        version_name: project.name,
-        created_at: project.created_at,
-        updated_at: project.updated_at,
-      }));
+      // Count published media files for each audio version
+      for (const audioVersion of remoteAudioVersions) {
+        const { count: publishedCount, error: countError } = await supabase
+          .from('media_files')
+          .select('*', { count: 'exact', head: true })
+          .eq('audio_version_id', audioVersion.id)
+          .eq('publish_status', 'published')
+          .is('deleted_at', null);
 
-      audioVersions.push(...transformedVersions);
+        if (countError) {
+          console.error(
+            `Error counting media files for audio version ${audioVersion.id}:`,
+            countError
+          );
+          continue;
+        }
 
-      const lastProject = remoteProjects[remoteProjects.length - 1];
-      if (lastProject?.id) {
-        lastFetchedId = lastProject.id;
+        // Only include audio versions with published content
+        if (publishedCount && publishedCount > 0) {
+          audioVersions.push({
+            id: audioVersion.id,
+            version_type: 'audio' as const,
+            language_entity_id: audioVersion.language_entity_id,
+            version_id: audioVersion.id,
+            version_name: audioVersion.name,
+            created_at: audioVersion.created_at,
+            updated_at: audioVersion.updated_at,
+            is_available: true,
+            published_content_count: publishedCount,
+            last_availability_check: new Date().toISOString(),
+          });
+        }
       }
 
-      if (remoteProjects.length < mobileBatchSize) {
+      const lastAudioVersion =
+        remoteAudioVersions[remoteAudioVersions.length - 1];
+      if (lastAudioVersion?.id) {
+        lastFetchedId = lastAudioVersion.id;
+      }
+
+      if (remoteAudioVersions.length < mobileBatchSize) {
         hasMoreData = false;
       }
     }
@@ -412,6 +452,7 @@ class LanguageSyncService implements BaseSyncService {
     const mobileBatchSize = Math.min(batchSize, 500);
 
     while (hasMoreData) {
+      // Only fetch text_versions that have at least one published verse_text
       let query = supabase
         .from('text_versions')
         .select(
@@ -420,11 +461,17 @@ class LanguageSyncService implements BaseSyncService {
           name,
           language_entity_id,
           created_at,
-          updated_at
+          updated_at,
+          verse_texts!inner(
+            id,
+            publish_status
+          )
         `
         )
         .gte('updated_at', lastSync)
         .is('deleted_at', null)
+        .eq('verse_texts.publish_status', 'published')
+        .is('verse_texts.deleted_at', null)
         .order('updated_at', { ascending: true })
         .order('id', { ascending: true })
         .limit(mobileBatchSize);
@@ -444,18 +491,31 @@ class LanguageSyncService implements BaseSyncService {
         break;
       }
 
-      // Transform text versions into available versions format
-      const transformedVersions = remoteTextVersions.map(textVersion => ({
-        id: textVersion.id,
-        version_type: 'text' as const,
-        language_entity_id: textVersion.language_entity_id,
-        version_id: textVersion.id,
-        version_name: textVersion.name,
-        created_at: textVersion.created_at,
-        updated_at: textVersion.updated_at,
-      }));
+      // Count published verse_texts for each text_version
+      for (const textVersion of remoteTextVersions) {
+        const { count: publishedCount } = await supabase
+          .from('verse_texts')
+          .select('*', { count: 'exact', head: true })
+          .eq('text_version_id', textVersion.id)
+          .eq('publish_status', 'published')
+          .is('deleted_at', null);
 
-      textVersions.push(...transformedVersions);
+        // Only include text_versions with published content
+        if (publishedCount && publishedCount > 0) {
+          textVersions.push({
+            id: textVersion.id,
+            version_type: 'text' as const,
+            language_entity_id: textVersion.language_entity_id,
+            version_id: textVersion.id,
+            version_name: textVersion.name,
+            created_at: textVersion.created_at,
+            updated_at: textVersion.updated_at,
+            is_available: true,
+            published_content_count: publishedCount,
+            last_availability_check: new Date().toISOString(),
+          });
+        }
+      }
 
       const lastTextVersion = remoteTextVersions[remoteTextVersions.length - 1];
       if (lastTextVersion?.id) {
@@ -530,37 +590,22 @@ class LanguageSyncService implements BaseSyncService {
     audioVersions: any[],
     textVersions: any[]
   ): Promise<void> {
-    await databaseManager.transaction(async () => {
-      // Insert audio versions
-      for (const version of audioVersions) {
-        await databaseManager.execSingle(
-          `
-          INSERT OR REPLACE INTO available_versions_cache (
-            id, version_type, language_entity_id, version_id, version_name,
-            created_at, updated_at, synced_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `,
-          [
-            version.id,
-            version.version_type,
-            version.language_entity_id,
-            version.version_id,
-            version.version_name,
-            version.created_at,
-            version.updated_at,
-          ]
-        );
-      }
+    const allVersions = [...audioVersions, ...textVersions];
 
-      // Insert text versions
-      for (const version of textVersions) {
-        await databaseManager.execSingle(
-          `
-          INSERT OR REPLACE INTO available_versions_cache (
-            id, version_type, language_entity_id, version_id, version_name,
-            created_at, updated_at, synced_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `,
+    if (allVersions.length === 0) {
+      return;
+    }
+
+    const db = await databaseManager.getDatabase();
+
+    // Use transaction for better performance
+    await db.withTransactionAsync(async () => {
+      for (const version of allVersions) {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO available_versions_cache 
+           (id, version_type, language_entity_id, version_id, version_name, 
+            created_at, updated_at, synced_at, is_available, published_content_count, last_availability_check) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             version.id,
             version.version_type,
@@ -569,6 +614,10 @@ class LanguageSyncService implements BaseSyncService {
             version.version_name,
             version.created_at,
             version.updated_at,
+            new Date().toISOString(),
+            version.is_available ? 1 : 0,
+            version.published_content_count || 0,
+            version.last_availability_check || new Date().toISOString(),
           ]
         );
       }
@@ -581,7 +630,7 @@ class LanguageSyncService implements BaseSyncService {
       return '1970-01-01T00:00:00.000Z';
     }
 
-    const result = await databaseManager.executeQuery<BibleSyncMetadata>(
+    const result = await databaseManager.executeQuery<SyncMetadata>(
       'SELECT last_sync FROM sync_metadata WHERE table_name = ?',
       [tableName]
     );
@@ -626,7 +675,7 @@ class LanguageSyncService implements BaseSyncService {
     );
   }
 
-  async getSyncMetadata(tableName?: string): Promise<BibleSyncMetadata[]> {
+  async getSyncMetadata(tableName?: string): Promise<SyncMetadata[]> {
     const query = tableName
       ? 'SELECT * FROM sync_metadata WHERE table_name = ?'
       : 'SELECT * FROM sync_metadata WHERE table_name IN (?, ?, ?)';
@@ -639,7 +688,7 @@ class LanguageSyncService implements BaseSyncService {
           'user_saved_versions',
         ];
 
-    return databaseManager.executeQuery<BibleSyncMetadata>(query, params);
+    return databaseManager.executeQuery<SyncMetadata>(query, params);
   }
 
   async hasRemoteChanges(tableName: string): Promise<boolean> {

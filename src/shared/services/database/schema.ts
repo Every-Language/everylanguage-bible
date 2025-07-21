@@ -4,7 +4,7 @@ export interface SyncMetadata {
   table_name: string;
   last_sync: string; // ISO timestamp
   total_records: number;
-  sync_status: 'idle' | 'syncing' | 'error';
+  sync_status: string; // Flexible string instead of hardcoded union
   error_message?: string;
   // New fields for bible content sync optimization
   content_version?: string; // For version-based syncing
@@ -17,7 +17,7 @@ export interface LocalBook {
   id: string;
   book_number: number;
   name: string;
-  testament: 'OT' | 'NT';
+  testament: string | null; // Flexible string or null to handle remote null values
   chapters: number;
   global_order: number;
   created_at: string;
@@ -45,10 +45,24 @@ export interface LocalVerse {
   synced_at: string;
 }
 
+// ✅ NEW: Interface for verse texts
+export interface LocalVerseText {
+  id: string;
+  verse_id: string;
+  text_version_id: string | null;
+  project_id: string | null;
+  verse_text: string;
+  publish_status: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  synced_at: string;
+}
+
 // Language Selection Feature Interfaces
 export interface UserSavedVersion {
   id: string;
-  version_type: 'audio' | 'text';
+  version_type: string; // Flexible string instead of hardcoded union
   language_entity_id: string;
   language_name: string;
   version_id: string; // project_id or text_version_id
@@ -61,22 +75,31 @@ export interface UserSavedVersion {
 export interface LanguageEntityCache {
   id: string;
   name: string;
-  level: 'family' | 'language' | 'dialect' | 'mother_tongue';
+  level: string; // Changed from hardcoded union to flexible string
   parent_id: string | null;
   created_at: string;
   updated_at: string;
   synced_at: string;
+  // New availability fields
+  has_available_versions?: boolean;
+  audio_versions_count?: number;
+  text_versions_count?: number;
+  last_availability_check?: string;
 }
 
 export interface AvailableVersionCache {
   id: string;
-  version_type: 'audio' | 'text';
+  version_type: string; // Flexible string instead of hardcoded union
   language_entity_id: string;
   version_id: string; // project_id or text_version_id
   version_name: string;
   created_at: string;
   updated_at: string;
   synced_at: string;
+  // New availability fields
+  is_available: boolean;
+  published_content_count: number;
+  last_availability_check: string;
 }
 
 export const DATABASE_NAME = 'everylanguage_bible.db';
@@ -109,7 +132,7 @@ export const createTables = async (
       id TEXT PRIMARY KEY,
       book_number INTEGER NOT NULL,
       name TEXT NOT NULL,
-      testament TEXT NOT NULL CHECK (testament IN ('OT', 'NT')),
+      testament TEXT,
       chapters INTEGER NOT NULL,
       global_order INTEGER NOT NULL,
       created_at TEXT NOT NULL,
@@ -147,13 +170,30 @@ export const createTables = async (
     )
   `);
 
+  // ✅ NEW: Verse texts table (mirroring Supabase verse_texts table)
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS verse_texts (
+      id TEXT PRIMARY KEY,
+      verse_id TEXT NOT NULL,
+      text_version_id TEXT,
+      project_id TEXT,
+      verse_text TEXT NOT NULL,
+      publish_status TEXT NOT NULL,
+      version INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (verse_id) REFERENCES verses (id) ON DELETE CASCADE
+    )
+  `);
+
   // Language Selection Feature Tables
 
   // User saved language versions (local storage)
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS user_saved_versions (
       id TEXT PRIMARY KEY,
-      version_type TEXT NOT NULL CHECK (version_type IN ('audio', 'text')),
+      version_type TEXT NOT NULL,
       language_entity_id TEXT NOT NULL,
       language_name TEXT NOT NULL,
       version_id TEXT NOT NULL,
@@ -170,11 +210,15 @@ export const createTables = async (
     CREATE TABLE IF NOT EXISTS language_entities_cache (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      level TEXT NOT NULL CHECK (level IN ('family', 'language', 'dialect', 'mother_tongue')),
+      level TEXT NOT NULL,
       parent_id TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      has_available_versions BOOLEAN DEFAULT 0,
+      audio_versions_count INTEGER DEFAULT 0,
+      text_versions_count INTEGER DEFAULT 0,
+      last_availability_check TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (parent_id) REFERENCES language_entities_cache (id)
     )
   `);
@@ -183,13 +227,16 @@ export const createTables = async (
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS available_versions_cache (
       id TEXT PRIMARY KEY,
-      version_type TEXT NOT NULL CHECK (version_type IN ('audio', 'text')),
+      version_type TEXT NOT NULL,
       language_entity_id TEXT NOT NULL,
       version_id TEXT NOT NULL,
       version_name TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      is_available BOOLEAN DEFAULT 0,
+      published_content_count INTEGER DEFAULT 0,
+      last_availability_check TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (language_entity_id) REFERENCES language_entities_cache (id)
     )
   `);
@@ -231,6 +278,23 @@ export const createTables = async (
     'CREATE INDEX IF NOT EXISTS idx_verses_updated_at ON verses(updated_at)'
   );
 
+  // ✅ NEW: Verse texts indexes for performance
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_verse_texts_verse_id ON verse_texts(verse_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_verse_texts_text_version_id ON verse_texts(text_version_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_verse_texts_project_id ON verse_texts(project_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_verse_texts_publish_status ON verse_texts(publish_status)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_verse_texts_updated_at ON verse_texts(updated_at)'
+  );
+
   // ✅ PERFORMANCE: Add compound indexes for optimized JOIN queries
   await db.execAsync(
     'CREATE INDEX IF NOT EXISTS idx_chapters_book_chapter ON chapters(book_id, chapter_number)'
@@ -240,6 +304,10 @@ export const createTables = async (
   );
   await db.execAsync(
     'CREATE INDEX IF NOT EXISTS idx_sync_metadata_table_status ON sync_metadata(table_name, sync_status)'
+  );
+  // ✅ NEW: Compound index for verse texts lookups
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_verse_texts_verse_version ON verse_texts(verse_id, text_version_id, project_id)'
   );
 
   // Language Selection Feature Indexes
@@ -289,6 +357,12 @@ export const createTables = async (
     VALUES ('verses', '1970-01-01T00:00:00.000Z')
   `);
 
+  // ✅ NEW: Initialize sync metadata for verse texts
+  await db.execAsync(`
+    INSERT OR IGNORE INTO sync_metadata (table_name, last_sync)
+    VALUES ('verse_texts', '1970-01-01T00:00:00.000Z')
+  `);
+
   // Initialize sync metadata for language selection tables
   await db.execAsync(`
     INSERT OR IGNORE INTO sync_metadata (table_name, last_sync)
@@ -314,6 +388,9 @@ export const dropTables = async (db: SQLite.SQLiteDatabase): Promise<void> => {
   await db.execAsync('DROP TABLE IF EXISTS user_saved_versions');
   await db.execAsync('DROP TABLE IF EXISTS language_entities_cache');
 
+  // ✅ NEW: Drop verse_texts table (before verses due to foreign key)
+  await db.execAsync('DROP TABLE IF EXISTS verse_texts');
+
   // Drop existing tables
   await db.execAsync('DROP TABLE IF EXISTS verses');
   await db.execAsync('DROP TABLE IF EXISTS chapters');
@@ -334,6 +411,12 @@ export const getTableSchema = () => ({
   },
   verses: {
     tableName: 'verses',
+    primaryKey: 'id',
+    timestampField: 'updated_at',
+  },
+  // ✅ NEW: Add verse_texts to table schema
+  verse_texts: {
+    tableName: 'verse_texts',
     primaryKey: 'id',
     timestampField: 'updated_at',
   },

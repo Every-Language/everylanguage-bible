@@ -1,3 +1,93 @@
+// Import auto-generated database types for IntelliSense
+import type { Database } from '@everylanguage/shared-types';
+
+// Use flexible types that accept any string but provide IntelliSense for known values
+export type SyncStatus = Database['public']['Enums']['upload_status'] | string;
+export type VersionType = 'audio' | 'text' | string;
+export type Testament = 'OT' | 'NT' | 'old' | 'new' | string | null;
+
+// Configuration for validation behavior
+export interface ValidationConfig {
+  warnOnUnknownValues: boolean;
+  strictMode: boolean; // If true, throws on unknown values
+}
+
+export const DEFAULT_VALIDATION_CONFIG: ValidationConfig = {
+  warnOnUnknownValues: true,
+  strictMode: false,
+};
+
+// Generic validation function that can be configured
+export const createValidator = <T extends string>(
+  knownValues: readonly T[],
+  fieldName: string,
+  config: ValidationConfig = DEFAULT_VALIDATION_CONFIG
+) => {
+  return (value: string): string => {
+    const isKnown = knownValues.includes(value as T);
+
+    if (!isKnown) {
+      const message = `Unknown ${fieldName}: ${value}`;
+
+      if (config.strictMode) {
+        throw new Error(message);
+      }
+
+      if (config.warnOnUnknownValues) {
+        console.warn(`${message}. Using as-is.`);
+      }
+    }
+
+    return value;
+  };
+};
+
+// Optional validators that can be used when needed
+// These pull from your auto-generated types when possible
+export const validateSyncStatus = createValidator(
+  [
+    'pending',
+    'uploading',
+    'completed',
+    'failed',
+    'idle',
+    'syncing',
+    'error',
+  ] as const,
+  'sync status'
+);
+
+export const validateVersionType = createValidator(
+  ['audio', 'text'] as const,
+  'version type'
+);
+
+// Special validator for testament that handles null values
+export const validateTestament = (value: string | null): string | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const knownValues = ['OT', 'NT', 'old', 'new'] as const;
+  const isKnown = knownValues.includes(value as any);
+
+  if (!isKnown) {
+    console.warn(`Unknown testament: ${value}. Using as-is.`);
+  }
+
+  return value;
+};
+
+// For cases where you want strict validation
+export const createStrictValidator = <T extends string>(
+  knownValues: readonly T[],
+  fieldName: string
+) =>
+  createValidator(knownValues, fieldName, {
+    warnOnUnknownValues: true,
+    strictMode: true,
+  });
+
 export interface SyncOptions {
   batchSize?: number;
   maxRetries?: number;
@@ -31,7 +121,7 @@ export interface BibleSyncMetadata {
   table_name: string;
   last_sync: string;
   total_records: number;
-  sync_status: 'idle' | 'syncing' | 'error';
+  sync_status: string; // Pure string - validation is optional
   error_message?: string;
   created_at?: string;
   updated_at?: string;
@@ -39,10 +129,8 @@ export interface BibleSyncMetadata {
   last_version_check?: string; // When we last checked for new versions
 }
 
-export type SyncStrategy = 'timestamp' | 'version' | 'manual';
-
 export interface SyncConfig {
-  strategy: SyncStrategy;
+  strategy: string; // Pure string - validation is optional
   checkInterval?: number; // in milliseconds
   autoSync?: boolean;
 }
