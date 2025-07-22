@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { localDataService } from '../../../shared/services/database/LocalDataService';
-import type { Verse, VersesState } from '../types';
+import type { Verse, VersesState, VersesWithTextState } from '../types';
 import type {
   VerseFilters,
   VerseSort,
 } from '../../../shared/services/database/LocalDataService';
+import { useCurrentVersions } from '../../languages/hooks';
 
 export const useVerses = (
   chapterId: string,
@@ -113,6 +114,72 @@ export const useVerses = (
     selectVerse,
     getVerseRange,
     getAdjacentVerse,
+    refreshVerses,
+  };
+};
+
+// ✅ NEW: Enhanced hook that includes verse texts
+export const useVersesWithTexts = (chapterId: string) => {
+  const [state, setState] = useState<VersesWithTextState>({
+    versesWithTexts: [],
+    loading: false,
+    error: null,
+    selectedVerse: null,
+    currentTextVersion: null,
+  });
+
+  const { currentTextVersion } = useCurrentVersions();
+
+  const loadVersesWithTexts = async () => {
+    if (!chapterId) {
+      setState(prev => ({ ...prev, versesWithTexts: [], loading: false }));
+      return;
+    }
+
+    setState(prev => ({ ...prev, loading: true, error: null }));
+
+    try {
+      const versesWithTexts = await localDataService.getVersesWithTexts(
+        chapterId,
+        currentTextVersion?.id
+      );
+
+      setState(prev => ({
+        ...prev,
+        versesWithTexts,
+        loading: false,
+        error: null,
+        currentTextVersion,
+      }));
+    } catch (error) {
+      console.error('Failed to load verses with texts:', error);
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to load verses with texts',
+      }));
+    }
+  };
+
+  const selectVerse = (verse: Verse | null) => {
+    setState(prev => ({ ...prev, selectedVerse: verse }));
+  };
+
+  const refreshVerses = () => {
+    loadVersesWithTexts();
+  };
+
+  // Load verses when chapterId or currentTextVersion changes
+  useEffect(() => {
+    loadVersesWithTexts();
+  }, [chapterId, currentTextVersion?.id]);
+
+  return {
+    ...state,
+    selectVerse,
     refreshVerses,
   };
 };

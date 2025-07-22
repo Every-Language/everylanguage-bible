@@ -17,6 +17,9 @@ import { useTheme } from '../../../shared/context/ThemeContext';
 import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
 import { useVerses } from '../hooks/useVerses';
 import { VerseCard } from '@/features/bible/components/VerseCard';
+import { useCurrentVersions } from '../../languages/hooks';
+import { localDataService } from '../../../shared/services/database/LocalDataService';
+import type { LocalVerseText } from '../../../shared/services/database/schema';
 import type { Chapter, Verse } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 
@@ -34,6 +37,59 @@ export const VersesScreen: React.FC = () => {
 
   const { book, chapter } = route.params;
   const { verses, loading, error } = useVerses(chapter.id);
+  const { currentTextVersion } = useCurrentVersions();
+  const [verseTexts, setVerseTexts] = React.useState<
+    Map<string, LocalVerseText>
+  >(new Map());
+  const [loadingTexts, setLoadingTexts] = React.useState(false);
+
+  // Load verse texts when currentTextVersion changes
+  React.useEffect(() => {
+    const loadVerseTexts = async () => {
+      console.log(
+        '📖 VersesScreen - Loading verse texts for chapterId:',
+        chapter.id
+      );
+      console.log(
+        '📖 VersesScreen - Current text version:',
+        currentTextVersion
+      );
+
+      if (!currentTextVersion) {
+        console.log(
+          '📖 VersesScreen - No textVersion, setting verse texts to empty'
+        );
+        setVerseTexts(new Map());
+        return;
+      }
+
+      try {
+        setLoadingTexts(true);
+        const textsMap = await localDataService.getVerseTextsForChapter(
+          chapter.id,
+          currentTextVersion.id
+        );
+        console.log(
+          '📖 VersesScreen - Loaded verse texts:',
+          textsMap.size,
+          'texts for version:',
+          currentTextVersion.name
+        );
+        console.log(
+          '📖 VersesScreen - First few verse text IDs:',
+          Array.from(textsMap.keys()).slice(0, 3)
+        );
+        setVerseTexts(textsMap);
+      } catch (error) {
+        console.error('📖 VersesScreen - Error loading verse texts:', error);
+        setVerseTexts(new Map());
+      } finally {
+        setLoadingTexts(false);
+      }
+    };
+
+    loadVerseTexts();
+  }, [chapter.id, currentTextVersion?.id]);
 
   const styles = StyleSheet.create({
     container: {
@@ -219,17 +275,22 @@ export const VersesScreen: React.FC = () => {
     console.log('Share verse:', verse);
   };
 
-  const renderVerseCard = (verse: Verse) => (
-    <VerseCard
-      key={verse.id}
-      verse={verse}
-      onPlay={handlePlayVerse}
-      onShare={handleShareVerse}
-    />
-  );
+  const renderVerseCard = (verse: Verse) => {
+    const verseText = verseTexts.get(verse.id) || null;
+    return (
+      <VerseCard
+        key={verse.id}
+        verse={verse}
+        verseText={verseText}
+        currentTextVersion={currentTextVersion}
+        onPlay={handlePlayVerse}
+        onShare={handleShareVerse}
+      />
+    );
+  };
 
   const renderContent = () => {
-    if (loading) {
+    if (loading || loadingTexts) {
       return (
         <View style={styles.loadingContainer}>
           <MaterialIcons

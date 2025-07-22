@@ -1,13 +1,23 @@
 import type { Tables } from '@everylanguage/shared-types';
+import type { LocalVerseText } from '../../../shared/services/database/schema';
 
 // Use the existing books table type from shared types
 export type Book = Tables<'books'>;
 export type Chapter = Tables<'chapters'>;
 export type Verse = Tables<'verses'>;
 
+// ✅ NEW: Interface for verse with associated text
+export interface VerseWithText {
+  verse: Verse;
+  verseText: LocalVerseText | null;
+}
+
 export interface BooksFilters {
   testament?: 'OT' | 'NT';
   search?: string;
+  searchQuery?: string;
+  sortBy?: 'name' | 'book_number' | 'global_order';
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface BooksState {
@@ -31,6 +41,15 @@ export interface VersesState {
   loading: boolean;
   error: string | null;
   selectedVerse: Verse | null;
+}
+
+// ✅ NEW: Enhanced verses state with text support
+export interface VersesWithTextState {
+  versesWithTexts: VerseWithText[];
+  loading: boolean;
+  error: string | null;
+  selectedVerse: Verse | null;
+  currentTextVersion: any; // Will be properly typed when we use it
 }
 
 export interface BibleNavigationState {

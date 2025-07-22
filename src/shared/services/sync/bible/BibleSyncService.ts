@@ -9,12 +9,44 @@ import type {
   BibleSyncMetadata,
   SyncConfig,
 } from '../types';
+import { validateTestament } from '../types';
 import type { Tables } from '@everylanguage/shared-types';
 
 export interface BibleSyncOptions extends SyncOptions {
   forceFullSync?: boolean;
   checkVersionOnly?: boolean;
 }
+
+// Enhanced error types for better error handling
+export class BibleSyncError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly details?: any
+  ) {
+    super(message);
+    this.name = 'BibleSyncError';
+  }
+}
+
+// Validation utilities for Bible-specific data
+const validateBookData = (book: any): any => {
+  if (!book.id || !book.name || book.book_number === undefined) {
+    throw new BibleSyncError(
+      'Invalid book data: missing required fields',
+      'INVALID_BOOK_DATA',
+      { book }
+    );
+  }
+
+  // Testament validation with graceful handling
+  const validatedTestament = validateTestament(book.testament);
+
+  return {
+    ...book,
+    testament: validatedTestament,
+  };
+};
 
 class BibleSyncService implements BaseSyncService {
   private static instance: BibleSyncService;
@@ -444,8 +476,25 @@ class BibleSyncService implements BaseSyncService {
     if (books.length === 0) return;
 
     await databaseManager.transaction(async () => {
+      // Validate and normalize book data
+      const validatedBooks = books
+        .map(book => {
+          try {
+            return validateBookData(book);
+          } catch (error) {
+            console.warn('Skipping invalid book data:', error);
+            return null;
+          }
+        })
+        .filter(Boolean);
+
+      if (validatedBooks.length === 0) {
+        console.warn('No valid books to insert after validation');
+        return;
+      }
+
       // Create placeholders for batch insert
-      const placeholders = books
+      const placeholders = validatedBooks
         .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
         .join(', ');
 
@@ -456,13 +505,13 @@ class BibleSyncService implements BaseSyncService {
         ) VALUES ${placeholders}
       `;
 
-      // Flatten all parameters
-      const params = books.flatMap(book => [
+      // Flatten all parameters with validated data
+      const params = validatedBooks.flatMap(book => [
         book.id,
         book.book_number,
         book.name,
-        'OT', // Default value since it's not in the schema
-        1, // Default value since chapters is not in the schema
+        book.testament, // Use validated testament
+        book.chapters || 1, // Use actual chapters or default
         book.global_order || 0,
         book.created_at || new Date().toISOString(),
         book.updated_at || new Date().toISOString(),

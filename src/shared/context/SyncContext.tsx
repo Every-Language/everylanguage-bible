@@ -7,9 +7,7 @@ import React, {
   useMemo,
 } from 'react';
 import NetInfo from '@react-native-community/netinfo';
-import DatabaseManager from '../services/database/DatabaseManager';
-
-const databaseManager = DatabaseManager.getInstance();
+import { initializationService } from '../services/initialization/InitializationService';
 import { bibleSync } from '../services/sync/bible/BibleSyncService';
 import { localDataService } from '../services/database/LocalDataService';
 import { backgroundSyncService } from '../services/sync/BackgroundSyncService';
@@ -61,11 +59,10 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     if (isInitialized) return;
 
     try {
-      console.log('Initializing local database...');
-      await databaseManager.initialize();
+      console.log('Starting app initialization...');
 
-      // Initialize background sync service
-      await backgroundSyncService.initialize();
+      // Use the centralized initialization service
+      await initializationService.initialize();
 
       // Check if we have local data
       const dataAvailable = await localDataService.isDataAvailable();
@@ -76,7 +73,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       setLastSyncAt(lastSync);
 
       setIsInitialized(true);
-      console.log('Database initialized successfully');
+      console.log('App initialization completed successfully');
 
       // For bible content, we can be more conservative about auto-syncing
       // Only auto-sync if no local data exists or if explicitly needed
@@ -91,13 +88,13 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
 
       // Register background sync after successful initialization
       try {
-        await backgroundSyncService.registerBackgroundFetch();
+        await backgroundSyncService.registerBackgroundTask();
         console.log('Background sync registered successfully');
       } catch (error) {
         console.warn('Failed to register background sync:', error);
       }
     } catch (error) {
-      console.error('Failed to initialize database:', error);
+      console.error('Failed to initialize app:', error);
       throw error;
     }
   }, [isInitialized]);

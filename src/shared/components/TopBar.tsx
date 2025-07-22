@@ -18,10 +18,9 @@ import { useCurrentVersions } from '@/features/languages/hooks';
 interface TopBarProps {
   title?: string;
   showProfile?: boolean;
-  showThemeToggle?: boolean;
   showSyncStatus?: boolean;
   showLanguageSelection?: boolean;
-  onProfilePress?: () => void;
+  onMenuPress?: () => void;
   onSyncPress?: () => void;
   onAudioVersionPress?: () => void;
   onTextVersionPress?: () => void;
@@ -30,15 +29,14 @@ interface TopBarProps {
 export const TopBar: React.FC<TopBarProps> = ({
   title,
   showProfile = true,
-  showThemeToggle = true,
   showSyncStatus = true,
   showLanguageSelection = false,
-  onProfilePress,
+  onMenuPress,
   onSyncPress,
   onAudioVersionPress,
   onTextVersionPress,
 }) => {
-  const { theme, mode, toggleTheme } = useTheme();
+  const { theme } = useTheme();
 
   const { currentAudioVersion, currentTextVersion } = useCurrentVersions();
 
@@ -88,21 +86,9 @@ export const TopBar: React.FC<TopBarProps> = ({
             <Ionicons name='search' size={20} color={theme.colors.text} />
           </TouchableOpacity>
 
-          {showThemeToggle && (
-            <TouchableOpacity style={styles.iconButton} onPress={toggleTheme}>
-              <Ionicons
-                name={mode === 'light' ? 'moon' : 'sunny'}
-                size={20}
-                color={theme.colors.text}
-              />
-            </TouchableOpacity>
-          )}
-
           {showProfile && (
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={onProfilePress}>
-              <Ionicons name='person' size={20} color={theme.colors.text} />
+            <TouchableOpacity style={styles.iconButton} onPress={onMenuPress}>
+              <Ionicons name='menu' size={20} color={theme.colors.text} />
             </TouchableOpacity>
           )}
         </View>

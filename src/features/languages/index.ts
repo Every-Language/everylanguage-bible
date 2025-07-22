@@ -5,10 +5,10 @@ export * from './components';
 export * from './hooks';
 
 // Services
-export { languageEntitiesService, userVersionsService } from './services';
+export { languageService, userVersionsService } from './services';
 
 // Store
-export { useLanguageSelectionStore } from './store/languageSelectionStore';
+export { useLanguageSelectionStore } from './store';
 
 // Types
 export * from './types';

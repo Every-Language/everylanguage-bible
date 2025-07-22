@@ -4,22 +4,23 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   ScrollView,
-  ActivityIndicator,
+  TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { SlideUpModal } from '@/shared/components/ui/SlideUpModal';
 import { Button } from '@/shared/components/ui/Button';
 import {
-  LanguageHierarchyBrowserProps,
   LanguageEntity,
   AudioVersion,
   TextVersion,
+  LanguageHierarchyBrowserProps,
 } from '../types';
 import { useLanguageHierarchy } from '../hooks';
+import { useLanguageSelection } from '../hooks/useLanguageSelection';
 
 // Individual Language Node Component with proper expansion handling
 interface LanguageNodeWrapperProps {
@@ -44,6 +45,10 @@ const LanguageNodeWrapper: React.FC<LanguageNodeWrapperProps> = ({
     node.hasChildren || (node.children && node.children.length > 0);
   const isExpanded = isNodeExpanded(node.id);
 
+  // Check if this language has available content
+  const hasAvailableContent = node.hasAvailableVersions || false;
+  const isDisabled = !hasAvailableContent && !hasChildren;
+
   return (
     <View>
       <TouchableOpacity
@@ -53,9 +58,11 @@ const LanguageNodeWrapper: React.FC<LanguageNodeWrapperProps> = ({
             paddingLeft,
             backgroundColor: theme.colors.background,
           },
+          isDisabled && styles.disabledNode,
         ]}
-        onPress={() => onSelect(node)}
-        activeOpacity={0.7}>
+        onPress={() => !isDisabled && onSelect(node)}
+        disabled={isDisabled}
+        activeOpacity={isDisabled ? 1 : 0.7}>
         <View style={styles.nodeContent}>
           {hasChildren && (
             <TouchableOpacity
@@ -74,31 +81,81 @@ const LanguageNodeWrapper: React.FC<LanguageNodeWrapperProps> = ({
 
           <View style={styles.nodeInfo}>
             <Text
-              style={[styles.nodeName, { color: theme.colors.text }]}
+              style={[
+                styles.nodeName,
+                { color: theme.colors.text },
+                isDisabled && styles.disabledText,
+              ]}
               numberOfLines={2}>
               {node.name}
             </Text>
 
-            <Text
-              style={[styles.nodeLevel, { color: theme.colors.textSecondary }]}>
-              {node.level}
-            </Text>
+            <View style={styles.nodeMetadata}>
+              <Text
+                style={[
+                  styles.nodeLevel,
+                  { color: theme.colors.textSecondary },
+                  isDisabled && styles.disabledText,
+                ]}>
+                {node.level}
+              </Text>
+
+              {/* Show availability counts */}
+              {node.availableVersionCounts && (
+                <View style={styles.availabilityCounts}>
+                  {node.availableVersionCounts.audio > 0 && (
+                    <View style={styles.countBadge}>
+                      <Ionicons name='volume-high' size={10} color='#4CAF50' />
+                      <Text style={[styles.countText, { color: '#4CAF50' }]}>
+                        {node.availableVersionCounts.audio}
+                      </Text>
+                    </View>
+                  )}
+
+                  {node.availableVersionCounts.text > 0 && (
+                    <View style={styles.countBadge}>
+                      <Ionicons
+                        name='document-text'
+                        size={10}
+                        color='#2196F3'
+                      />
+                      <Text style={[styles.countText, { color: '#2196F3' }]}>
+                        {node.availableVersionCounts.text}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Show "No content" for languages without content */}
+              {!hasAvailableContent && !hasChildren && (
+                <Text
+                  style={[
+                    styles.noContentLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}>
+                  No content available
+                </Text>
+              )}
+            </View>
           </View>
 
-          <TouchableOpacity
-            style={[
-              styles.selectButton,
-              { backgroundColor: theme.colors.primary },
-            ]}
-            onPress={() => onSelect(node)}>
-            <Text
+          {hasAvailableContent && (
+            <TouchableOpacity
               style={[
-                styles.selectButtonText,
-                { color: theme.colors.textInverse },
-              ]}>
-              Select
-            </Text>
-          </TouchableOpacity>
+                styles.selectButton,
+                { backgroundColor: theme.colors.primary },
+              ]}
+              onPress={() => onSelect(node)}>
+              <Text
+                style={[
+                  styles.selectButtonText,
+                  { color: theme.colors.textInverse },
+                ]}>
+                Select
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
 
@@ -133,6 +190,7 @@ export const LanguageHierarchyBrowser: React.FC<
   title = 'Select Language',
 }) => {
   const { theme } = useTheme();
+  const { addToSavedVersions } = useLanguageSelection();
   const {
     languageHierarchy,
     searchQuery,
@@ -171,14 +229,15 @@ export const LanguageHierarchyBrowser: React.FC<
       resetNavigation();
       clearSearch();
 
-      // Load hierarchy if needed
-      if (languageHierarchy.length === 0) {
+      // Load hierarchy only if not already loaded or loading
+      if (languageHierarchy.length === 0 && !isLoadingHierarchy) {
         loadLanguageHierarchy();
       }
     }
   }, [
     visible,
     languageHierarchy.length,
+    isLoadingHierarchy,
     loadLanguageHierarchy,
     resetNavigation,
     clearSearch,
@@ -192,14 +251,14 @@ export const LanguageHierarchyBrowser: React.FC<
         // In browse mode, show available versions
         try {
           setLoadingVersions(true);
-          // This would normally call the service to get available versions
-          // For now, we'll just simulate the API call
-          await new Promise(resolve => setTimeout(resolve, 500));
 
-          // TODO: Replace with actual service call
-          // const versions = await languageEntitiesService.getAvailableVersions(language.id);
-          // setAvailableVersions(versions);
-          setAvailableVersions({ audio: [], text: [] }); // Placeholder
+          // Call the actual service to get available versions
+          const { languageService } = await import('../services');
+          const versions = await languageService.getAvailableVersions(
+            language.id
+          );
+
+          setAvailableVersions(versions);
           setShowingAvailableVersions(true);
         } catch (error) {
           console.error('Error loading available versions:', error);
@@ -220,13 +279,28 @@ export const LanguageHierarchyBrowser: React.FC<
   );
 
   const handleVersionSelect = useCallback(
-    (version: AudioVersion | TextVersion, type: 'audio' | 'text') => {
-      if (onVersionSelect) {
-        onVersionSelect(version, type);
+    async (version: AudioVersion | TextVersion, type: 'audio' | 'text') => {
+      try {
+        // First add the version to saved versions
+        await addToSavedVersions(version, type);
+
+        // Then call the parent's version select handler
+        if (onVersionSelect) {
+          onVersionSelect(version, type);
+        }
+
+        onClose();
+      } catch (error) {
+        console.error('Error adding version to saved list:', error);
+
+        // Still proceed with selection even if saving fails
+        if (onVersionSelect) {
+          onVersionSelect(version, type);
+        }
+        onClose();
       }
-      onClose();
     },
-    [onVersionSelect, onClose]
+    [addToSavedVersions, onVersionSelect, onClose]
   );
 
   const handleBackToLanguages = useCallback(() => {
@@ -765,5 +839,36 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  disabledNode: {
+    opacity: 0.6,
+    backgroundColor: '#f0f0f0', // Light gray background for disabled nodes
+  },
+  nodeMetadata: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  availabilityCounts: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 8,
+  },
+  countBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  countText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  disabledText: {
+    color: '#999',
+  },
+  noContentLabel: {
+    fontSize: 12,
+    marginLeft: 8,
   },
 });

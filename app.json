@@ -24,7 +24,7 @@
       "expo-notifications",
       "expo-audio",
       "expo-sqlite",
-      "expo-background-fetch",
+      "expo-background-task",
       "expo-task-manager"
     ],
     "scheme": "el-bible",

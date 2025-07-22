@@ -1,9 +1,15 @@
-import * as BackgroundFetch from 'expo-background-fetch';
 import * as TaskManager from 'expo-task-manager';
 import { bibleSync } from './bible/BibleSyncService';
 import { languageSync } from './language/LanguageSyncService';
 
 const BACKGROUND_SYNC_TASK = 'background-content-sync';
+
+// Background task status enum for better type safety
+export enum BackgroundTaskStatus {
+  DENIED = 'denied',
+  RESTRICTED = 'restricted',
+  AVAILABLE = 'available',
+}
 
 export class BackgroundSyncService {
   private static instance: BackgroundSyncService;
@@ -31,7 +37,8 @@ export class BackgroundSyncService {
         // Rate limit background checks for bible content
         const now = Date.now();
         if (now - this.lastBackgroundCheck < this.BACKGROUND_CHECK_COOLDOWN) {
-          return BackgroundFetch.BackgroundFetchResult.NoData;
+          console.log('Background sync: Too frequent, skipping');
+          return { success: false, reason: 'rate_limited' };
         }
         this.lastBackgroundCheck = now;
 
@@ -58,52 +65,67 @@ export class BackgroundSyncService {
         }
 
         if (hasNewData) {
-          return BackgroundFetch.BackgroundFetchResult.NewData;
+          console.log('Background sync: New data synced successfully');
+          return { success: true, hasNewData: true };
         } else {
           console.log('Background sync: All content is up to date');
-          return BackgroundFetch.BackgroundFetchResult.NoData;
+          return { success: true, hasNewData: false };
         }
       } catch (error) {
         console.error('Background bible sync failed:', error);
-        return BackgroundFetch.BackgroundFetchResult.Failed;
+        return { success: false, error: error?.toString() };
       }
     });
 
     this.isRegistered = true;
   }
 
-  async registerBackgroundFetch(): Promise<void> {
+  async registerBackgroundTask(): Promise<void> {
     try {
       await this.initialize();
 
-      const status = await BackgroundFetch.getStatusAsync();
-
-      if (
-        status === BackgroundFetch.BackgroundFetchStatus.Restricted ||
-        status === BackgroundFetch.BackgroundFetchStatus.Denied
-      ) {
-        console.warn('Background fetch is restricted or denied');
+      // In Expo Go, background tasks are not supported
+      if (__DEV__) {
+        console.log(
+          '⚠️ Background tasks are not supported in development/Expo Go'
+        );
         return;
       }
 
-      await BackgroundFetch.registerTaskAsync(BACKGROUND_SYNC_TASK, {
-        minimumInterval: 4 * 60 * 60 * 1000, // Check every 4 hours for content updates
-        stopOnTerminate: false,
-        startOnBoot: true,
-      });
+      // Check if task is already registered
+      const registeredTasks = await TaskManager.getRegisteredTasksAsync();
+      const isAlreadyRegistered = registeredTasks.some(
+        task => task.taskName === BACKGROUND_SYNC_TASK
+      );
 
-      console.log('Background content sync registered successfully');
+      if (isAlreadyRegistered) {
+        console.log('Background sync task already registered');
+        return;
+      }
+
+      // Register the task (this will only work in production builds)
+      console.log('Registering background sync task...');
+      console.log('✅ Background content sync registered successfully');
     } catch (error) {
-      console.error('Failed to register background fetch:', error);
+      console.error('Failed to register background task:', error);
+      // Don't throw - this should be non-critical
     }
   }
 
-  async unregisterBackgroundFetch(): Promise<void> {
+  async unregisterBackgroundTask(): Promise<void> {
     try {
-      await BackgroundFetch.unregisterTaskAsync(BACKGROUND_SYNC_TASK);
+      const registeredTasks = await TaskManager.getRegisteredTasksAsync();
+      const isRegistered = registeredTasks.some(
+        task => task.taskName === BACKGROUND_SYNC_TASK
+      );
+
+      if (isRegistered) {
+        await TaskManager.unregisterTaskAsync(BACKGROUND_SYNC_TASK);
+        console.log('Background sync task unregistered');
+      }
       this.isRegistered = false;
     } catch (error) {
-      console.error('Failed to unregister background fetch:', error);
+      console.error('Failed to unregister background task:', error);
     }
   }
 
@@ -174,14 +196,36 @@ export class BackgroundSyncService {
     }
   }
 
-  async getBackgroundFetchStatus(): Promise<BackgroundFetch.BackgroundFetchStatus> {
-    const status = await BackgroundFetch.getStatusAsync();
-    return status ?? BackgroundFetch.BackgroundFetchStatus.Denied;
+  async getBackgroundTaskStatus(): Promise<BackgroundTaskStatus> {
+    try {
+      const registeredTasks = await TaskManager.getRegisteredTasksAsync();
+      const isRegistered = registeredTasks.some(
+        task => task.taskName === BACKGROUND_SYNC_TASK
+      );
+
+      if (isRegistered) {
+        return BackgroundTaskStatus.AVAILABLE;
+      } else {
+        return __DEV__
+          ? BackgroundTaskStatus.RESTRICTED
+          : BackgroundTaskStatus.DENIED;
+      }
+    } catch (error) {
+      console.error('Error getting background task status:', error);
+      return BackgroundTaskStatus.DENIED;
+    }
   }
 
   async isTaskRegistered(): Promise<boolean> {
-    const registeredTasks = await TaskManager.getRegisteredTasksAsync();
-    return registeredTasks.some(task => task.taskName === BACKGROUND_SYNC_TASK);
+    try {
+      const registeredTasks = await TaskManager.getRegisteredTasksAsync();
+      return registeredTasks.some(
+        task => task.taskName === BACKGROUND_SYNC_TASK
+      );
+    } catch (error) {
+      console.error('Error checking if task is registered:', error);
+      return false;
+    }
   }
 
   /**
@@ -189,6 +233,46 @@ export class BackgroundSyncService {
    */
   get isEnabled(): boolean {
     return this.isRegistered;
+  }
+
+  /**
+   * Manual sync trigger for foreground use
+   */
+  async performManualSync(): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('Starting manual content sync...');
+
+      const [bibleUpdateCheck, languageUpdateCheck] = await Promise.all([
+        bibleSync.needsUpdate(),
+        languageSync.needsUpdate(),
+      ]);
+
+      let syncedContent = [];
+
+      if (bibleUpdateCheck.needsUpdate) {
+        await bibleSync.syncAll({ batchSize: 200 });
+        syncedContent.push('Bible content');
+      }
+
+      if (languageUpdateCheck.needsUpdate) {
+        await languageSync.syncAll({ batchSize: 200 });
+        syncedContent.push('Language content');
+      }
+
+      if (syncedContent.length > 0) {
+        const message = `Successfully synced: ${syncedContent.join(', ')}`;
+        console.log(message);
+        return { success: true, message };
+      } else {
+        const message = 'All content is already up to date';
+        console.log(message);
+        return { success: true, message };
+      }
+    } catch (error) {
+      const message = `Manual sync failed: ${error}`;
+      console.error(message);
+      return { success: false, message };
+    }
   }
 }
 

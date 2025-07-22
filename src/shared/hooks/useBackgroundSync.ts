@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
-import * as BackgroundFetch from 'expo-background-fetch';
-import { backgroundSyncService } from '../services/sync/BackgroundSyncService';
+import {
+  backgroundSyncService,
+  BackgroundTaskStatus,
+} from '../services/sync/BackgroundSyncService';
 import { bibleSync } from '../services/sync/bible/BibleSyncService';
 import { useSync } from '../context/SyncContext';
 
 export interface BackgroundSyncState {
   isRegistered: boolean;
-  status: BackgroundFetch.BackgroundFetchStatus;
+  status: BackgroundTaskStatus;
   isEnabled: boolean;
   hasRemoteChanges: boolean;
   lastUpdateCheck?: string;
@@ -17,7 +19,7 @@ export const useBackgroundSync = () => {
   const { isInitialized } = useSync();
   const [state, setState] = useState<BackgroundSyncState>({
     isRegistered: false,
-    status: BackgroundFetch.BackgroundFetchStatus.Denied,
+    status: BackgroundTaskStatus.DENIED,
     isEnabled: false,
     hasRemoteChanges: false,
   });
@@ -34,7 +36,7 @@ export const useBackgroundSync = () => {
         await backgroundSyncService.initialize();
 
         // Check current status
-        const status = await backgroundSyncService.getBackgroundFetchStatus();
+        const status = await backgroundSyncService.getBackgroundTaskStatus();
         const isRegistered = await backgroundSyncService.isTaskRegistered();
         const isEnabled = backgroundSyncService.isEnabled;
 
@@ -46,11 +48,8 @@ export const useBackgroundSync = () => {
         }));
 
         // Auto-register if available
-        if (
-          status === BackgroundFetch.BackgroundFetchStatus.Available &&
-          !isRegistered
-        ) {
-          await backgroundSyncService.registerBackgroundFetch();
+        if (status === BackgroundTaskStatus.AVAILABLE && !isRegistered) {
+          await backgroundSyncService.registerBackgroundTask();
           setState(prev => ({ ...prev, isRegistered: true }));
         }
       } catch (error) {
@@ -108,10 +107,10 @@ export const useBackgroundSync = () => {
 
   const enableBackgroundSync = async (): Promise<boolean> => {
     try {
-      const status = await backgroundSyncService.getBackgroundFetchStatus();
+      const status = await backgroundSyncService.getBackgroundTaskStatus();
 
-      if (status === BackgroundFetch.BackgroundFetchStatus.Available) {
-        await backgroundSyncService.registerBackgroundFetch();
+      if (status === BackgroundTaskStatus.AVAILABLE) {
+        await backgroundSyncService.registerBackgroundTask();
         const isRegistered = await backgroundSyncService.isTaskRegistered();
 
         setState(prev => ({
@@ -123,7 +122,7 @@ export const useBackgroundSync = () => {
         return true;
       }
 
-      console.warn('Background fetch is not available:', status);
+      console.warn('Background tasks are not available:', status);
       return false;
     } catch (error) {
       console.error('Failed to enable background sync:', error);
@@ -133,7 +132,7 @@ export const useBackgroundSync = () => {
 
   const disableBackgroundSync = async (): Promise<boolean> => {
     try {
-      await backgroundSyncService.unregisterBackgroundFetch();
+      await backgroundSyncService.unregisterBackgroundTask();
 
       setState(prev => ({
         ...prev,
@@ -175,6 +174,18 @@ export const useBackgroundSync = () => {
     }
   };
 
+  // Manual sync method for foreground use
+  const performManualSync = async (): Promise<{
+    success: boolean;
+    message: string;
+  }> => {
+    try {
+      return await backgroundSyncService.performManualSync();
+    } catch (error) {
+      return { success: false, message: `Manual sync failed: ${error}` };
+    }
+  };
+
   return {
     ...state,
     isLoading,
@@ -182,5 +193,6 @@ export const useBackgroundSync = () => {
     disableBackgroundSync,
     checkForRemoteChanges,
     getChangesSummary,
+    performManualSync,
   };
 };

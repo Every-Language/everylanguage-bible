@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useOnboarding } from '@/shared/context/OnboardingContext';
 import { TopBar } from '@/shared/components/TopBar';
+import { MenuModal } from '@/shared/components/MenuModal';
 import { SlideUpModal } from '@/shared/components/ui/SlideUpModal';
 import { MediaPlayerSheet } from '@/features/media/components/MediaPlayerSheet';
 import { VersionSelectionModal } from '@/features/languages/components';
@@ -24,11 +25,17 @@ export const HomeScreen: React.FC = () => {
   const { activeTab, switchTab } = useHomeNavigation('Bible');
 
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showMenuModal, setShowMenuModal] = useState(false);
   const [showAudioVersionModal, setShowAudioVersionModal] = useState(false);
   const [showTextVersionModal, setShowTextVersionModal] = useState(false);
 
   // Language selection hooks
-  const { currentAudioVersion, currentTextVersion } = useCurrentVersions();
+  const {
+    currentAudioVersion,
+    currentTextVersion,
+    setAudioVersion,
+    setTextVersion,
+  } = useCurrentVersions();
   const { savedAudioVersions, savedTextVersions } = useSavedVersions();
 
   const handleProfilePress = () => {
@@ -37,6 +44,14 @@ export const HomeScreen: React.FC = () => {
 
   const handleModalClose = () => {
     setShowProfileModal(false);
+  };
+
+  const handleMenuPress = () => {
+    setShowMenuModal(true);
+  };
+
+  const handleMenuClose = () => {
+    setShowMenuModal(false);
   };
 
   // Language selection handlers
@@ -50,11 +65,13 @@ export const HomeScreen: React.FC = () => {
 
   const handleAudioVersionSelect = (version: AudioVersion | TextVersion) => {
     console.log('Selected audio version:', version);
+    setAudioVersion(version as AudioVersion);
     setShowAudioVersionModal(false);
   };
 
   const handleTextVersionSelect = (version: AudioVersion | TextVersion) => {
     console.log('Selected text version:', version);
+    setTextVersion(version as TextVersion);
     setShowTextVersionModal(false);
   };
 
@@ -76,7 +93,7 @@ export const HomeScreen: React.FC = () => {
         ]}>
         <TopBar
           showLanguageSelection={true}
-          onProfilePress={handleProfilePress}
+          onMenuPress={handleMenuPress}
           onAudioVersionPress={handleAudioVersionPress}
           onTextVersionPress={handleTextVersionPress}
         />
@@ -104,6 +121,13 @@ export const HomeScreen: React.FC = () => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Menu Modal - rendered outside main content to appear on top */}
+      <MenuModal
+        visible={showMenuModal}
+        onClose={handleMenuClose}
+        onProfilePress={handleProfilePress}
+      />
 
       {/* Profile/Auth Modal */}
       <SlideUpModal visible={showProfileModal} onClose={handleModalClose}>

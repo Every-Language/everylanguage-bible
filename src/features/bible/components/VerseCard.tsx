@@ -3,15 +3,21 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 import type { Verse } from '../types';
+import type { LocalVerseText } from '../../../shared/services/database/schema';
+import type { TextVersion } from '../../languages/types';
 
 interface VerseCardProps {
   verse: Verse;
+  verseText?: LocalVerseText | null;
+  currentTextVersion?: TextVersion | null;
   onPlay?: (verse: Verse) => void;
   onShare?: (verse: Verse) => void;
 }
 
 export const VerseCard: React.FC<VerseCardProps> = ({
   verse,
+  verseText,
+  currentTextVersion,
   onPlay,
   onShare,
 }) => {
@@ -37,6 +43,13 @@ export const VerseCard: React.FC<VerseCardProps> = ({
       color: theme.colors.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
+    },
+    versionName: {
+      fontSize: 10,
+      fontWeight: '500',
+      color: theme.colors.primary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
     },
     verseActions: {
       flexDirection: 'row',
@@ -68,7 +81,12 @@ export const VerseCard: React.FC<VerseCardProps> = ({
   return (
     <View style={styles.verseCard}>
       <View style={styles.verseHeader}>
-        <Text style={styles.verseNumber}>VERSE {verse.verse_number}</Text>
+        <View>
+          <Text style={styles.verseNumber}>VERSE {verse.verse_number}</Text>
+          {currentTextVersion && (
+            <Text style={styles.versionName}>{currentTextVersion.name}</Text>
+          )}
+        </View>
         <View style={styles.verseActions}>
           {onShare && (
             <TouchableOpacity
@@ -94,9 +112,16 @@ export const VerseCard: React.FC<VerseCardProps> = ({
           )}
         </View>
       </View>
-      <Text style={[styles.verseContent, styles.placeholderText]}>
-        Verse content will be available when text versions are implemented
-      </Text>
+
+      {verseText ? (
+        <Text style={styles.verseContent}>{verseText.verse_text}</Text>
+      ) : (
+        <Text style={[styles.verseContent, styles.placeholderText]}>
+          {currentTextVersion
+            ? `Text not available for ${currentTextVersion.name}`
+            : 'No text version selected'}
+        </Text>
+      )}
     </View>
   );
 };

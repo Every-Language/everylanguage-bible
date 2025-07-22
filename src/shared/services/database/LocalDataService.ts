@@ -1,16 +1,17 @@
 import DatabaseManager from './DatabaseManager';
+import { LocalBook, LocalChapter, LocalVerse, LocalVerseText } from './schema';
+import type { Tables } from '@everylanguage/shared-types';
+import { validateTestament } from '../sync/types';
 
 const databaseManager = DatabaseManager.getInstance();
-import type { LocalBook, LocalChapter, LocalVerse } from './schema';
-import type { Tables } from '@everylanguage/shared-types';
 
-export interface BookFilters {
-  testament?: 'OT' | 'NT';
+interface BookFilters {
+  testament?: string; // Changed from hardcoded union to flexible string
   search?: string;
 }
 
 export interface BookSort {
-  field: 'name' | 'book_number' | 'global_order';
+  field: string;
   direction: 'asc' | 'desc';
 }
 
@@ -24,7 +25,7 @@ export interface VerseSort {
   direction: 'asc' | 'desc';
 }
 
-class LocalDataService {
+export class LocalDataService {
   private static instance: LocalDataService;
 
   private constructor() {}
@@ -36,15 +37,32 @@ class LocalDataService {
     return LocalDataService.instance;
   }
 
-  async getBooks(filters?: BookFilters, sort?: BookSort): Promise<LocalBook[]> {
-    let query = 'SELECT * FROM books';
-    const params: any[] = [];
-    const conditions: string[] = [];
+  /**
+   * Ensure database is ready before operations
+   */
+  private async ensureReady(): Promise<void> {
+    await databaseManager.ensureInitialized();
+  }
 
-    // Apply filters
+  /**
+   * Get books with optional filtering
+   */
+  async getBooks(filters: BookFilters = {}): Promise<LocalBook[]> {
+    await this.ensureReady();
+
+    const db = await databaseManager.getDatabase();
+
+    let query = 'SELECT * FROM books';
+    const conditions: string[] = [];
+    const params: any[] = [];
+
     if (filters?.testament) {
-      conditions.push('testament = ?');
-      params.push(filters.testament);
+      // Validate and normalize testament but don't fail on unknown values
+      const validatedTestament = validateTestament(filters.testament);
+      if (validatedTestament !== null) {
+        conditions.push('testament = ?');
+        params.push(validatedTestament);
+      }
     }
 
     if (filters?.search) {
@@ -52,20 +70,13 @@ class LocalDataService {
       params.push(`%${filters.search}%`);
     }
 
-    // Add WHERE clause if there are conditions
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
     }
 
-    // Apply sorting
-    if (sort) {
-      query += ` ORDER BY ${sort.field} ${sort.direction.toUpperCase()}`;
-    } else {
-      // Default sort by global_order
-      query += ' ORDER BY global_order ASC';
-    }
+    query += ' ORDER BY global_order';
 
-    return databaseManager.executeQuery<LocalBook>(query, params);
+    return await db.getAllAsync(query, params);
   }
 
   async getBookById(id: string): Promise<LocalBook | null> {
@@ -154,6 +165,7 @@ class LocalDataService {
       id: localBook.id,
       book_number: localBook.book_number,
       name: localBook.name,
+      testament: validateTestament(localBook.testament) as 'old' | 'new' | null, // Handle null testament values
       global_order: localBook.global_order,
       created_at: localBook.created_at,
       updated_at: localBook.updated_at,
@@ -163,9 +175,9 @@ class LocalDataService {
 
   async getBooksForUI(
     filters?: BookFilters,
-    sort?: BookSort
+    _sort?: BookSort
   ): Promise<Tables<'books'>[]> {
-    const localBooks = await this.getBooks(filters, sort);
+    const localBooks = await this.getBooks(filters);
     return localBooks.map(book => this.transformToUIFormat(book));
   }
 
@@ -599,6 +611,200 @@ class LocalDataService {
     }
 
     return result;
+  }
+
+  // ✅ NEW: Get verses with their associated verse texts for a chapter
+  async getVersesWithTexts(
+    chapterId: string,
+    textVersionId?: string
+  ): Promise<
+    Array<{
+      verse: LocalVerse;
+      verseText: LocalVerseText | null;
+    }>
+  > {
+    try {
+      const db = await databaseManager.getDatabase();
+
+      let query = `
+        SELECT 
+          v.id as verse_id,
+          v.chapter_id,
+          v.verse_number,
+          v.global_order as verse_global_order,
+          v.created_at as verse_created_at,
+          v.updated_at as verse_updated_at,
+          v.synced_at as verse_synced_at,
+          vt.id as verse_text_id,
+          vt.verse_text,
+          vt.text_version_id,
+          vt.project_id,
+          vt.publish_status,
+          vt.version as verse_text_version,
+          vt.created_at as verse_text_created_at,
+          vt.updated_at as verse_text_updated_at,
+          vt.synced_at as verse_text_synced_at
+        FROM verses v
+        LEFT JOIN verse_texts vt ON v.id = vt.verse_id
+      `;
+
+      const params: any[] = [chapterId];
+
+      // Add WHERE clause for chapter filter first
+      query += ` WHERE v.chapter_id = ?`;
+
+      // Add text version filter if provided
+      if (textVersionId) {
+        query += ` AND (vt.text_version_id = ? OR vt.project_id = ?)`;
+        query += ` AND (vt.publish_status = 'published' OR vt.publish_status IS NULL)`;
+        params.push(textVersionId, textVersionId);
+      }
+
+      query += ` ORDER BY v.verse_number ASC`;
+
+      const rows = await db.getAllAsync<{
+        verse_id: string;
+        chapter_id: string;
+        verse_number: number;
+        verse_global_order: number | null;
+        verse_created_at: string;
+        verse_updated_at: string;
+        verse_synced_at: string;
+        verse_text_id: string | null;
+        verse_text: string | null;
+        text_version_id: string | null;
+        project_id: string | null;
+        publish_status: string | null;
+        verse_text_version: number | null;
+        verse_text_created_at: string | null;
+        verse_text_updated_at: string | null;
+        verse_text_synced_at: string | null;
+      }>(query, params);
+
+      return rows.map(row => ({
+        verse: {
+          id: row.verse_id,
+          chapter_id: row.chapter_id,
+          verse_number: row.verse_number,
+          global_order: row.verse_global_order,
+          created_at: row.verse_created_at,
+          updated_at: row.verse_updated_at,
+          synced_at: row.verse_synced_at,
+        },
+        verseText: row.verse_text_id
+          ? {
+              id: row.verse_text_id,
+              verse_id: row.verse_id,
+              text_version_id: row.text_version_id,
+              project_id: row.project_id,
+              verse_text: row.verse_text!,
+              publish_status: row.publish_status!,
+              version: row.verse_text_version!,
+              created_at: row.verse_text_created_at!,
+              updated_at: row.verse_text_updated_at!,
+              synced_at: row.verse_text_synced_at!,
+            }
+          : null,
+      }));
+    } catch (error) {
+      console.error('Error getting verses with texts:', error);
+      throw error;
+    }
+  }
+
+  // ✅ NEW: Get verse texts for specific verses and text version
+  async getVerseTextsForChapter(
+    chapterId: string,
+    textVersionId?: string
+  ): Promise<Map<string, LocalVerseText>> {
+    try {
+      console.log('🗃️ DB - getVerseTextsForChapter called with:', {
+        chapterId,
+        textVersionId,
+      });
+
+      if (!textVersionId) {
+        console.log('🗃️ DB - No textVersionId provided, returning empty map');
+        return new Map();
+      }
+
+      const db = await databaseManager.getDatabase();
+
+      const query = `
+        SELECT 
+          vt.id,
+          vt.verse_id,
+          vt.text_version_id,
+          vt.project_id,
+          vt.verse_text,
+          vt.publish_status,
+          vt.version,
+          vt.created_at,
+          vt.updated_at,
+          vt.synced_at
+        FROM verse_texts vt
+        INNER JOIN verses v ON vt.verse_id = v.id
+        WHERE v.chapter_id = ?
+          AND (vt.text_version_id = ? OR vt.project_id = ?)
+          AND vt.publish_status = 'published'
+        ORDER BY v.verse_number ASC
+      `;
+
+      console.log('🗃️ DB - Executing query with params:', [
+        chapterId,
+        textVersionId,
+        textVersionId,
+      ]);
+
+      // First, let's check if any verse_texts exist at all
+      const allVerseTextsCount = await db.getFirstAsync<{ count: number }>(
+        'SELECT COUNT(*) as count FROM verse_texts'
+      );
+      console.log(
+        '🗃️ DB - Total verse_texts in database:',
+        allVerseTextsCount?.count || 0
+      );
+
+      // Check if any verse_texts exist for this text version
+      const versionTextsCount = await db.getFirstAsync<{ count: number }>(
+        'SELECT COUNT(*) as count FROM verse_texts WHERE text_version_id = ? OR project_id = ?',
+        [textVersionId, textVersionId]
+      );
+      console.log(
+        '🗃️ DB - Verse texts for this version:',
+        versionTextsCount?.count || 0
+      );
+
+      const rows = await db.getAllAsync<LocalVerseText>(query, [
+        chapterId,
+        textVersionId,
+        textVersionId,
+      ]);
+
+      console.log('🗃️ DB - Found', rows.length, 'verse texts');
+      if (rows.length > 0) {
+        const firstRow = rows[0];
+        console.log('🗃️ DB - First verse text:', {
+          id: firstRow?.id,
+          verse_id: firstRow?.verse_id,
+          text_version_id: firstRow?.text_version_id,
+          project_id: firstRow?.project_id,
+          verse_text: firstRow?.verse_text?.substring(0, 50) + '...',
+        });
+      }
+
+      // Create a map with verse_id as key for quick lookup
+      const verseTextsMap = new Map<string, LocalVerseText>();
+      rows.forEach(verseText => {
+        verseTextsMap.set(verseText.verse_id, verseText);
+      });
+
+      console.log('🗃️ DB - Created map with', verseTextsMap.size, 'entries');
+      return verseTextsMap;
+    } catch (error) {
+      console.error('🗃️ DB - Error getting verse texts for chapter:', error);
+      throw error;
+    }
   }
 }
 
