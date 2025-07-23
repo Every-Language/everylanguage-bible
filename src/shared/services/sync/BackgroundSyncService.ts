@@ -1,6 +1,7 @@
 import * as TaskManager from 'expo-task-manager';
 import { bibleSync } from './bible/BibleSyncService';
 import { languageSync } from './language/LanguageSyncService';
+import { MediaFilesVersesSyncService } from './media';
 
 const BACKGROUND_SYNC_TASK = 'background-content-sync';
 
@@ -42,11 +43,14 @@ export class BackgroundSyncService {
         }
         this.lastBackgroundCheck = now;
 
-        // Check for updates in both bible and language content
-        const [bibleUpdateCheck, languageUpdateCheck] = await Promise.all([
-          bibleSync.needsUpdate(),
-          languageSync.needsUpdate(),
-        ]);
+        // Check for updates in bible, language, and media content
+        const mediaFilesVersesSync = MediaFilesVersesSyncService.getInstance();
+        const [bibleUpdateCheck, languageUpdateCheck, mediaUpdateCheck] =
+          await Promise.all([
+            bibleSync.needsUpdate(),
+            languageSync.needsUpdate(),
+            mediaFilesVersesSync.needsUpdate(),
+          ]);
 
         let hasNewData = false;
 
@@ -61,6 +65,13 @@ export class BackgroundSyncService {
           console.log('Background sync: Language content updates detected');
           // Use smaller batch size for background sync
           await languageSync.syncAll({ batchSize: 100 });
+          hasNewData = true;
+        }
+
+        if (mediaUpdateCheck.needsUpdate) {
+          console.log('Background sync: Media files verses updates detected');
+          // Use smaller batch size for background sync
+          await mediaFilesVersesSync.syncAll({ batchSize: 100 });
           hasNewData = true;
         }
 

@@ -6,6 +6,13 @@ export type Book = Tables<'books'>;
 export type Chapter = Tables<'chapters'>;
 export type Verse = Tables<'verses'>;
 
+// Extended chapter type with additional metadata
+export interface ChapterWithMetadata extends Chapter {
+  title: string;
+  verseRange: string;
+  isAvailable: boolean;
+}
+
 // ✅ NEW: Interface for verse with associated text
 export interface VerseWithText {
   verse: Verse;

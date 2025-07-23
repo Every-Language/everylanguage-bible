@@ -5,7 +5,6 @@ export type {
   SyncProgress,
   BaseSyncService,
   BibleSyncMetadata,
-  SyncStrategy,
   SyncConfig,
 } from './types';
 
@@ -16,6 +15,10 @@ export type { BibleSyncOptions } from './bible/BibleSyncService';
 // Export language sync service
 export { languageSync } from './language/LanguageSyncService';
 export type { LanguageSyncOptions } from './language/LanguageSyncService';
+
+// Export media sync service
+export { MediaFilesVersesSyncService } from './media';
+export type { MediaFilesVersesSyncOptions } from './media';
 
 // Re-export commonly used services
 export {

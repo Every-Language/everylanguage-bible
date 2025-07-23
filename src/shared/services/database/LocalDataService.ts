@@ -225,6 +225,70 @@ export class LocalDataService {
     return result[0]?.count || 0;
   }
 
+  /**
+   * Check if a chapter has media files available
+   */
+  async hasMediaFiles(chapterId: string): Promise<boolean> {
+    try {
+      const result = await databaseManager.executeQuery<{ count: number }>(
+        'SELECT COUNT(*) as count FROM media_files WHERE chapter_id = ? AND deleted_at IS NULL',
+        [chapterId]
+      );
+      return (result[0]?.count || 0) > 0;
+    } catch (error) {
+      console.error('Error checking media files for chapter:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get media availability for multiple chapters
+   */
+  async getChaptersMediaAvailability(
+    chapterIds: string[]
+  ): Promise<Map<string, boolean>> {
+    if (chapterIds.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const placeholders = chapterIds.map(() => '?').join(',');
+      const query = `
+        SELECT chapter_id, COUNT(*) as count 
+        FROM media_files 
+        WHERE chapter_id IN (${placeholders}) AND deleted_at IS NULL 
+        GROUP BY chapter_id
+      `;
+
+      const results = await databaseManager.executeQuery<{
+        chapter_id: string;
+        count: number;
+      }>(query, chapterIds);
+
+      const availabilityMap = new Map<string, boolean>();
+
+      // Initialize all chapters as not available
+      for (const chapterId of chapterIds) {
+        availabilityMap.set(chapterId, false);
+      }
+
+      // Set available chapters based on results
+      for (const result of results) {
+        availabilityMap.set(result.chapter_id, result.count > 0);
+      }
+
+      return availabilityMap;
+    } catch (error) {
+      console.error('Error getting chapters media availability:', error);
+      // Return all chapters as not available on error
+      const availabilityMap = new Map<string, boolean>();
+      for (const chapterId of chapterIds) {
+        availabilityMap.set(chapterId, false);
+      }
+      return availabilityMap;
+    }
+  }
+
   // Utility method to convert local chapter to the format expected by the UI
   transformChapterToUIFormat(localChapter: LocalChapter): Tables<'chapters'> {
     return {
@@ -240,9 +304,16 @@ export class LocalDataService {
 
   async getChaptersForUI(bookId: string): Promise<Tables<'chapters'>[]> {
     const localChapters = await this.getChaptersByBookId(bookId);
-    return localChapters.map(chapter =>
-      this.transformChapterToUIFormat(chapter)
-    );
+
+    // Get media availability for all chapters
+    const chapterIds = localChapters.map(chapter => chapter.id);
+    const mediaAvailability =
+      await this.getChaptersMediaAvailability(chapterIds);
+
+    return localChapters.map(chapter => ({
+      ...this.transformChapterToUIFormat(chapter),
+      isAvailable: mediaAvailability.get(chapter.id) || false,
+    }));
   }
 
   // Verse methods

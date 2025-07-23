@@ -217,7 +217,7 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
           Import Bible Content
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          Select Bible versions to download and store locally
+          Select Bible versions to import and store locally
         </Text>
       </View>
 

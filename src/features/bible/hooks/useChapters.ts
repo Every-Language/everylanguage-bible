@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { bibleService } from '../services/bibleService';
 import { useSync } from '@/shared/context/SyncContext';
-import type { Chapter, ChaptersState } from '../types';
+import type { Chapter, ChaptersState, ChapterWithMetadata } from '../types';
 
 export const useChapters = (bookId: string | null) => {
   const { isInitialized, hasLocalData } = useSync();
@@ -18,6 +18,7 @@ export const useChapters = (bookId: string | null) => {
 
     try {
       const chapters = await bibleService.fetchChaptersByBookId(id);
+
       setState(prev => ({
         ...prev,
         chapters,
@@ -73,7 +74,8 @@ export const useChapters = (bookId: string | null) => {
       ...chapter,
       title: `Chapter ${chapter.chapter_number}`,
       verseRange: `1 - ${chapter.total_verses}`,
-    }));
+      isAvailable: (chapter as any).isAvailable || false,
+    })) as ChapterWithMetadata[];
   }, [state.chapters]);
 
   return {

@@ -17,7 +17,7 @@ import { useTheme } from '../../../shared/context/ThemeContext';
 import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
 import { useChapters } from '../hooks/useChapters';
 import { ChapterCard } from '../components/ChapterCard';
-import type { Book, Chapter } from '../types';
+import type { Book, ChapterWithMetadata } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 
 type ChapterScreenProps = NativeStackScreenProps<
@@ -142,7 +142,7 @@ export const ChapterScreen: React.FC = () => {
   };
 
   const createMockTrackForChapter = (
-    chapter: Chapter
+    chapter: ChapterWithMetadata
   ): import('../../../shared/context/MediaPlayerContext').MediaTrack => {
     // Estimate duration based on verse count (rough calculation)
     const estimatedDuration = chapter.total_verses * 20; // ~20 seconds per verse
@@ -161,7 +161,7 @@ export const ChapterScreen: React.FC = () => {
 
   // formatVerseCount moved to ChapterCard component
 
-  const handleChapterPress = (chapter: Chapter) => {
+  const handleChapterPress = (chapter: ChapterWithMetadata) => {
     // Navigate to verses screen using React Navigation
     navigation.navigate('BibleVerses', { book, chapter });
   };
@@ -182,7 +182,7 @@ export const ChapterScreen: React.FC = () => {
     }
   };
 
-  const handlePlayChapter = (chapter: Chapter) => {
+  const handlePlayChapter = (chapter: ChapterWithMetadata) => {
     // Create mock track data and load it into the media player
     const mockTrack = createMockTrackForChapter(chapter);
 
@@ -194,18 +194,22 @@ export const ChapterScreen: React.FC = () => {
     mediaActions.play();
   };
 
-  const handleQueueChapter = (chapter: Chapter) => {
+  const handleQueueChapter = (chapter: ChapterWithMetadata) => {
     // TODO: Implement queue chapter functionality
     console.log('Queue chapter:', chapter);
   };
 
-  const renderChapterCard = ({ item: chapter }: { item: Chapter }) => (
+  const renderChapterCard = ({
+    item: chapter,
+  }: {
+    item: ChapterWithMetadata;
+  }) => (
     <ChapterCard
       chapter={chapter}
       onPress={handleChapterPress}
       onQueue={handleQueueChapter}
       onPlay={handlePlayChapter}
-      isAvailable={chapter.total_verses > 0} // Available if it has verses
+      isAvailable={chapter.isAvailable} // Use the isAvailable field from metadata
       isCloudAvailable={true} // Always available in cloud since it's in our database
     />
   );

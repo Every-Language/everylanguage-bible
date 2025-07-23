@@ -41,7 +41,8 @@
   },
   "tabs": {
     "bible": "Bible",
-    "playlists": "Playlists"
+    "playlists": "Playlists",
+    "downloads": "Downloads"
   },
   "bible": {
     "oldTestament": "Old Testament",

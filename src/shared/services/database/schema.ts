@@ -102,6 +102,38 @@ export interface AvailableVersionCache {
   last_availability_check: string;
 }
 
+// Media Files Table Interface (Non-syncing table)
+export interface LocalMediaFile {
+  id: string;
+  language_entity_id: string;
+  sequence_id: string;
+  media_type: string;
+  local_path: string;
+  remote_path: string;
+  file_size: number;
+  duration_seconds: number;
+  upload_status: string;
+  publish_status: string;
+  check_status: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  chapter_id: string | null;
+  verses: string; // JSON string of verse IDs
+}
+
+// Media Files Verses Table Interface (Syncing table)
+export interface LocalMediaFileVerse {
+  id: string;
+  media_file_id: string;
+  verse_id: string;
+  start_time_seconds: number;
+  created_at: string;
+  updated_at: string;
+  synced_at: string;
+}
+
 export const DATABASE_NAME = 'everylanguage_bible.db';
 export const DATABASE_VERSION = 1;
 
@@ -241,6 +273,46 @@ export const createTables = async (
     )
   `);
 
+  // Media Files Table (Non-syncing table)
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS media_files (
+      id TEXT PRIMARY KEY,
+      language_entity_id TEXT NOT NULL,
+      sequence_id TEXT NOT NULL,
+      media_type TEXT NOT NULL,
+      local_path TEXT NOT NULL,
+      remote_path TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      duration_seconds INTEGER NOT NULL,
+      upload_status TEXT NOT NULL,
+      publish_status TEXT NOT NULL,
+      check_status TEXT NOT NULL,
+      version INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      deleted_at TEXT,
+      chapter_id TEXT,
+      verses TEXT NOT NULL,
+      FOREIGN KEY (language_entity_id) REFERENCES language_entities_cache (id),
+      FOREIGN KEY (chapter_id) REFERENCES chapters (id)
+    )
+  `);
+
+  // Media Files Verses Table (Syncing table)
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS media_files_verses (
+      id TEXT PRIMARY KEY,
+      media_file_id TEXT NOT NULL,
+      verse_id TEXT NOT NULL,
+      start_time_seconds INTEGER NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (media_file_id) REFERENCES media_files (id) ON DELETE CASCADE,
+      FOREIGN KEY (verse_id) REFERENCES verses (id) ON DELETE CASCADE
+    )
+  `);
+
   // Create indexes for better performance
   await db.execAsync(
     'CREATE INDEX IF NOT EXISTS idx_books_testament ON books(testament)'
@@ -341,6 +413,43 @@ export const createTables = async (
     'CREATE INDEX IF NOT EXISTS idx_available_versions_cache_version_id ON available_versions_cache(version_id)'
   );
 
+  // Media Files Table Indexes
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_language_entity_id ON media_files(language_entity_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_sequence_id ON media_files(sequence_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_media_type ON media_files(media_type)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_upload_status ON media_files(upload_status)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_publish_status ON media_files(publish_status)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_chapter_id ON media_files(chapter_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_deleted_at ON media_files(deleted_at)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_updated_at ON media_files(updated_at)'
+  );
+
+  // Media Files Verses Indexes
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_verses_media_file_id ON media_files_verses(media_file_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_verses_verse_id ON media_files_verses(verse_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_verses_start_time_seconds ON media_files_verses(start_time_seconds)'
+  );
+
   // Initialize sync metadata for bible content
   await db.execAsync(`
     INSERT OR IGNORE INTO sync_metadata (table_name, last_sync)
@@ -379,10 +488,20 @@ export const createTables = async (
     VALUES ('user_saved_versions', '1970-01-01T00:00:00.000Z')
   `);
 
+  // Initialize sync metadata for media files verses
+  await db.execAsync(`
+    INSERT OR IGNORE INTO sync_metadata (table_name, last_sync)
+    VALUES ('media_files_verses', '1970-01-01T00:00:00.000Z')
+  `);
+
   console.log('Database tables created successfully');
 };
 
 export const dropTables = async (db: SQLite.SQLiteDatabase): Promise<void> => {
+  // Drop media files table first (due to foreign key constraints)
+  await db.execAsync('DROP TABLE IF EXISTS media_files');
+  await db.execAsync('DROP TABLE IF EXISTS media_files_verses');
+
   // Drop language selection tables first (due to foreign key constraints)
   await db.execAsync('DROP TABLE IF EXISTS available_versions_cache');
   await db.execAsync('DROP TABLE IF EXISTS user_saved_versions');
@@ -432,6 +551,16 @@ export const getTableSchema = () => ({
   },
   user_saved_versions: {
     tableName: 'user_saved_versions',
+    primaryKey: 'id',
+    timestampField: 'updated_at',
+  },
+  media_files: {
+    tableName: 'media_files',
+    primaryKey: 'id',
+    timestampField: 'updated_at',
+  },
+  media_files_verses: {
+    tableName: 'media_files_verses',
     primaryKey: 'id',
     timestampField: 'updated_at',
   },

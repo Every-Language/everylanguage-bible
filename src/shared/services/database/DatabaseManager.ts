@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { DATABASE_NAME, createTables, dropTables } from './schema';
 
-const CURRENT_DATABASE_VERSION = 4; // Increment when schema changes
+const CURRENT_DATABASE_VERSION = 5; // Increment when schema changes
 
 // Enhanced error types for better error handling
 export class DatabaseError extends Error {
@@ -276,10 +276,9 @@ class DatabaseManager {
         'PRAGMA user_version'
       );
       currentVersion = result?.user_version || 1;
-    } catch (error) {
+    } catch {
       console.log(
-        'No previous database version found, starting from version 1:',
-        error
+        'No previous database version found, starting from version 1'
       );
     }
 
@@ -301,6 +300,11 @@ class DatabaseManager {
     if (currentVersion < 4) {
       await this.migrateToVersion4();
       currentVersion = 4;
+    }
+
+    if (currentVersion < 5) {
+      await this.migrateToVersion5();
+      currentVersion = 5;
     }
 
     // Update database version
@@ -512,6 +516,48 @@ class DatabaseManager {
       console.log('Successfully migrated to version 4');
     } catch (error) {
       console.error('Error during migration to version 4:', error);
+      throw error;
+    }
+  }
+
+  private async migrateToVersion5(): Promise<void> {
+    if (!this.db) return;
+
+    console.log(
+      'Migrating database to version 5: Updating media_files_verses table schema'
+    );
+
+    try {
+      // Check if there's a schema mismatch by trying to access the table
+      try {
+        await this.db.execAsync('SELECT COUNT(*) FROM media_files_verses');
+        console.log('media_files_verses table exists and is accessible');
+      } catch {
+        console.log(
+          'media_files_verses table has schema issues, dropping and recreating'
+        );
+
+        // Drop the table if it exists
+        await this.db.execAsync('DROP TABLE IF EXISTS media_files_verses');
+
+        // Drop any existing indexes
+        await this.db.execAsync(
+          'DROP INDEX IF EXISTS idx_media_files_verses_media_file_id'
+        );
+        await this.db.execAsync(
+          'DROP INDEX IF EXISTS idx_media_files_verses_verse_id'
+        );
+        await this.db.execAsync(
+          'DROP INDEX IF EXISTS idx_media_files_verses_sequence_order'
+        );
+        await this.db.execAsync(
+          'DROP INDEX IF EXISTS idx_media_files_verses_start_time_seconds'
+        );
+      }
+
+      console.log('Successfully migrated to version 5');
+    } catch (error) {
+      console.error('Error during migration to version 5:', error);
       throw error;
     }
   }

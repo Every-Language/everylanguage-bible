@@ -2,13 +2,13 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
-import type { Chapter } from '../types';
+import type { ChapterWithMetadata } from '../types';
 
 interface ChapterCardProps {
-  chapter: Chapter;
-  onPress: (chapter: Chapter) => void;
-  onQueue?: (chapter: Chapter) => void;
-  onPlay?: (chapter: Chapter) => void;
+  chapter: ChapterWithMetadata;
+  onPress: (chapter: ChapterWithMetadata) => void;
+  onQueue?: (chapter: ChapterWithMetadata) => void;
+  onPlay?: (chapter: ChapterWithMetadata) => void;
   /** Whether the chapter content is locally available for offline use */
   isAvailable?: boolean;
   /** Whether the chapter content is available in the cloud for download */

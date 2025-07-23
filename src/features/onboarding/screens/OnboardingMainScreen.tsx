@@ -108,7 +108,7 @@ export const OnboardingMainScreen: React.FC<OnboardingMainScreenProps> = ({
           <OnboardingCard
             icon='🌍'
             title='Choose Your Language'
-            description='Download the bible in your mother tongue or any other language. Internet is required.'
+            description='Choose the bible in your mother tongue or any other language. Internet is required.'
             backgroundColor={theme.colors.primary}
             onPress={canProceed ? onNavigateToMotherTongue : undefined}
             disabled={!canProceed}
