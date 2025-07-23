@@ -1,7 +1,10 @@
 import { supabase } from '../../api/supabase';
 import DatabaseManager from '../../database/DatabaseManager';
+import { MediaFilesService } from '../../database/MediaFilesService';
 
 const databaseManager = DatabaseManager.getInstance();
+const mediaFilesService = MediaFilesService.getInstance();
+
 import type {
   SyncOptions,
   SyncResult,
@@ -14,6 +17,7 @@ import type { Tables } from '@everylanguage/shared-types';
 export interface MediaFilesVersesSyncOptions extends SyncOptions {
   forceFullSync?: boolean;
   checkVersionOnly?: boolean;
+  mediaFileIds?: string[]; // Optional: sync specific media files only
 }
 
 // Enhanced error types for better error handling
@@ -133,7 +137,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
     try {
       console.log('Starting media files verses sync...');
 
-      // Sync media files verses
+      // Sync media files verses using the new approach
       const mediaFilesVersesResult = await this.syncMediaFilesVerses(options);
       results.push(mediaFilesVersesResult);
 
@@ -155,23 +159,65 @@ class MediaFilesVersesSyncService implements BaseSyncService {
   }
 
   /**
-   * Sync media files verses data
+   * Sync media files verses data using the new approach:
+   * 1. Get media files from local media_files table
+   * 2. For each media file, check if there's corresponding data in Supabase media_files_verses
+   * 3. Download any existing data
    */
   private async syncMediaFilesVerses(
-    _options: MediaFilesVersesSyncOptions = {}
+    options: MediaFilesVersesSyncOptions = {}
   ): Promise<SyncResult> {
     try {
       await this.updateSyncStatus('media_files_verses', 'syncing');
 
-      const lastSync = await this.getLastSync('media_files_verses');
-      console.log(`Syncing media_files_verses since: ${lastSync}`);
+      console.log('Starting media files verses sync with new approach...');
 
-      // Fetch media files verses from Supabase
+      // Step 1: Get media files from local media_files table
+      let mediaFiles;
+      if (options.mediaFileIds && options.mediaFileIds.length > 0) {
+        // Sync specific media files only
+        mediaFiles = [];
+        for (const mediaFileId of options.mediaFileIds) {
+          const mediaFile =
+            await mediaFilesService.getMediaFileById(mediaFileId);
+          if (mediaFile) {
+            mediaFiles.push(mediaFile);
+          }
+        }
+        console.log(`Syncing ${mediaFiles.length} specific media files`);
+      } else {
+        // Get all media files
+        mediaFiles = await mediaFilesService.getMediaFiles({
+          include_deleted: false, // Don't sync deleted files
+        });
+        console.log(`Found ${mediaFiles.length} media files to check`);
+      }
+
+      if (!mediaFiles || mediaFiles.length === 0) {
+        console.log('No media files found to sync');
+        await this.updateSyncStatus('media_files_verses', 'idle');
+        return {
+          success: true,
+          tableName: 'media_files_verses',
+          recordsSynced: 0,
+        };
+      }
+
+      // Step 2: For each media file, check and download corresponding media_files_verses data
+      let totalRecordsSynced = 0;
+      const mediaFileIds = mediaFiles.map((mf: any) => mf.id);
+
+      console.log(
+        `Checking for media_files_verses data for ${mediaFileIds.length} media files`
+      );
+
+      // Fetch all media_files_verses data for these media files from Supabase
       const { data: mediaFilesVerses, error } = await supabase
         .from('media_files_verses')
         .select('*')
-        .gte('updated_at', lastSync)
-        .order('updated_at', { ascending: true });
+        .in('media_file_id', mediaFileIds)
+        .order('media_file_id', { ascending: true })
+        .order('start_time_seconds', { ascending: true });
 
       if (error) {
         throw new MediaFilesVersesSyncError(
@@ -182,7 +228,9 @@ class MediaFilesVersesSyncService implements BaseSyncService {
       }
 
       if (!mediaFilesVerses || mediaFilesVerses.length === 0) {
-        console.log('No new media files verses to sync');
+        console.log(
+          'No media_files_verses data found in Supabase for these media files'
+        );
         await this.updateSyncStatus('media_files_verses', 'idle');
         return {
           success: true,
@@ -191,13 +239,38 @@ class MediaFilesVersesSyncService implements BaseSyncService {
         };
       }
 
-      console.log(`Syncing ${mediaFilesVerses.length} media files verses`);
+      console.log(
+        `Found ${mediaFilesVerses.length} media_files_verses records in Supabase`
+      );
 
-      // Validate and upsert media files verses
+      // Step 3: Validate and upsert the data
       const validatedMediaFilesVerses = mediaFilesVerses.map(
         validateMediaFileVerseData
       );
+
+      // Group by media_file_id for better logging
+      const groupedByMediaFile = validatedMediaFilesVerses.reduce(
+        (acc, mfv) => {
+          if (!acc[mfv.media_file_id]) {
+            acc[mfv.media_file_id] = [];
+          }
+          acc[mfv.media_file_id].push(mfv);
+          return acc;
+        },
+        {} as Record<string, typeof validatedMediaFilesVerses>
+      );
+
+      console.log(
+        `Syncing verses data for ${Object.keys(groupedByMediaFile).length} media files:`
+      );
+      Object.entries(groupedByMediaFile).forEach(([mediaFileId, verses]) => {
+        console.log(
+          `  - Media file ${mediaFileId}: ${(verses as any[]).length} verses`
+        );
+      });
+
       await this.upsertMediaFilesVerses(validatedMediaFilesVerses);
+      totalRecordsSynced = validatedMediaFilesVerses.length;
 
       // Update sync metadata
       const now = new Date().toISOString();
@@ -207,7 +280,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
       const result: SyncResult = {
         success: true,
         tableName: 'media_files_verses',
-        recordsSynced: mediaFilesVerses.length,
+        recordsSynced: totalRecordsSynced,
       };
 
       this.notifyListeners(result);
@@ -230,6 +303,20 @@ class MediaFilesVersesSyncService implements BaseSyncService {
       this.notifyListeners(errorResult);
       return errorResult;
     }
+  }
+
+  /**
+   * Sync media files verses for a specific media file
+   */
+  async syncForMediaFile(mediaFileId: string): Promise<SyncResult[]> {
+    return this.syncAll({ mediaFileIds: [mediaFileId] });
+  }
+
+  /**
+   * Sync media files verses for multiple specific media files
+   */
+  async syncForMediaFiles(mediaFileIds: string[]): Promise<SyncResult[]> {
+    return this.syncAll({ mediaFileIds });
   }
 
   /**
@@ -343,13 +430,20 @@ class MediaFilesVersesSyncService implements BaseSyncService {
    */
   async hasRemoteChanges(tableName: string): Promise<boolean> {
     try {
-      const lastSync = await this.getLastSync(tableName);
+      // For the new approach, we check if there are any media files locally
+      // and if there might be corresponding data in Supabase
+      const mediaFiles = await mediaFilesService.getMediaFiles({
+        include_deleted: false,
+      });
 
-      // Check if there are any records updated since last sync
+      if (mediaFiles.length === 0) {
+        return false;
+      }
+
+      // Check if there are any media_files_verses records in Supabase
       const { data, error } = await supabase
         .from('media_files_verses' as const)
-        .select('updated_at')
-        .gte('updated_at', lastSync)
+        .select('id')
         .limit(1);
 
       if (error) {
