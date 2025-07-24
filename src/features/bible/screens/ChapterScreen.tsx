@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,10 +15,12 @@ import type {
 } from '@react-navigation/native-stack';
 import { useTheme } from '../../../shared/context/ThemeContext';
 import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
+import type { MediaTrack } from '../../../shared/context/MediaPlayerContext';
 import { useChapters } from '../hooks/useChapters';
 import { ChapterCard } from '../components/ChapterCard';
 import type { Book, ChapterWithMetadata } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
+import { ChapterDownloadModal } from '@/features/downloads/components/ChapterDownloadModal';
 
 type ChapterScreenProps = NativeStackScreenProps<
   BibleStackParamList,
@@ -34,6 +36,11 @@ export const ChapterScreen: React.FC = () => {
 
   const { book } = route.params;
   const { chapters, loading, error } = useChapters(book.id);
+
+  // Modal state for unavailable chapters
+  const [showUnavailableModal, setShowUnavailableModal] = useState(false);
+  const [selectedChapter, setSelectedChapter] =
+    useState<ChapterWithMetadata | null>(null);
 
   const styles = StyleSheet.create({
     container: {
@@ -133,6 +140,8 @@ export const ChapterScreen: React.FC = () => {
   });
 
   const formatTestament = (_book: Book) => {
+    console.log('Current book', _book);
+
     // You can implement proper testament detection based on book data
     return 'OLD TESTAMENT'; // Placeholder
   };
@@ -143,7 +152,7 @@ export const ChapterScreen: React.FC = () => {
 
   const createMockTrackForChapter = (
     chapter: ChapterWithMetadata
-  ): import('../../../shared/context/MediaPlayerContext').MediaTrack => {
+  ): MediaTrack => {
     // Estimate duration based on verse count (rough calculation)
     const estimatedDuration = chapter.total_verses * 20; // ~20 seconds per verse
 
@@ -162,6 +171,13 @@ export const ChapterScreen: React.FC = () => {
   // formatVerseCount moved to ChapterCard component
 
   const handleChapterPress = (chapter: ChapterWithMetadata) => {
+    // Check if chapter is available
+    if (!chapter.isAvailable) {
+      setSelectedChapter(chapter);
+      setShowUnavailableModal(true);
+      return;
+    }
+
     // Navigate to verses screen using React Navigation
     navigation.navigate('BibleVerses', { book, chapter });
   };
@@ -197,6 +213,11 @@ export const ChapterScreen: React.FC = () => {
   const handleQueueChapter = (chapter: ChapterWithMetadata) => {
     // TODO: Implement queue chapter functionality
     console.log('Queue chapter:', chapter);
+  };
+
+  const handleCloseModal = () => {
+    setShowUnavailableModal(false);
+    setSelectedChapter(null);
   };
 
   const renderChapterCard = ({
@@ -301,6 +322,16 @@ export const ChapterScreen: React.FC = () => {
         </View>
       </View>
       <View style={styles.content}>{renderContent()}</View>
+
+      <ChapterDownloadModal
+        bookName={'Psalms'}
+        visible={showUnavailableModal}
+        chapterTitle={
+          selectedChapter ? `Chapter ${selectedChapter.chapter_number}` : ''
+        }
+        chapterId={selectedChapter?.id || ''}
+        onClose={handleCloseModal}
+      />
     </SafeAreaView>
   );
 };

@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { logger } from '../../../shared/utils/logger';
 
 // Environment configuration for the app
 export const env = {
@@ -17,8 +18,8 @@ export const env = {
 // Type-safe environment variable access
 export function getRequiredEnvVar(name: string, value?: string): string {
   if (!value || value.trim() === '') {
-    console.error(`Missing or empty environment variable: ${name}`);
-    console.error('Available environment variables:', {
+    logger.error(`Missing or empty environment variable: ${name}`);
+    logger.error('Available environment variables:', {
       EXPO_PUBLIC_SUPABASE_URL: env.supabase.url,
       EXPO_PUBLIC_SUPABASE_ANON_KEY: env.supabase.anonKey
         ? '[REDACTED]'

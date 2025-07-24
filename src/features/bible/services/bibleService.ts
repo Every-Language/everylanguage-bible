@@ -1,5 +1,6 @@
 import { localDataService } from '@/shared/services/database/LocalDataService';
 import DatabaseManager from '@/shared/services/database/DatabaseManager';
+import { logger } from '../../../shared/utils/logger';
 
 const databaseManager = DatabaseManager.getInstance();
 import type { Book } from '../types';
@@ -10,7 +11,7 @@ export const bibleService = {
     try {
       await databaseManager.waitForReady(5000); // 5 second timeout
     } catch (error) {
-      console.error('Database readiness check failed:', error);
+      logger.error('Database readiness check failed:', error);
       throw new Error(
         'Database not ready. Please wait for the app to finish loading or try restarting.'
       );
@@ -84,7 +85,7 @@ export const bibleService = {
       await this.ensureDatabaseReady();
       return await localDataService.isDataAvailable();
     } catch (error) {
-      console.error('Failed to check data availability:', error);
+      logger.error('Failed to check data availability:', error);
       return false;
     }
   },

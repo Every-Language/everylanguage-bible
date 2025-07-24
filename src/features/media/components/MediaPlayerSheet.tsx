@@ -250,6 +250,7 @@ const MediaPlayerContent: React.FC = () => {
 };
 
 export const MediaPlayerSheet: React.FC = () => {
+  const { theme } = useTheme();
   const { state, actions } = useMediaPlayer();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
@@ -311,7 +312,10 @@ export const MediaPlayerSheet: React.FC = () => {
         onChange={handleSheetChanges}
         backdropComponent={() => null}
         backgroundComponent={BlurredBackground}
-        handleIndicatorStyle={[styles.handle, { backgroundColor: '#ccc' }]}
+        handleIndicatorStyle={[
+          styles.handle,
+          { backgroundColor: theme.colors.border },
+        ]}
         enablePanDownToClose={false}
         enableDynamicSizing={false}
         enableOverDrag={false}

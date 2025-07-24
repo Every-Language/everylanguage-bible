@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { useAuthContext } from './AuthProvider';
+import { logger } from '../../../shared/utils/logger';
 import { useTheme, Button, createThemedStyles, getInputStyle } from '@/shared';
 import { useTranslations } from '@/shared/context/LocalizationContext';
 
@@ -62,7 +63,7 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
       }
     } catch (error) {
       // Error handling is done in the hook
-      console.error('Auth error:', error);
+      logger.auth('Auth error:', error);
     }
   };
 

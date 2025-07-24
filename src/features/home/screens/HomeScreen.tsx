@@ -84,7 +84,7 @@ export const HomeScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={styles.safeArea}>
       {/* Main App Content */}
       <View
         style={[
@@ -159,6 +159,9 @@ export const HomeScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
@@ -175,7 +178,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     elevation: 4,
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,

@@ -75,8 +75,16 @@ export const LanguageSearch: React.FC<LanguageSearchProps> = ({
                 <View style={styles.searchResultCounts}>
                   {language.availableVersionCounts.audio > 0 && (
                     <View style={styles.countBadge}>
-                      <Ionicons name='volume-high' size={12} color='#4CAF50' />
-                      <Text style={[styles.countText, { color: '#4CAF50' }]}>
+                      <Ionicons
+                        name='volume-high'
+                        size={12}
+                        color={theme.colors.success}
+                      />
+                      <Text
+                        style={[
+                          styles.countText,
+                          { color: theme.colors.success },
+                        ]}>
                         {language.availableVersionCounts.audio}
                       </Text>
                     </View>

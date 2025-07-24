@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { OnboardingSlideContainer } from '../components/OnboardingSlideContainer';
@@ -13,8 +14,15 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   const { theme } = useTheme();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <OnboardingSlideContainer onComplete={onComplete} />
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

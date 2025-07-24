@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, StyleSheet } from 'react-native';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import {
 } from '@/shared/context/OnboardingContext';
 import { AuthProvider } from '@/features/auth';
 import { HomeScreen } from '@/features/home';
+import { logger } from '@/shared/utils/logger';
 import { OnboardingScreen } from '@/features/onboarding/screens/OnboardingScreen';
 
 const StatusBarWrapper: React.FC = () => {
@@ -27,6 +28,7 @@ const StatusBarWrapper: React.FC = () => {
 };
 
 const MainContent: React.FC = () => {
+  const { theme } = useTheme();
   const {
     showOnboarding,
     checkOnboardingStatus,
@@ -48,7 +50,7 @@ const MainContent: React.FC = () => {
       // Check onboarding status first
       await checkOnboardingStatus();
     } catch (error) {
-      console.error('App: Failed to initialize:', error);
+      logger.error('App: Failed to initialize:', error);
       setError(
         error instanceof Error ? error.message : 'Failed to initialize app'
       );
@@ -69,15 +71,10 @@ const MainContent: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: '#f5f5f5',
-        }}>
-        <ActivityIndicator size='large' color='#007AFF' />
-        <Text style={{ marginTop: 16, fontSize: 16, color: '#666' }}>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size='large' color={theme.colors.primary} />
+        <Text
+          style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
           Loading Bible App...
         </Text>
       </View>
@@ -87,48 +84,21 @@ const MainContent: React.FC = () => {
   // Error state
   if (error) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: '#f5f5f5',
-          padding: 20,
-        }}>
-        <Text
-          style={{
-            fontSize: 18,
-            fontWeight: 'bold',
-            color: '#333',
-            marginBottom: 8,
-          }}>
+      <View style={styles.errorContainer}>
+        <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
           Initialization Failed
         </Text>
         <Text
-          style={{
-            fontSize: 14,
-            color: '#666',
-            textAlign: 'center',
-            marginBottom: 20,
-          }}>
+          style={[styles.errorMessage, { color: theme.colors.textSecondary }]}>
           {error}
         </Text>
         <Text
-          style={{
-            fontSize: 16,
-            color: '#007AFF',
-            textDecorationLine: 'underline',
-          }}
+          style={[styles.retryButton, { color: theme.colors.primary }]}
           onPress={handleRetry}>
           Retry
         </Text>
         <Text
-          style={{
-            fontSize: 14,
-            color: '#999',
-            marginTop: 20,
-            textDecorationLine: 'underline',
-          }}
+          style={[styles.resetButton, { color: theme.colors.textSecondary }]}
           onPress={resetOnboarding}>
           Reset Onboarding (Dev)
         </Text>
@@ -154,7 +124,7 @@ const App: React.FC = () => {
             <SyncProvider>
               <AuthProvider>
                 <MediaPlayerProvider>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
+                  <GestureHandlerRootView style={styles.gestureHandlerRoot}>
                     <StatusBarWrapper />
                     <MainContent />
                   </GestureHandlerRootView>
@@ -169,3 +139,43 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    fontSize: 16,
+    textDecorationLine: 'underline',
+  },
+  resetButton: {
+    fontSize: 14,
+    marginTop: 20,
+    textDecorationLine: 'underline',
+  },
+  gestureHandlerRoot: {
+    flex: 1,
+  },
+});

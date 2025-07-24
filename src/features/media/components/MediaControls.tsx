@@ -65,13 +65,14 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
 
   if (!state.currentTrack) return null;
 
+  const containerStyle = [
+    styles.container,
+    compact && styles.compactContainer,
+    { paddingBottom: compact ? Math.max(insets.bottom, 8) : 8 },
+  ];
+
   return (
-    <View
-      style={[
-        styles.container,
-        compact && styles.compactContainer,
-        { paddingBottom: compact ? Math.max(insets.bottom, 8) : 8 }, // Ensure proper bottom padding in compact mode
-      ]}>
+    <View style={containerStyle}>
       {/* Progress Bar */}
       <View style={styles.progressBarContainer}>
         <View
@@ -197,6 +198,7 @@ const styles = StyleSheet.create({
   compactContainer: {
     paddingVertical: 4,
   },
+
   progressBarContainer: {
     height: 2,
     marginBottom: 8,

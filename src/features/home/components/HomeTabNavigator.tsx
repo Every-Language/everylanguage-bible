@@ -16,7 +16,7 @@ export const HomeTabNavigator: React.FC<HomeTabNavigatorProps> = ({
   const { theme } = useTheme();
   const t = useTranslations();
 
-  const tabs: HomeTab[] = ['Bible', 'Playlists'];
+  const tabs: HomeTab[] = ['Bible', 'Playlists', 'Downloads'];
 
   return (
     <View

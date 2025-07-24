@@ -12,3 +12,6 @@ export * from './media';
 
 // Home feature
 export * from './home';
+
+// Downloads feature
+export * from './downloads';

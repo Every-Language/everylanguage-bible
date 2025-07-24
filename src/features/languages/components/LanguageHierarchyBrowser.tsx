@@ -105,8 +105,16 @@ const LanguageNodeWrapper: React.FC<LanguageNodeWrapperProps> = ({
                 <View style={styles.availabilityCounts}>
                   {node.availableVersionCounts.audio > 0 && (
                     <View style={styles.countBadge}>
-                      <Ionicons name='volume-high' size={10} color='#4CAF50' />
-                      <Text style={[styles.countText, { color: '#4CAF50' }]}>
+                      <Ionicons
+                        name='volume-high'
+                        size={10}
+                        color={theme.colors.success}
+                      />
+                      <Text
+                        style={[
+                          styles.countText,
+                          { color: theme.colors.success },
+                        ]}>
                         {node.availableVersionCounts.audio}
                       </Text>
                     </View>

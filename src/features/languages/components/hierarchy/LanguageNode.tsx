@@ -86,8 +86,16 @@ export const LanguageNode: React.FC<LanguageNodeProps> = ({
                 <View style={styles.availabilityCounts}>
                   {node.availableVersionCounts.audio > 0 && (
                     <View style={styles.countBadge}>
-                      <Ionicons name='volume-high' size={10} color='#4CAF50' />
-                      <Text style={[styles.countText, { color: '#4CAF50' }]}>
+                      <Ionicons
+                        name='volume-high'
+                        size={10}
+                        color={theme.colors.success}
+                      />
+                      <Text
+                        style={[
+                          styles.countText,
+                          { color: theme.colors.success },
+                        ]}>
                         {node.availableVersionCounts.audio}
                       </Text>
                     </View>
@@ -98,9 +106,13 @@ export const LanguageNode: React.FC<LanguageNodeProps> = ({
                       <Ionicons
                         name='document-text'
                         size={10}
-                        color='#2196F3'
+                        color={theme.colors.info}
                       />
-                      <Text style={[styles.countText, { color: '#2196F3' }]}>
+                      <Text
+                        style={[
+                          styles.countText,
+                          { color: theme.colors.info },
+                        ]}>
                         {node.availableVersionCounts.text}
                       </Text>
                     </View>

@@ -2,6 +2,7 @@ import * as TaskManager from 'expo-task-manager';
 import { bibleSync } from './bible/BibleSyncService';
 import { languageSync } from './language/LanguageSyncService';
 import { MediaFilesVersesSyncService } from './media';
+import { logger } from '../../utils/logger';
 
 const BACKGROUND_SYNC_TASK = 'background-content-sync';
 
@@ -38,7 +39,7 @@ export class BackgroundSyncService {
         // Rate limit background checks for bible content
         const now = Date.now();
         if (now - this.lastBackgroundCheck < this.BACKGROUND_CHECK_COOLDOWN) {
-          console.log('Background sync: Too frequent, skipping');
+          logger.sync('Background sync: Too frequent, skipping');
           return { success: false, reason: 'rate_limited' };
         }
         this.lastBackgroundCheck = now;
@@ -55,35 +56,35 @@ export class BackgroundSyncService {
         let hasNewData = false;
 
         if (bibleUpdateCheck.needsUpdate) {
-          console.log('Background sync: Bible content updates detected');
+          logger.sync('Background sync: Bible content updates detected');
           // Use smaller batch size for background sync
           await bibleSync.syncAll({ batchSize: 100 });
           hasNewData = true;
         }
 
         if (languageUpdateCheck.needsUpdate) {
-          console.log('Background sync: Language content updates detected');
+          logger.sync('Background sync: Language content updates detected');
           // Use smaller batch size for background sync
           await languageSync.syncAll({ batchSize: 100 });
           hasNewData = true;
         }
 
         if (mediaUpdateCheck.needsUpdate) {
-          console.log('Background sync: Media files verses updates detected');
+          logger.sync('Background sync: Media files verses updates detected');
           // Use smaller batch size for background sync
           await mediaFilesVersesSync.syncAll({ batchSize: 100 });
           hasNewData = true;
         }
 
         if (hasNewData) {
-          console.log('Background sync: New data synced successfully');
+          logger.sync('Background sync: New data synced successfully');
           return { success: true, hasNewData: true };
         } else {
-          console.log('Background sync: All content is up to date');
+          logger.sync('Background sync: All content is up to date');
           return { success: true, hasNewData: false };
         }
       } catch (error) {
-        console.error('Background bible sync failed:', error);
+        logger.error('Background bible sync failed:', error);
         return { success: false, error: error?.toString() };
       }
     });
@@ -97,7 +98,7 @@ export class BackgroundSyncService {
 
       // In Expo Go, background tasks are not supported
       if (__DEV__) {
-        console.log(
+        logger.sync(
           '⚠️ Background tasks are not supported in development/Expo Go'
         );
         return;
@@ -110,15 +111,15 @@ export class BackgroundSyncService {
       );
 
       if (isAlreadyRegistered) {
-        console.log('Background sync task already registered');
+        logger.sync('Background sync task already registered');
         return;
       }
 
       // Register the task (this will only work in production builds)
-      console.log('Registering background sync task...');
-      console.log('✅ Background content sync registered successfully');
+      logger.sync('Registering background sync task...');
+      logger.sync('✅ Background content sync registered successfully');
     } catch (error) {
-      console.error('Failed to register background task:', error);
+      logger.error('Failed to register background task:', error);
       // Don't throw - this should be non-critical
     }
   }
@@ -132,11 +133,11 @@ export class BackgroundSyncService {
 
       if (isRegistered) {
         await TaskManager.unregisterTaskAsync(BACKGROUND_SYNC_TASK);
-        console.log('Background sync task unregistered');
+        logger.sync('Background sync task unregistered');
       }
       this.isRegistered = false;
     } catch (error) {
-      console.error('Failed to unregister background task:', error);
+      logger.error('Failed to unregister background task:', error);
     }
   }
 
@@ -153,7 +154,7 @@ export class BackgroundSyncService {
 
       return bibleUpdateCheck.needsUpdate || languageUpdateCheck.needsUpdate;
     } catch (error) {
-      console.error('Error in checkForChanges:', error);
+      logger.error('Error in checkForChanges:', error);
       return false;
     }
   }
@@ -176,10 +177,7 @@ export class BackgroundSyncService {
         return await bibleSync.hasRemoteChanges(tableName);
       }
     } catch (error) {
-      console.error(
-        `Error checking for remote changes in ${tableName}:`,
-        error
-      );
+      logger.error(`Error checking for remote changes in ${tableName}:`, error);
       return false;
     }
   }
@@ -200,10 +198,10 @@ export class BackgroundSyncService {
       ];
 
       if (allChangedTables.length > 0) {
-        console.log('Remote changes detected in tables:', allChangedTables);
+        logger.sync('Remote changes detected in tables:', allChangedTables);
       }
     } catch (error) {
-      console.error('Error checking for remote changes:', error);
+      logger.error('Error checking for remote changes:', error);
     }
   }
 
@@ -222,7 +220,7 @@ export class BackgroundSyncService {
           : BackgroundTaskStatus.DENIED;
       }
     } catch (error) {
-      console.error('Error getting background task status:', error);
+      logger.error('Error getting background task status:', error);
       return BackgroundTaskStatus.DENIED;
     }
   }
@@ -234,7 +232,7 @@ export class BackgroundSyncService {
         task => task.taskName === BACKGROUND_SYNC_TASK
       );
     } catch (error) {
-      console.error('Error checking if task is registered:', error);
+      logger.error('Error checking if task is registered:', error);
       return false;
     }
   }
@@ -251,7 +249,7 @@ export class BackgroundSyncService {
    */
   async performManualSync(): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('Starting manual content sync...');
+      logger.sync('Starting manual content sync...');
 
       const [bibleUpdateCheck, languageUpdateCheck] = await Promise.all([
         bibleSync.needsUpdate(),
@@ -272,16 +270,16 @@ export class BackgroundSyncService {
 
       if (syncedContent.length > 0) {
         const message = `Successfully synced: ${syncedContent.join(', ')}`;
-        console.log(message);
+        logger.sync(message);
         return { success: true, message };
       } else {
         const message = 'All content is already up to date';
-        console.log(message);
+        logger.sync(message);
         return { success: true, message };
       }
     } catch (error) {
       const message = `Manual sync failed: ${error}`;
-      console.error(message);
+      logger.error(message);
       return { success: false, message };
     }
   }

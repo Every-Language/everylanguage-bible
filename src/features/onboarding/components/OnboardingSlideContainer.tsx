@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Dimensions } from 'react-native';
+import { View, Dimensions, StyleSheet } from 'react-native';
 import { OnboardingMainScreen } from '../screens/OnboardingMainScreen';
 import { MotherTongueSearchScreen } from '../screens/MotherTongueSearchScreen';
 import { ImportBibleScreen } from '../screens/ImportBibleScreen';
@@ -62,5 +62,12 @@ export const OnboardingSlideContainer: React.FC<
     }
   };
 
-  return <View style={{ flex: 1, width: screenWidth }}>{renderScreen()}</View>;
+  return <View style={styles.container}>{renderScreen()}</View>;
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    width: screenWidth,
+  },
+});

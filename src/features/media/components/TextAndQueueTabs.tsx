@@ -131,12 +131,7 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
       return (
         <View style={styles.contentScrollView}>
           <Text
-            style={{
-              color: theme.colors.textSecondary,
-              fontSize: 16,
-              textAlign: 'center',
-              paddingTop: 40,
-            }}>
+            style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
             Loading verses...
           </Text>
         </View>
@@ -149,12 +144,7 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
       return (
         <View style={styles.contentScrollView}>
           <Text
-            style={{
-              color: theme.colors.textSecondary,
-              fontSize: 16,
-              textAlign: 'center',
-              paddingTop: 40,
-            }}>
+            style={[styles.noDataText, { color: theme.colors.textSecondary }]}>
             {currentTextVersion
               ? `No verses available for this chapter`
               : 'Select a text version to view verse text'}
@@ -177,50 +167,45 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
           showsVerticalScrollIndicator={false}>
           {/* Text Version Badge */}
           <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 12,
-              borderRadius: 8,
-              marginBottom: 20,
-              backgroundColor: theme.colors.surface,
-            }}>
+            style={[
+              styles.textVersionBadge,
+              { backgroundColor: theme.colors.surface },
+            ]}>
             <MaterialIcons name='book' size={16} color={theme.colors.primary} />
-            <View style={{ marginLeft: 8 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: '600' }}>
+            <View style={styles.textVersionInfo}>
+              <Text
+                style={[styles.textVersionName, { color: theme.colors.text }]}>
                 {currentTextVersion.name}
               </Text>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+              <Text
+                style={[
+                  styles.textVersionLanguage,
+                  { color: theme.colors.textSecondary },
+                ]}>
                 {currentTextVersion.languageName}
               </Text>
             </View>
           </View>
 
           {/* No Data Warning */}
-          <View style={{ padding: 20, alignItems: 'center' }}>
+          <View style={styles.noDataContainer}>
             <MaterialIcons
               name='warning'
               size={48}
               color={theme.colors.error || '#ff4444'}
             />
             <Text
-              style={{
-                color: theme.colors.error || '#ff4444',
-                fontSize: 18,
-                fontWeight: '600',
-                textAlign: 'center',
-                marginTop: 12,
-              }}>
+              style={[
+                styles.noDataTitle,
+                { color: theme.colors.error || '#ff4444' },
+              ]}>
               No Text Data Available
             </Text>
             <Text
-              style={{
-                color: theme.colors.textSecondary,
-                fontSize: 14,
-                textAlign: 'center',
-                marginTop: 8,
-                lineHeight: 20,
-              }}>
+              style={[
+                styles.noDataMessage,
+                { color: theme.colors.textSecondary },
+              ]}>
               The selected text version &ldquo;{currentTextVersion.name}&rdquo;
               doesn&apos;t have any verse texts available yet. Try selecting a
               different text version or contact support.
@@ -556,5 +541,47 @@ const styles = StyleSheet.create({
   queueItemSubtitle: {
     fontSize: 14,
     marginTop: 2,
+  },
+  loadingText: {
+    fontSize: 16,
+    textAlign: 'center',
+    paddingTop: 40,
+  },
+  noDataText: {
+    fontSize: 16,
+    textAlign: 'center',
+    paddingTop: 40,
+  },
+  textVersionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  textVersionInfo: {
+    marginLeft: 8,
+  },
+  textVersionName: {
+    fontWeight: '600',
+  },
+  textVersionLanguage: {
+    fontSize: 12,
+  },
+  noDataContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noDataTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  noDataMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
   },
 });

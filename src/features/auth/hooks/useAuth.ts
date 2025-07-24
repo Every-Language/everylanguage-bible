@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { authService } from '../services/authService';
+import { logger } from '../../../shared/utils/logger';
 import type { AuthState } from '@/shared/types/auth';
 
 export function useAuth() {
@@ -23,7 +24,7 @@ export function useAuth() {
           isInitialized: true,
         });
       } catch (error) {
-        console.error('Failed to initialize auth:', error);
+        logger.error('Failed to initialize auth:', error);
         setAuthState({
           user: null,
           session: null,
