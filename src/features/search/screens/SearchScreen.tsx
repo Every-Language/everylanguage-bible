@@ -6,7 +6,6 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   Keyboard,
   Image,
 } from 'react-native';
@@ -14,8 +13,13 @@ import { useHeader } from '@/shared';
 import { Fonts, Dimensions } from '@/shared/constants';
 import { useTheme } from '@/shared/store';
 import { usePlayerOverlayHeight } from '@/shared/hooks';
-import { useAudioStore } from '@/shared/store';
+
 import type { AudioRecording } from '@/types';
+import {
+  SearchResultItem,
+  InstructionalText,
+  SearchEmptyState,
+} from '../components/search-screen';
 
 // Import the search icon
 import searchIcon from '../../../../assets/images/utility_icons/search.png';
@@ -25,116 +29,153 @@ interface SearchScreenProps {
   // No props needed - options menu handled by MainNavigator
 }
 
-interface SearchResultItemProps {
-  recording: AudioRecording;
-  onPress: (recording: AudioRecording) => void;
-  testID?: string;
-}
-
-const SearchResultItem: React.FC<SearchResultItemProps> = ({
-  recording,
-  onPress,
-  testID,
-}) => {
-  const { colors } = useTheme();
-
-  const styles = StyleSheet.create({
-    container: {
-      backgroundColor: colors.chapterTileBackground || colors.background,
-      borderRadius: 16,
-      padding: Dimensions.spacing.md,
-      marginHorizontal: Dimensions.spacing.lg,
-      marginBottom: Dimensions.spacing.sm,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    contentContainer: {
-      flex: 1,
-    },
-    title: {
-      fontSize: Fonts.size.lg,
-      fontWeight: Fonts.weight.semibold,
-      color: colors.text,
-      marginBottom: Dimensions.spacing.xs,
-    },
-    description: {
-      fontSize: Fonts.size.sm,
-      color: colors.secondary,
-      lineHeight: 20,
-    },
-    duration: {
-      fontSize: Fonts.size.xs,
-      color: colors.secondary,
-      marginTop: Dimensions.spacing.xs,
-    },
-    audioIcon: {
-      marginLeft: Dimensions.spacing.md,
-      padding: Dimensions.spacing.sm,
-      borderRadius: 20,
-      backgroundColor: colors.primary + '20',
-    },
-    audioIconText: {
-      fontSize: Fonts.size.lg,
-    },
-  });
-
-  const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <TouchableOpacity
-      style={styles.container}
-      onPress={() => onPress(recording)}
-      accessibilityRole='button'
-      accessibilityLabel={`${recording.title} audio recording`}
-      testID={testID}>
-      <View style={styles.contentContainer}>
-        <Text style={styles.title} numberOfLines={2}>
-          {recording.title}
-        </Text>
-        {recording.description && (
-          <Text style={styles.description} numberOfLines={2}>
-            {recording.description}
-          </Text>
-        )}
-        <Text style={styles.duration}>
-          {formatDuration(recording.duration_seconds ?? 0)}
-        </Text>
-      </View>
-      <View style={styles.audioIcon}>
-        <Text style={styles.audioIconText}>🎵</Text>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
 export const SearchScreen: React.FC<SearchScreenProps> = () => {
-  const { colors } = useTheme();
-  const { setCurrentScreen, setBottomContent } = useHeader();
-  const { collapsedHeight } = usePlayerOverlayHeight();
-  const { searchRecordings } = useAudioStore();
-
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<AudioRecording[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
   const searchInputRef = useRef<TextInput>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Define search bar styles to match toggle buttons exactly
+  const { colors } = useTheme();
+  const { collapsedHeight } = usePlayerOverlayHeight();
+  const { setCurrentScreen, setBottomContent } = useHeader();
+
+  // Set up header
+  useEffect(() => {
+    setCurrentScreen('search');
+  }, [setCurrentScreen]);
+
+  // Debounced search function
+  const performSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setHasSearched(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setHasSearched(true);
+
+    try {
+      // Mock search logic - replace with actual search API
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+
+      const mockResults: AudioRecording[] = [
+        {
+          id: 'luke-1-1-10',
+          title: 'Luke Chapter 1 (verses 1-10)',
+          description: 'The birth of John the Baptist foretold',
+          duration_seconds: 120,
+          audio_file_url: '',
+          created_at: null,
+          original_language: 'en',
+          status: 'active',
+          target_language: 'en',
+          updated_at: null,
+          user_id: null,
+        },
+        {
+          id: 'john-3-16',
+          title: 'John Chapter 3 (verse 16)',
+          description: 'For God so loved the world...',
+          duration_seconds: 30,
+          audio_file_url: '',
+          created_at: null,
+          original_language: 'en',
+          status: 'active',
+          target_language: 'en',
+          updated_at: null,
+          user_id: null,
+        },
+      ];
+
+      // Filter based on query (simple mock filtering)
+      const filtered = mockResults.filter(
+        result =>
+          result.title.toLowerCase().includes(query.toLowerCase()) ||
+          result.description?.toLowerCase().includes(query.toLowerCase())
+      );
+
+      setSearchResults(filtered);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Debounce search input
+  useEffect(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300);
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, performSearch]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+  };
+
+  const handleResultPress = (_recording: AudioRecording) => {
+    // TODO: Implement playback when audio store is properly set up
+    Keyboard.dismiss();
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setHasSearched(false);
+    searchInputRef.current?.focus();
+  };
+
+  const handleSearchSubmit = () => {
+    Keyboard.dismiss();
+    performSearch(searchQuery);
+  };
+
+  // Auto-focus search input when screen loads
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Create search bar for header
   const searchBarStyles = StyleSheet.create({
     inputContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      borderRadius: Dimensions.radius.md, // Match toggle button radius
+      borderRadius: Dimensions.radius.md,
       paddingHorizontal: Dimensions.spacing.md,
-      height: 32, // 32 pixels tall
+      height: 32,
       borderWidth: 1,
-      borderColor: colors.navigationSelected, // Match toggle button border
-      flex: 1, // Take up all available space
+      borderColor: colors.navigationSelected,
+      backgroundColor: colors.navigationUnselected,
+      flex: 1,
     },
     searchIcon: {
       width: 14,
@@ -145,87 +186,22 @@ export const SearchScreen: React.FC<SearchScreenProps> = () => {
     input: {
       flex: 1,
       fontSize: Fonts.size.base,
-      paddingVertical: 0, // Remove default padding for better control
-      minHeight: 20, // Ensure text is visible
+      paddingVertical: 0,
+      minHeight: 20,
+      color: colors.navigationUnselectedText,
+    },
+    clearButton: {
+      padding: Dimensions.spacing.xs,
+      marginLeft: Dimensions.spacing.xs,
+    },
+    clearButtonText: {
+      fontSize: Fonts.size.sm,
+      color: colors.navigationUnselectedText,
     },
   });
 
-  // Define callback functions before using them
-  const handleSearch = useCallback(
-    async (query?: string) => {
-      const searchText = query || searchQuery;
-      if (searchText.trim() === '') return;
-
-      setIsSearching(true);
-      try {
-        const results = await searchRecordings(searchText.trim());
-        setSearchResults(results);
-        setHasSearched(true);
-      } catch (error) {
-        console.error('Search failed:', error);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    },
-    [searchQuery, searchRecordings]
-  );
-
-  const handleSearchSubmit = useCallback(() => {
-    handleSearch();
-  }, [handleSearch]);
-
-  const handleSearchChange = useCallback(
-    (text: string) => {
-      setSearchQuery(text);
-
-      // Clear results if search is empty
-      if (text.trim() === '') {
-        setSearchResults([]);
-        setHasSearched(false);
-        return;
-      }
-
-      // Debounced search - search after user stops typing for 300ms
-      const timeoutId = setTimeout(() => {
-        handleSearch(text);
-      }, 300);
-
-      // Store timeout ID for cleanup if needed
-      return () => clearTimeout(timeoutId);
-    },
-    [handleSearch]
-  );
-
-  const handleResultPress = useCallback((recording: AudioRecording) => {
-    // TODO: Navigate to the recording or start playing it
-    console.log('Selected recording:', recording.title);
-    Keyboard.dismiss();
-  }, []);
-
-  // Set up header content
-  useEffect(() => {
-    setCurrentScreen('search');
-  }, [setCurrentScreen]);
-
-  // Auto-focus search input when screen loads
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInputRef.current) {
-        searchInputRef.current.focus();
-      }
-    }, 100); // Small delay to ensure the screen is fully rendered
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Create search bar component that fills the available width
   const searchBar = (
-    <View
-      style={[
-        searchBarStyles.inputContainer,
-        { backgroundColor: colors.navigationUnselected },
-      ]}>
+    <View style={searchBarStyles.inputContainer}>
       <Image
         source={searchIcon}
         style={searchBarStyles.searchIcon}
@@ -233,10 +209,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = () => {
       />
       <TextInput
         ref={searchInputRef}
-        style={[
-          searchBarStyles.input,
-          { color: colors.navigationUnselectedText },
-        ]}
+        style={searchBarStyles.input}
         value={searchQuery}
         onChangeText={handleSearchChange}
         placeholder='Search Bible content...'
@@ -245,8 +218,15 @@ export const SearchScreen: React.FC<SearchScreenProps> = () => {
         onSubmitEditing={handleSearchSubmit}
         autoCorrect={false}
         autoCapitalize='none'
-        clearButtonMode='while-editing'
       />
+      {searchQuery.length > 0 && (
+        <TouchableOpacity
+          style={searchBarStyles.clearButton}
+          onPress={clearSearch}
+          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
+          <Text style={searchBarStyles.clearButtonText}>✕</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -255,6 +235,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = () => {
     setBottomContent(searchBar);
   }, [setBottomContent, searchQuery, colors]);
 
+  // Render search result item
   const renderSearchResult = ({
     item,
     index,
@@ -269,122 +250,63 @@ export const SearchScreen: React.FC<SearchScreenProps> = () => {
     />
   );
 
-  // Instructional text component to show below search bar
-  const InstructionalText: React.FC = () => (
-    <View style={instructionalStyles.container}>
-      <Text style={[instructionalStyles.title, { color: colors.text }]}>
-        Search the Bible
-      </Text>
-      <Text style={[instructionalStyles.text, { color: colors.secondary }]}>
-        Search for books, chapters, or specific content
-      </Text>
-    </View>
-  );
-
   const renderEmptyState = () => {
     if (isSearching) {
       return (
-        <View style={emptyStateStyles.container}>
-          <ActivityIndicator size='large' color={colors.primary} />
-          <Text style={[emptyStateStyles.text, { color: colors.secondary }]}>
-            Searching...
-          </Text>
-        </View>
+        <SearchEmptyState
+          isSearching={true}
+          hasSearched={hasSearched}
+          hasResults={false}
+        />
       );
     }
 
     if (hasSearched && searchResults.length === 0) {
       return (
-        <View style={emptyStateStyles.container}>
-          <Text style={[emptyStateStyles.title, { color: colors.text }]}>
-            No results found
-          </Text>
-          <Text style={[emptyStateStyles.text, { color: colors.secondary }]}>
-            Try searching for a different book or chapter
-          </Text>
-        </View>
+        <SearchEmptyState
+          isSearching={false}
+          hasSearched={true}
+          hasResults={false}
+        />
       );
     }
 
-    return null; // Don't show empty state initially - instructions are now above
+    return null;
   };
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.bibleBooksBackground || colors.background,
+      backgroundColor: colors.background,
     },
     resultsContainer: {
       flex: 1,
     },
     resultsList: {
       paddingTop: Dimensions.spacing.md,
-      paddingBottom: (collapsedHeight || 0) + Dimensions.spacing.md,
-    },
-  });
-
-  const instructionalStyles = StyleSheet.create({
-    container: {
-      paddingHorizontal: Dimensions.spacing.lg,
-      paddingTop: Dimensions.spacing.md,
-      paddingBottom: Dimensions.spacing.lg,
-    },
-    title: {
-      fontSize: Fonts.size.xl,
-      fontWeight: Fonts.weight.bold,
-      textAlign: 'center',
-      marginBottom: Dimensions.spacing.sm,
-    },
-    text: {
-      fontSize: Fonts.size.base,
-      textAlign: 'center',
-      lineHeight: 22,
-    },
-  });
-
-  const emptyStateStyles = StyleSheet.create({
-    container: {
-      flex: 1,
-      justifyContent: 'flex-start',
-      alignItems: 'center',
-      paddingHorizontal: Dimensions.spacing.xl,
-      paddingTop: Dimensions.spacing.xl,
-      paddingBottom: (collapsedHeight || 0) + Dimensions.spacing.xl,
-    },
-    title: {
-      fontSize: Fonts.size.xl,
-      fontWeight: Fonts.weight.bold,
-      textAlign: 'center',
-      marginBottom: Dimensions.spacing.sm,
-    },
-    text: {
-      fontSize: Fonts.size.base,
-      textAlign: 'center',
-      lineHeight: 22,
+      paddingBottom: collapsedHeight + Dimensions.spacing.md,
     },
   });
 
   return (
     <View style={styles.container}>
-      {/* Show instructional text when not searching and no results */}
-      {!hasSearched && !isSearching && <InstructionalText />}
-
+      {/* Instructions or Results */}
       <View style={styles.resultsContainer}>
-        {searchResults.length > 0 ? (
+        {!hasSearched && <InstructionalText />}
+
+        {hasSearched && searchResults.length > 0 && (
           <FlatList
             data={searchResults}
             renderItem={renderSearchResult}
             keyExtractor={item => item.id}
-            contentContainerStyle={styles.resultsList}
             showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps='handled'
+            contentContainerStyle={styles.resultsList}
+            testID='search-results-list'
           />
-        ) : (
-          renderEmptyState()
         )}
-      </View>
 
-      {/* Options menu now handled by MainNavigator */}
+        {renderEmptyState()}
+      </View>
     </View>
   );
 };
