@@ -709,7 +709,6 @@ export class LocalDataService {
           vt.id as verse_text_id,
           vt.verse_text,
           vt.text_version_id,
-          vt.project_id,
           vt.publish_status,
           vt.version as verse_text_version,
           vt.created_at as verse_text_created_at,
@@ -726,9 +725,9 @@ export class LocalDataService {
 
       // Add text version filter if provided
       if (textVersionId) {
-        query += ` AND (vt.text_version_id = ? OR vt.project_id = ?)`;
+        query += ` AND vt.text_version_id = ?`;
         query += ` AND (vt.publish_status = 'published' OR vt.publish_status IS NULL)`;
-        params.push(textVersionId, textVersionId);
+        params.push(textVersionId);
       }
 
       query += ` ORDER BY v.verse_number ASC`;
@@ -744,7 +743,6 @@ export class LocalDataService {
         verse_text_id: string | null;
         verse_text: string | null;
         text_version_id: string | null;
-        project_id: string | null;
         publish_status: string | null;
         verse_text_version: number | null;
         verse_text_created_at: string | null;
@@ -767,7 +765,6 @@ export class LocalDataService {
               id: row.verse_text_id,
               verse_id: row.verse_id,
               text_version_id: row.text_version_id,
-              project_id: row.project_id,
               verse_text: row.verse_text!,
               publish_status: row.publish_status!,
               version: row.verse_text_version!,
@@ -806,7 +803,6 @@ export class LocalDataService {
           vt.id,
           vt.verse_id,
           vt.text_version_id,
-          vt.project_id,
           vt.verse_text,
           vt.publish_status,
           vt.version,
@@ -816,14 +812,13 @@ export class LocalDataService {
         FROM verse_texts vt
         INNER JOIN verses v ON vt.verse_id = v.id
         WHERE v.chapter_id = ?
-          AND (vt.text_version_id = ? OR vt.project_id = ?)
+          AND vt.text_version_id = ?
           AND vt.publish_status = 'published'
         ORDER BY v.verse_number ASC
       `;
 
       console.log('🗃️ DB - Executing query with params:', [
         chapterId,
-        textVersionId,
         textVersionId,
       ]);
 
@@ -838,8 +833,8 @@ export class LocalDataService {
 
       // Check if any verse_texts exist for this text version
       const versionTextsCount = await db.getFirstAsync<{ count: number }>(
-        'SELECT COUNT(*) as count FROM verse_texts WHERE text_version_id = ? OR project_id = ?',
-        [textVersionId, textVersionId]
+        'SELECT COUNT(*) as count FROM verse_texts WHERE text_version_id = ?',
+        [textVersionId]
       );
       console.log(
         '🗃️ DB - Verse texts for this version:',
@@ -848,7 +843,6 @@ export class LocalDataService {
 
       const rows = await db.getAllAsync<LocalVerseText>(query, [
         chapterId,
-        textVersionId,
         textVersionId,
       ]);
 
@@ -859,7 +853,6 @@ export class LocalDataService {
           id: firstRow?.id,
           verse_id: firstRow?.verse_id,
           text_version_id: firstRow?.text_version_id,
-          project_id: firstRow?.project_id,
           verse_text: firstRow?.verse_text?.substring(0, 50) + '...',
         });
       }

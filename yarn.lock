@@ -878,10 +878,10 @@
     "@eslint/core" "^0.15.1"
     levn "^0.4.1"
 
-"@everylanguage/shared-types@^1.0.0":
-  version "1.0.10"
-  resolved "https://registry.npmjs.org/@everylanguage/shared-types/-/shared-types-1.0.10.tgz"
-  integrity sha512-xMDbFqBtf7C4rl5rrFMzJOZU3MXqnBGnn7p4bU2VABNX4vatDof0EO2nYiSTjD2BiaRAbDjndQdtb6XpF0Prkg==
+"@everylanguage/shared-types@^1.0.11":
+  version "1.0.11"
+  resolved "https://registry.yarnpkg.com/@everylanguage/shared-types/-/shared-types-1.0.11.tgz#44c4a278efe203ae732d7a1a7ca2c68d88109128"
+  integrity sha512-yUz98WggJMUE4ClMcr4T2pfN6j5E/JFjIFits4dv/BhZxR2QmtS7V5ePQfPgUQO9EP3uB7PLVQV3Y5V5wWK+jQ==
   dependencies:
     "@typescript-eslint/eslint-plugin" "^8.34.1"
     "@typescript-eslint/parser" "^8.34.1"

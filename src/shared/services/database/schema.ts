@@ -50,7 +50,6 @@ export interface LocalVerseText {
   id: string;
   verse_id: string;
   text_version_id: string | null;
-  project_id: string | null;
   verse_text: string;
   publish_status: string;
   version: number;
@@ -208,7 +207,6 @@ export const createTables = async (
       id TEXT PRIMARY KEY,
       verse_id TEXT NOT NULL,
       text_version_id TEXT,
-      project_id TEXT,
       verse_text TEXT NOT NULL,
       publish_status TEXT NOT NULL,
       version INTEGER DEFAULT 1,
@@ -357,9 +355,7 @@ export const createTables = async (
   await db.execAsync(
     'CREATE INDEX IF NOT EXISTS idx_verse_texts_text_version_id ON verse_texts(text_version_id)'
   );
-  await db.execAsync(
-    'CREATE INDEX IF NOT EXISTS idx_verse_texts_project_id ON verse_texts(project_id)'
-  );
+
   await db.execAsync(
     'CREATE INDEX IF NOT EXISTS idx_verse_texts_publish_status ON verse_texts(publish_status)'
   );
@@ -379,7 +375,7 @@ export const createTables = async (
   );
   // ✅ NEW: Compound index for verse texts lookups
   await db.execAsync(
-    'CREATE INDEX IF NOT EXISTS idx_verse_texts_verse_version ON verse_texts(verse_id, text_version_id, project_id)'
+    'CREATE INDEX IF NOT EXISTS idx_verse_texts_verse_version ON verse_texts(verse_id, text_version_id)'
   );
 
   // Language Selection Feature Indexes

@@ -59,12 +59,10 @@ class VerseTextSyncService implements BaseSyncService {
    */
   async syncVerseTextsForVersion(
     versionId: string,
-    versionType: 'text_version' | 'project',
     options: VerseTextSyncOptions = {}
   ): Promise<SyncResult> {
     console.log('🌐 VerseTextSync - syncVerseTextsForVersion called:', {
       versionId,
-      versionType,
       options,
     });
 
@@ -85,7 +83,7 @@ class VerseTextSyncService implements BaseSyncService {
       await this.updateSyncStatus('verse_texts', 'syncing');
 
       console.log(
-        `🌐 VerseTextSync - Starting verse text sync for ${versionType}: ${versionId}`
+        `🌐 VerseTextSync - Starting verse text sync for text_version: ${versionId}`
       );
 
       const lastSync = options.forceFullSync
@@ -118,17 +116,10 @@ class VerseTextSyncService implements BaseSyncService {
           .limit(mobileBatchSize);
 
         // Filter by the specific version
-        if (versionType === 'text_version') {
-          console.log(
-            `🌐 VerseTextSync - Filtering by text_version_id: ${versionId}`
-          );
-          query = query.eq('text_version_id', versionId);
-        } else {
-          console.log(
-            `🌐 VerseTextSync - Filtering by project_id: ${versionId}`
-          );
-          query = query.eq('project_id', versionId);
-        }
+        console.log(
+          `🌐 VerseTextSync - Filtering by text_version_id: ${versionId}`
+        );
+        query = query.eq('text_version_id', versionId);
 
         if (lastFetchedId) {
           query = query.gt('id', lastFetchedId);
@@ -142,7 +133,7 @@ class VerseTextSyncService implements BaseSyncService {
           throw new VerseTextSyncError(
             `Failed to fetch verse texts: ${error.message}`,
             'FETCH_ERROR',
-            { versionId, versionType, error }
+            { versionId, error }
           );
         }
 
@@ -155,7 +146,6 @@ class VerseTextSyncService implements BaseSyncService {
             id: firstVerseText?.id,
             verse_id: firstVerseText?.verse_id,
             text_version_id: firstVerseText?.text_version_id,
-            project_id: firstVerseText?.project_id,
             verse_text: firstVerseText?.verse_text?.substring(0, 50) + '...',
           });
         }
@@ -180,7 +170,7 @@ class VerseTextSyncService implements BaseSyncService {
 
       if (allVerseTexts.length === 0) {
         await this.updateSyncStatus('verse_texts', 'idle');
-        console.log(`No verse texts found for ${versionType}: ${versionId}`);
+        console.log(`No verse texts found for text_version: ${versionId}`);
 
         const result: SyncResult = {
           success: true,
@@ -203,7 +193,7 @@ class VerseTextSyncService implements BaseSyncService {
       await this.updateSyncStatus('verse_texts', 'idle');
 
       console.log(
-        `Synced ${allVerseTexts.length} verse texts for ${versionType}: ${versionId}`
+        `Synced ${allVerseTexts.length} verse texts for text_version: ${versionId}`
       );
 
       const result: SyncResult = {
@@ -255,8 +245,8 @@ class VerseTextSyncService implements BaseSyncService {
       const params: any[] = [chapterId];
 
       if (textVersionId) {
-        query += ` AND (vt.text_version_id = ? OR vt.project_id = ?)`;
-        params.push(textVersionId, textVersionId);
+        query += ` AND vt.text_version_id = ?`;
+        params.push(textVersionId);
       }
 
       query += ` ORDER BY v.verse_number ASC`;
@@ -300,15 +290,10 @@ class VerseTextSyncService implements BaseSyncService {
       const query = `
         DELETE FROM verse_texts 
         WHERE text_version_id NOT IN (${placeholders}) 
-        AND project_id NOT IN (${placeholders})
-        AND text_version_id IS NOT NULL 
-        AND project_id IS NOT NULL
+        AND text_version_id IS NOT NULL
       `;
 
-      await databaseManager.execSingle(query, [
-        ...savedVersionIds,
-        ...savedVersionIds,
-      ]);
+      await databaseManager.execSingle(query, savedVersionIds);
       console.log('Cleaned up unused verse texts');
     } catch (error) {
       console.error('Error cleaning up unused verse texts:', error);
@@ -335,12 +320,12 @@ class VerseTextSyncService implements BaseSyncService {
 
       await databaseManager.transaction(async () => {
         const placeholders = batch
-          .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+          .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
           .join(', ');
 
         const query = `
           INSERT OR REPLACE INTO verse_texts (
-            id, verse_id, text_version_id, project_id, verse_text,
+            id, verse_id, text_version_id, verse_text,
             publish_status, version, created_at, updated_at, synced_at
           ) VALUES ${placeholders}
         `;
@@ -349,7 +334,6 @@ class VerseTextSyncService implements BaseSyncService {
           verseText.id,
           verseText.verse_id,
           verseText.text_version_id,
-          verseText.project_id,
           verseText.verse_text,
           verseText.publish_status,
           verseText.version,

@@ -158,15 +158,9 @@ export const createCurrentSelectionsSlice: StateCreator<
       });
 
       const verseTextSyncService = VerseTextSyncService.getInstance();
-      const versionType =
-        currentTextVersion.source === 'text_version'
-          ? 'text_version'
-          : 'project';
-      console.log('🔄 Sync - Using version type:', versionType);
 
       await verseTextSyncService.syncVerseTextsForVersion(
-        currentTextVersion.id,
-        versionType
+        currentTextVersion.id
       );
 
       set({
