@@ -70,10 +70,7 @@ const BlurredBackground: React.FC<BottomSheetBackgroundProps> = ({
         style={[
           StyleSheet.absoluteFillObject,
           {
-            backgroundColor:
-              theme.mode === 'dark'
-                ? 'rgba(0, 0, 0, 0.9)'
-                : 'rgba(255, 255, 255, 0.9)',
+            backgroundColor: theme.colors.overlay,
           },
         ]}
       />

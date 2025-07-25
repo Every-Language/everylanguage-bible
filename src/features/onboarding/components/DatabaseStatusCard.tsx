@@ -31,7 +31,10 @@ export const DatabaseStatusCard: React.FC<DatabaseStatusCardProps> = ({
           <View
             style={[
               styles.databaseCard,
-              { backgroundColor: theme.colors.surface },
+              {
+                backgroundColor: theme.colors.surface,
+                shadowColor: theme.colors.shadow,
+              },
             ]}>
             <View style={styles.cardIcon}>
               <Text style={styles.iconText}>🔍</Text>
@@ -57,7 +60,10 @@ export const DatabaseStatusCard: React.FC<DatabaseStatusCardProps> = ({
           <View
             style={[
               styles.databaseCard,
-              { backgroundColor: theme.colors.surface },
+              {
+                backgroundColor: theme.colors.surface,
+                shadowColor: theme.colors.shadow,
+              },
             ]}>
             <View style={styles.cardIcon}>
               <Text style={styles.iconText}>⚙️</Text>
@@ -109,7 +115,10 @@ export const DatabaseStatusCard: React.FC<DatabaseStatusCardProps> = ({
           <View
             style={[
               styles.databaseCard,
-              { backgroundColor: theme.colors.surface },
+              {
+                backgroundColor: theme.colors.surface,
+                shadowColor: theme.colors.shadow,
+              },
             ]}>
             <View
               style={[

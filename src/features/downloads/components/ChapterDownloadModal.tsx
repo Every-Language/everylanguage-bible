@@ -236,11 +236,14 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
       transparent={true}
       animationType='fade'
       onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { backgroundColor: theme.colors.overlay }]}>
         <View
           style={[
             styles.modalContainer,
-            { backgroundColor: theme.colors.background },
+            {
+              backgroundColor: theme.colors.background,
+              shadowColor: theme.colors.shadow,
+            },
           ]}>
           <View style={styles.iconContainer}>
             <MaterialIcons
@@ -489,7 +492,6 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // This is a standard overlay color
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -499,7 +501,6 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000', // This is a standard shadow color
     shadowOffset: {
       width: 0,
       height: 2,

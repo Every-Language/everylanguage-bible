@@ -81,7 +81,11 @@ export const AudioVersionSelector: React.FC<AudioVersionSelectorProps> = ({
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.7}>
-      <View style={styles.iconContainer}>
+      <View
+        style={[
+          styles.iconContainer,
+          { backgroundColor: theme.colors.surfaceVariant },
+        ]}>
         <Ionicons name='volume-high' size={20} color={theme.colors.primary} />
       </View>
 

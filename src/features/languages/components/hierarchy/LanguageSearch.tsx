@@ -95,9 +95,13 @@ export const LanguageSearch: React.FC<LanguageSearchProps> = ({
                       <Ionicons
                         name='document-text'
                         size={12}
-                        color='#2196F3'
+                        color={theme.colors.info}
                       />
-                      <Text style={[styles.countText, { color: '#2196F3' }]}>
+                      <Text
+                        style={[
+                          styles.countText,
+                          { color: theme.colors.info },
+                        ]}>
                         {language.availableVersionCounts.text}
                       </Text>
                     </View>

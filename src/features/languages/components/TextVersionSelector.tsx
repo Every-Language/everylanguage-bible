@@ -81,7 +81,11 @@ export const TextVersionSelector: React.FC<TextVersionSelectorProps> = ({
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.7}>
-      <View style={styles.iconContainer}>
+      <View
+        style={[
+          styles.iconContainer,
+          { backgroundColor: theme.colors.surfaceVariant },
+        ]}>
         <Ionicons name='book' size={20} color={theme.colors.primary} />
       </View>
 

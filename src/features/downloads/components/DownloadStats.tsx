@@ -26,7 +26,14 @@ export const DownloadStats: React.FC<DownloadStatsProps> = ({ stats }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.surface,
+          shadowColor: theme.colors.shadow,
+        },
+      ]}>
       <Text style={[styles.title, { color: theme.colors.text }]}>
         {t('downloads.downloadStatistics')}
       </Text>
@@ -73,7 +80,7 @@ export const DownloadStats: React.FC<DownloadStatsProps> = ({ stats }) => {
         </View>
       </View>
 
-      <View style={styles.sizeInfo}>
+      <View style={[styles.sizeInfo, { borderTopColor: theme.colors.border }]}>
         <Text style={[styles.sizeLabel, { color: theme.colors.textSecondary }]}>
           {t('downloads.totalSizeDownloaded')}:
         </Text>

@@ -214,7 +214,6 @@ const styles = StyleSheet.create({
   },
   disabledNode: {
     opacity: 0.6,
-    backgroundColor: '#f0f0f0',
   },
   nodeMetadata: {
     flexDirection: 'row',
@@ -237,7 +236,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   disabledText: {
-    color: '#999',
+    // Color will be applied via theme
   },
   noContentLabel: {
     fontSize: 12,

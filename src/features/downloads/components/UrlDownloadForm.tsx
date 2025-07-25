@@ -99,6 +99,7 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
       // Step 2: Download each file
       for (let i = 0; i < urlList.length; i++) {
         const url = urlList[i];
+        if (!url) continue; // Skip if URL is undefined
         const signedUrl = signedUrlsResult.urls?.[url];
 
         if (!signedUrl) {
@@ -197,16 +198,18 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
       if (urlList.length === 0) return;
 
       const firstUrl = urlList[0];
+      if (!firstUrl) return; // Additional safety check
+
       // Extract pathname from URL using regex
       const pathnameMatch = firstUrl.match(/https?:\/\/[^/]+(\/.*?)(?:\?|#|$)/);
       const pathname = pathnameMatch?.[1] || '/';
       const pathParts = pathname.split('/').filter(part => part.length > 0);
-      const extractedName =
-        pathParts.length > 0 ? pathParts[pathParts.length - 1] : 'download';
+      const lastPart = pathParts[pathParts.length - 1];
+      const extractedName = lastPart || 'download';
 
-      if (extractedName) {
+      if (extractedName && extractedName !== 'download') {
         // Remove query parameters and hash
-        const cleanName = extractedName.split('?')[0].split('#')[0];
+        const cleanName = extractedName.split('?')[0]?.split('#')[0];
 
         if (cleanName && cleanName !== '') {
           // Remove file extension for the base name
@@ -233,7 +236,14 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
   const isFormValid = urls.trim() !== '' && fileName.trim() !== '';
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.surface,
+          shadowColor: theme.colors.shadow,
+        },
+      ]}>
       <Text style={[styles.title, { color: theme.colors.text }]}>
         {t('downloads.downloadFromUrl')}
       </Text>

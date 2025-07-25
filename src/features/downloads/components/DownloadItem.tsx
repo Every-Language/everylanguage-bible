@@ -242,7 +242,14 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.surface,
+          shadowColor: theme.colors.shadow,
+        },
+      ]}>
       <View style={styles.header}>
         <Text
           style={[styles.fileName, { color: theme.colors.text }]}

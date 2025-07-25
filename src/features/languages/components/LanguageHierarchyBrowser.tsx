@@ -58,7 +58,10 @@ const LanguageNodeWrapper: React.FC<LanguageNodeWrapperProps> = ({
             paddingLeft,
             backgroundColor: theme.colors.background,
           },
-          isDisabled && styles.disabledNode,
+          isDisabled && [
+            styles.disabledNode,
+            { backgroundColor: theme.colors.surfaceVariant },
+          ],
         ]}
         onPress={() => !isDisabled && onSelect(node)}
         disabled={isDisabled}
@@ -84,7 +87,10 @@ const LanguageNodeWrapper: React.FC<LanguageNodeWrapperProps> = ({
               style={[
                 styles.nodeName,
                 { color: theme.colors.text },
-                isDisabled && styles.disabledText,
+                isDisabled && [
+                  styles.disabledText,
+                  { color: theme.colors.textSecondary },
+                ],
               ]}
               numberOfLines={2}>
               {node.name}
@@ -95,7 +101,10 @@ const LanguageNodeWrapper: React.FC<LanguageNodeWrapperProps> = ({
                 style={[
                   styles.nodeLevel,
                   { color: theme.colors.textSecondary },
-                  isDisabled && styles.disabledText,
+                  isDisabled && [
+                    styles.disabledText,
+                    { color: theme.colors.textSecondary },
+                  ],
                 ]}>
                 {node.level}
               </Text>
@@ -125,9 +134,13 @@ const LanguageNodeWrapper: React.FC<LanguageNodeWrapperProps> = ({
                       <Ionicons
                         name='document-text'
                         size={10}
-                        color='#2196F3'
+                        color={theme.colors.info}
                       />
-                      <Text style={[styles.countText, { color: '#2196F3' }]}>
+                      <Text
+                        style={[
+                          styles.countText,
+                          { color: theme.colors.info },
+                        ]}>
                         {node.availableVersionCounts.text}
                       </Text>
                     </View>
@@ -850,7 +863,6 @@ const styles = StyleSheet.create({
   },
   disabledNode: {
     opacity: 0.6,
-    backgroundColor: '#f0f0f0', // Light gray background for disabled nodes
   },
   nodeMetadata: {
     flexDirection: 'row',
@@ -873,7 +885,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   disabledText: {
-    color: '#999',
+    // Color will be applied via theme
   },
   noContentLabel: {
     fontSize: 12,
