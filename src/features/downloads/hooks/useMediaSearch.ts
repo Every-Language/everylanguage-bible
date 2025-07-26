@@ -2,9 +2,19 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/shared/services/api/supabase';
 import { logger } from '@/shared/utils/logger';
 
+interface MediaFile {
+  id: string;
+  start_verse_id: string | null;
+  version: number | null;
+  remote_path: string | null;
+  file_size: number | null;
+  deleted_at: string | null;
+  [key: string]: unknown;
+}
+
 interface MediaSearchState {
   isSearching: boolean;
-  searchResults: any[];
+  searchResults: MediaFile[];
   searchError: string | null;
 }
 

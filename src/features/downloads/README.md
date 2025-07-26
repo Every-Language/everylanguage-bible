@@ -1,390 +1,180 @@
 # Downloads Feature
 
-The Downloads feature provides a comprehensive download management system for Bible audio files using Expo FileSystem. It supports resumable downloads, progress tracking, batch operations, and offline storage.
+This feature provides comprehensive download management for the Bible app, including background downloads, progress tracking, and media file integration.
 
 ## Features
 
-- ✅ **Resumable Downloads**: Downloads can be paused and resumed
-- ✅ **Progress Tracking**: Real-time download progress with visual indicators
-- ✅ **Batch Downloads**: Download multiple files simultaneously
-- ✅ **Direct URL Downloads**: Download files directly from any URL
-- ✅ **Status Management**: Track download status (pending, downloading, completed, failed, paused, cancelled)
-- ✅ **File Management**: Delete completed downloads and manage storage
-- ✅ **Statistics**: View download statistics and success rates
-- ✅ **Filtering**: Filter downloads by status
-- ✅ **Error Handling**: Comprehensive error handling with retry mechanisms
-- ✅ **Offline Storage**: Files stored locally for offline access
+- **Background Downloads**: Downloads continue even when the app is in the background
+- **Progress Tracking**: Real-time progress updates for all downloads
+- **Retry Logic**: Automatic retry with exponential backoff for failed downloads
+- **Media File Integration**: Automatic integration with local media files database
+- **Batch Operations**: Support for downloading multiple files at once
+- **Queue Management**: Priority-based download queue with pause/resume functionality
 
-## Architecture
+## Continue Downloads Functionality
 
-### Components
+The "Continue Download" feature has been enhanced to ensure **ALL** pending and failed downloads are processed:
 
-- **DownloadService**: Core service handling file downloads using Expo FileSystem
-- **useDownloads**: React hook for managing download state and operations
-- **DownloadsScreen**: Main screen displaying downloads with filtering and management
-- **DownloadItem**: Individual download item component with progress and controls
-- **DownloadStats**: Statistics display component
-- **UrlDownloadForm**: Form component for downloading files directly from URLs
+### What it does:
 
-### File Structure
+1. **Retries ALL failed downloads**: Regardless of previous retry count, all failed downloads are retried
+2. **Processes ALL pending downloads**: All pending and paused downloads are processed, not just a limited batch
+3. **Resets retry counts**: Downloads that exceeded retry limits get a fresh start
+4. **Batch processing**: Downloads are processed in batches to respect concurrent limits while ensuring all are handled
 
-```
-src/features/downloads/
-├── components/
-│   ├── DownloadItem.tsx      # Individual download display
-│   ├── DownloadStats.tsx     # Statistics display
-│   ├── UrlDownloadForm.tsx   # URL download form
-│   └── index.ts
-├── hooks/
-│   ├── useDownloads.ts       # Main downloads hook
-│   └── index.ts
-├── screens/
-│   ├── DownloadsScreen.tsx   # Main downloads screen
-│   └── index.ts
-├── services/
-│   ├── downloadService.ts    # Core download service
-│   └── index.ts
-├── types/
-│   └── index.ts             # TypeScript types
-├── __tests__/
-│   ├── downloadService.test.ts
-│   └── UrlDownloadForm.test.tsx
-├── index.ts                 # Feature exports
-└── README.md
-```
+### Key improvements:
 
-## Usage
+- **Complete processing**: No downloads are left behind due to batch size limits
+- **Fresh retry attempts**: Failed downloads get their retry count reset for a new attempt
+- **Comprehensive logging**: Detailed logs show exactly what was processed
+- **Progress tracking**: Real-time updates on batch processing progress
 
-### Basic Download
+### Usage:
 
 ```typescript
-import { useDownloads } from '@/features/downloads/hooks';
-
-const MyComponent = () => {
-  const { downloadFile, downloads, isLoading } = useDownloads();
-
-  const handleDownload = async () => {
-    try {
-      await downloadFile(
-        'audio/genesis/chapter1.m4a',
-        'genesis_chapter1.m4a',
-        {
-          onProgress: (progress) => {
-            console.log(`Download progress: ${progress.progress * 100}%`);
-          },
-          onComplete: (item) => {
-            console.log('Download completed:', item.fileName);
-          },
-          onError: (error) => {
-            console.error('Download failed:', error);
-          },
-        }
-      );
-    } catch (error) {
-      console.error('Download error:', error);
-    }
-  };
-
-  return (
-    <View>
-      <Button title="Download Chapter" onPress={handleDownload} />
-      {isLoading && <Text>Downloading...</Text>}
-    </View>
-  );
-};
-```
-
-### Direct URL Download
-
-```typescript
-import { UrlDownloadForm } from '@/features/downloads/components';
-
-const MyComponent = () => {
-  return (
-    <UrlDownloadForm
-      onDownloadStart={() => {
-        console.log('Download started');
-      }}
-      onDownloadComplete={() => {
-        console.log('Download completed');
-      }}
-    />
-  );
-};
-```
-
-### Direct URL Download with Service
-
-```typescript
-import { useDownloads } from '@/features/downloads/hooks';
-import { downloadService } from '@/features/downloads/services';
-
-const MyComponent = () => {
-  const { downloadFile } = useDownloads();
-
-  const handleDirectUrlDownload = async () => {
-    try {
-      // Step 1: Get signed URLs for external URLs
-      const signedUrlsResult = await downloadService.getSignedUrlsForExternalUrls([
-        'https://example.com/audio/chapter1.mp3',
-        'https://example.com/audio/chapter2.mp3'
-      ], 24); // 24 hours expiration
-
-      // Step 2: Download files using signed URLs
-      for (const [originalUrl, signedUrl] of Object.entries(signedUrlsResult.urls)) {
-        await downloadFile(
-          `direct://${signedUrl}`,
-          'chapter.mp3',
-          {
-            onProgress: (progress) => {
-              console.log(`Download progress: ${progress.progress * 100}%`);
-            },
-            onComplete: (item) => {
-              console.log('Download completed:', item.fileName);
-            },
-            onError: (error) => {
-              console.error('Download failed:', error);
-            },
-          }
-        );
-      }
-    } catch (error) {
-      console.error('Download error:', error);
-    }
-  };
-
-  return (
-    <View>
-      <Button title="Download from URL" onPress={handleDirectUrlDownload} />
-    </View>
-  );
-};
-```
-
-### URL Download Workflow
-
-The proper workflow for downloading from URLs follows this pattern:
-
-1. **Get URLs**: User enters one or more URLs
-2. **Sign URLs**: The system gets signed URLs from the API (if required)
-3. **Download Files**: Files are downloaded using the signed URLs
-
-```typescript
-// Step 1: Get signed URLs for external URLs
-const signedUrlsResult = await downloadService.getSignedUrlsForExternalUrls(
-  ['https://example.com/audio1.mp3', 'https://example.com/audio2.mp3'],
-  24
-); // 24 hours expiration
-
-// Step 2: Download files using signed URLs
-for (const [originalUrl, signedUrl] of Object.entries(signedUrlsResult.urls)) {
-  await downloadService.downloadFile(`direct://${signedUrl}`, 'my-audio.mp3');
-}
-```
-
-### Batch Download
-
-```typescript
-const { downloadBatch } = useDownloads();
-
-const handleBatchDownload = async () => {
-  const files = [
-    {
-      filePath: 'audio/genesis/chapter1.m4a',
-      fileName: 'genesis_chapter1.m4a',
-    },
-    {
-      filePath: 'audio/genesis/chapter2.m4a',
-      fileName: 'genesis_chapter2.m4a',
-    },
-    {
-      filePath: 'audio/genesis/chapter3.m4a',
-      fileName: 'genesis_chapter3.m4a',
-    },
-  ];
-
-  const result = await downloadBatch(files);
-  console.log(`Downloaded ${result.successful} of ${result.total} files`);
-};
-```
-
-### Download Management
-
-```typescript
-const {
-  pauseDownload,
-  resumeDownload,
-  cancelDownload,
-  deleteDownload,
-  clearCompletedDownloads,
-  getDownloadsByStatus,
-  getDownloadStats,
-} = useDownloads();
-
-// Pause a download
-await pauseDownload(downloadId);
-
-// Resume a paused download
-await resumeDownload(downloadId);
-
-// Cancel a download
-await cancelDownload(downloadId);
-
-// Delete a completed download
-await deleteDownload(downloadId);
-
-// Clear all completed downloads
-await clearCompletedDownloads();
-
-// Get downloads by status
-const completedDownloads = getDownloadsByStatus('completed');
-const failedDownloads = getDownloadsByStatus('failed');
-
-// Get download statistics
-const stats = getDownloadStats();
+// Get summary of what will be processed
+const summary = backgroundDownloadService.getContinueDownloadsSummary();
 console.log(
-  `Success rate: ${(stats.completedDownloads / stats.totalDownloads) * 100}%`
+  `Will process ${summary.totalCount} downloads (${summary.pendingCount} pending, ${summary.failedCount} failed)`
+);
+
+// Continue all downloads
+const result = await backgroundDownloadService.continueDownloads();
+console.log(
+  `Processed ${result.processedCount} downloads (${result.successCount} succeeded, ${result.failedCount} failed, ${result.retriedCount} retried)`
 );
 ```
 
-## API Reference
+### UI Integration:
 
-### DownloadService
+The UI automatically shows:
 
-#### Methods
+- Total count of downloads to be processed
+- Breakdown of pending vs failed downloads
+- Real-time progress updates
+- Clear indication of what will happen when "Continue Download" is clicked
 
-- `getDownloadUrls(filePaths: string[], expirationHours?: number)`: Get signed URLs for downloads
-- `downloadFile(filePath: string, fileName: string, options?: DownloadOptions)`: Download a single file
-- `downloadBatch(files: Array<{filePath: string, fileName: string}>, options?: DownloadOptions)`: Download multiple files
-- `pauseDownload(id: string)`: Pause a download
-- `resumeDownload(id: string)`: Resume a paused download
-- `cancelDownload(id: string)`: Cancel a download
-- `deleteDownload(id: string)`: Delete a completed download
-- `clearCompletedDownloads()`: Clear all completed downloads
-- `getDownloadStats()`: Get download statistics
-- `getAllDownloads()`: Get all downloads
-- `getDownloadsByStatus(status: DownloadStatus)`: Get downloads by status
+## Background Download Service
 
-### useDownloads Hook
+The `BackgroundDownloadService` manages all background download operations with the following key methods:
 
-#### State
+### Core Methods
 
-- `downloads: DownloadItem[]`: Array of all downloads
-- `isLoading: boolean`: Loading state
-- `error: string | null`: Error state
+#### `continueDownloads()`
 
-#### Methods
+Processes ALL pending and failed downloads:
 
-- `downloadFile(filePath: string, fileName: string, options?: DownloadOptions)`: Download a single file
-- `downloadBatch(files: Array<{filePath: string, fileName: string}>, options?: DownloadOptions)`: Download multiple files
-- `pauseDownload(id: string)`: Pause a download
-- `resumeDownload(id: string)`: Resume a paused download
-- `cancelDownload(id: string)`: Cancel a download
-- `deleteDownload(id: string)`: Delete a completed download
-- `clearCompletedDownloads()`: Clear all completed downloads
-- `getDownloadsByStatus(status: DownloadStatus)`: Get downloads by status
-- `getDownloadStats()`: Get download statistics
-- `clearError()`: Clear error state
-- `refresh()`: Refresh downloads list
+- Retries all failed downloads (resets retry counts if needed)
+- Processes all pending and paused downloads
+- Returns comprehensive statistics
 
-### Types
+#### `processAllPendingDownloads()`
 
-```typescript
-interface DownloadItem {
-  id: string;
-  filePath: string;
-  fileName: string;
-  localPath: string;
-  fileSize?: number;
-  status: DownloadStatus;
-  progress: number;
-  error?: string;
-  createdAt: Date;
-  completedAt?: Date;
-  signedUrl?: string;
-  expiresAt?: Date;
-}
+New method that processes ALL pending downloads in batches:
 
-type DownloadStatus =
-  | 'pending'
-  | 'downloading'
-  | 'completed'
-  | 'failed'
-  | 'paused'
-  | 'cancelled';
+- Respects concurrent download limits
+- Processes downloads in batches of `maxConcurrentDownloads`
+- Ensures no downloads are left unprocessed
 
-interface DownloadProgress {
-  bytesWritten: number;
-  contentLength: number;
-  progress: number;
-}
+#### `retryFailedDownloads()`
 
-interface DownloadOptions {
-  onProgress?: (progress: DownloadProgress) => void;
-  onComplete?: (item: DownloadItem) => void;
-  onError?: (error: string) => void;
-  priority?: number;
-}
-```
+Enhanced to retry ALL failed downloads:
 
-## Integration
+- Resets retry counts for downloads that exceeded limits
+- Adds all failed downloads back to the queue
+- Provides fresh retry attempts
 
-The Downloads feature is integrated into the main app navigation as a tab alongside Bible and Playlists. Users can access it through the HomeTabNavigator.
-
-### Adding to Navigation
-
-The Downloads tab is automatically included in the home navigation:
+### Configuration
 
 ```typescript
-// In HomeTabNavigator.tsx
-const tabs: HomeTab[] = ['Bible', 'Playlists', 'Downloads'];
-
-// In HomeContainer.tsx
-case 'Downloads':
-  return <DownloadsScreen />;
+// config.ts
+export const downloadServiceConfig: DownloadServiceConfig = {
+  maxConcurrentDownloads: 3, // Process 3 downloads at once
+  retryAttempts: 3, // Default retry limit
+  retryDelay: 1000, // Base delay between retries
+};
 ```
 
-## Storage
+## Persistent Download Store
 
-Downloads are stored in the app's document directory under a `downloads/` folder:
+The `PersistentDownloadStore` provides persistent storage for downloads with enhanced retry management:
 
+### New Methods
+
+#### `resetRetryCount(id: string)`
+
+Resets the retry count for a specific download:
+
+- Sets retry count to 0
+- Clears last retry time
+- Useful for giving failed downloads a fresh start
+
+### Enhanced Methods
+
+#### `updateDownload(id: string, updates: Partial<PersistentDownloadItem>)`
+
+Enhanced to handle retry count resets and status updates.
+
+## Usage Examples
+
+### Basic Continue Downloads
+
+```typescript
+import { backgroundDownloadService } from './services/backgroundDownloadService';
+
+// Continue all downloads
+const result = await backgroundDownloadService.continueDownloads();
+console.log(`Processed ${result.processedCount} downloads`);
 ```
-FileSystem.documentDirectory + 'downloads/' + fileName
+
+### Get Summary Before Continuing
+
+```typescript
+const summary = backgroundDownloadService.getContinueDownloadsSummary();
+if (summary.canContinue) {
+  console.log(`Will process ${summary.totalCount} downloads`);
+  await backgroundDownloadService.continueDownloads();
+}
 ```
 
-Files are automatically organized and can be accessed offline once downloaded.
+### Hook Usage
+
+```typescript
+import { useBackgroundDownloads } from './hooks/useBackgroundDownloads';
+
+const { continueDownloads, getContinueDownloadsSummary, isProcessing } =
+  useBackgroundDownloads();
+
+const summary = getContinueDownloadsSummary();
+const handleContinue = async () => {
+  if (summary.canContinue && !isProcessing) {
+    await continueDownloads();
+  }
+};
+```
 
 ## Error Handling
 
-The feature includes comprehensive error handling:
+The system provides comprehensive error handling:
 
-- Network errors with retry mechanisms
-- Authentication errors
-- File system errors
-- Invalid URLs
-- Storage space issues
+- **Retry limits**: Configurable maximum retry attempts
+- **Exponential backoff**: Increasing delays between retries
+- **Fresh starts**: Reset retry counts for manual retry attempts
+- **Detailed logging**: Complete audit trail of all operations
 
-Errors are displayed to users with appropriate messaging and recovery options.
+## Performance Considerations
+
+- **Batch processing**: Downloads are processed in configurable batches
+- **Concurrent limits**: Respects system resource constraints
+- **Memory efficient**: Processes downloads without loading all into memory
+- **Background friendly**: Continues processing even when app is backgrounded
 
 ## Testing
 
-Run tests for the downloads feature:
+The enhanced functionality can be tested by:
 
-```bash
-npm test -- --testPathPattern=downloads
-```
-
-## Dependencies
-
-- `expo-file-system`: File system operations
-- `@supabase/supabase-js`: Authentication and API calls
-- React Native components for UI
-
-## Future Enhancements
-
-- Background download support
-- Download queue management
-- Network condition awareness
-- Automatic retry with exponential backoff
-- Download scheduling
-- Cloud sync for download preferences
+1. Creating multiple failed downloads
+2. Creating multiple pending downloads
+3. Clicking "Continue Download"
+4. Verifying all downloads are processed
+5. Checking logs for detailed processing information

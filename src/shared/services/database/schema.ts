@@ -291,9 +291,7 @@ export const createTables = async (
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       deleted_at TEXT,
       chapter_id TEXT,
-      verses TEXT NOT NULL,
-      FOREIGN KEY (language_entity_id) REFERENCES language_entities_cache (id),
-      FOREIGN KEY (chapter_id) REFERENCES chapters (id)
+      verses TEXT NOT NULL
     )
   `);
 
@@ -492,6 +490,9 @@ export const createTables = async (
   `);
 
   logger.info('Database tables created successfully');
+
+  // Run migrations for existing databases
+  await migrateMediaFilesTable(db);
 };
 
 export const dropTables = async (db: SQLite.SQLiteDatabase): Promise<void> => {
@@ -562,3 +563,60 @@ export const getTableSchema = () => ({
     timestampField: 'updated_at',
   },
 });
+
+export const migrateMediaFilesTable = async (
+  db: SQLite.SQLiteDatabase
+): Promise<void> => {
+  try {
+    // Check if foreign key constraints exist
+    const tableInfo = await db.getAllAsync('PRAGMA table_info(media_files)');
+    const hasForeignKeys = tableInfo.some(
+      (column: any) =>
+        column.name === 'language_entity_id' || column.name === 'chapter_id'
+    );
+
+    if (hasForeignKeys) {
+      logger.info(
+        'Migrating media_files table to remove foreign key constraints...'
+      );
+
+      // Create new table without foreign keys
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS media_files_new (
+          id TEXT PRIMARY KEY,
+          language_entity_id TEXT NOT NULL,
+          sequence_id TEXT NOT NULL,
+          media_type TEXT NOT NULL,
+          local_path TEXT NOT NULL,
+          remote_path TEXT NOT NULL,
+          file_size INTEGER NOT NULL,
+          duration_seconds INTEGER NOT NULL,
+          upload_status TEXT NOT NULL,
+          publish_status TEXT NOT NULL,
+          check_status TEXT NOT NULL,
+          version INTEGER DEFAULT 1,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          deleted_at TEXT,
+          chapter_id TEXT,
+          verses TEXT NOT NULL
+        )
+      `);
+
+      // Copy data from old table to new table
+      await db.execAsync(`
+        INSERT INTO media_files_new 
+        SELECT * FROM media_files
+      `);
+
+      // Drop old table and rename new table
+      await db.execAsync('DROP TABLE media_files');
+      await db.execAsync('ALTER TABLE media_files_new RENAME TO media_files');
+
+      logger.info('Successfully migrated media_files table');
+    }
+  } catch (error) {
+    logger.error('Error migrating media_files table:', error);
+    // Don't throw error to avoid breaking the app
+  }
+};

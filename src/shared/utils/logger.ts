@@ -1,5 +1,6 @@
 // Logging utility for the Bible App
 // This provides a centralized way to handle logging with environment-based control
+/* eslint-disable no-console */
 
 export enum LogLevel {
   ERROR = 0,

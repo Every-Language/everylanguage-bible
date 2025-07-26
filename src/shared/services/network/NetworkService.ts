@@ -20,25 +20,80 @@ export class NetworkService {
    */
   static async checkOnlineCapabilities(): Promise<boolean> {
     logger.info('NetworkService: Starting online capabilities check...');
+
+    // First check if we have basic network connectivity
+    const networkState = await this.getNetworkState();
+    logger.info('NetworkService: Current network state:', networkState);
+
+    if (!networkState.isConnected) {
+      logger.warn('NetworkService: No network connection detected');
+      return false;
+    }
+
     try {
       // Use a simple timeout approach instead of AbortController
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Request timeout')), 5000);
       });
 
-      logger.info('NetworkService: Making fetch request to httpbin.org...');
-      const fetchPromise = fetch('https://httpbin.org/get', {
-        method: 'GET',
-      });
+      // Try multiple endpoints for better reliability
+      const testEndpoints = [
+        'https://httpbin.org/get',
+        'https://jsonplaceholder.typicode.com/posts/1',
+        'https://api.github.com/zen',
+      ];
 
-      const response = await Promise.race([fetchPromise, timeoutPromise]);
-      logger.info('NetworkService: Fetch response status:', {
-        status: response.status,
-        ok: response.ok,
-      });
-      return response.ok;
+      for (const endpoint of testEndpoints) {
+        try {
+          logger.info(`NetworkService: Trying endpoint: ${endpoint}`);
+          const fetchPromise = fetch(endpoint, {
+            method: 'GET',
+            headers: {
+              Accept: 'application/json',
+              'User-Agent': 'BibleApp/1.0',
+            },
+          });
+
+          const response = await Promise.race([fetchPromise, timeoutPromise]);
+          logger.info('NetworkService: Fetch response status:', {
+            endpoint: endpoint,
+            status: response.status,
+            ok: response.ok,
+            statusText: response.statusText,
+          });
+
+          if (response.ok) {
+            logger.info(
+              `NetworkService: Successfully connected to ${endpoint}`
+            );
+            return true;
+          } else {
+            logger.warn(
+              `NetworkService: Response not OK for ${endpoint}:`,
+              response.status,
+              response.statusText
+            );
+          }
+        } catch (endpointError) {
+          logger.warn(`NetworkService: Failed to connect to ${endpoint}:`, {
+            error: endpointError,
+            errorMessage: (endpointError as any)?.message || 'No message',
+          });
+          // Continue to next endpoint
+        }
+      }
+
+      logger.error('NetworkService: All endpoints failed');
+      return false;
     } catch (error) {
-      logger.error('NetworkService: Fetch request failed:', error);
+      logger.error('NetworkService: Fetch request failed:', {
+        error: error,
+        errorType: typeof error,
+        errorConstructor: (error as any)?.constructor?.name,
+        errorMessage: (error as any)?.message || 'No message',
+        errorStack: (error as any)?.stack || 'No stack',
+        networkState: networkState,
+      });
       return false;
     }
   }
@@ -203,5 +258,45 @@ export class NetworkService {
       };
       callback(networkState);
     });
+  }
+
+  /**
+   * Debug method to test network connectivity with detailed logging
+   */
+  static async debugNetworkConnectivity(): Promise<void> {
+    logger.info('NetworkService: Starting debug network connectivity test...');
+
+    try {
+      // Check basic network state
+      const networkState = await this.getNetworkState();
+      logger.info('NetworkService: Debug - Network state:', networkState);
+
+      // Check if NetInfo reports internet reachability
+      if (networkState.isInternetReachable === false) {
+        logger.warn(
+          'NetworkService: Debug - NetInfo reports no internet reachability'
+        );
+      } else if (networkState.isInternetReachable === true) {
+        logger.info(
+          'NetworkService: Debug - NetInfo reports internet is reachable'
+        );
+      } else {
+        logger.info(
+          'NetworkService: Debug - NetInfo reports unknown internet reachability'
+        );
+      }
+
+      // Test actual connectivity
+      const isOnline = await this.checkOnlineCapabilities();
+      logger.info(
+        'NetworkService: Debug - Online capabilities check result:',
+        isOnline
+      );
+    } catch (error) {
+      logger.error('NetworkService: Debug - Error during network test:', {
+        error: error,
+        errorMessage: (error as any)?.message || 'No message',
+      });
+    }
   }
 }

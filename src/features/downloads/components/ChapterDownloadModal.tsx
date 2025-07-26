@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  ActivityIndicator,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useDownloads } from '../hooks/useDownloads';
@@ -9,21 +16,34 @@ import { DownloadProgressDisplay } from './DownloadProgressDisplay';
 import { useNetworkCapabilities } from '../hooks/useNetworkCapabilities';
 import { useMediaSearch } from '../hooks/useMediaSearch';
 import { useDownloadProgress } from '../hooks/useDownloadProgress';
-import { formatFileSize } from '../utils/fileUtils';
+import { useBackgroundDownloads } from '../hooks/useBackgroundDownloads';
 import { logger } from '@/shared/utils/logger';
+import { formatFileSize } from '../utils/fileUtils';
+import { createDownloadCompletionCallback } from '../utils/downloadUtils';
 
 interface ChapterDownloadModalProps {
   visible: boolean;
-  bookName: string;
+  book: {
+    id: string;
+    name: string;
+    testament?: string | null;
+    book_number?: number;
+  };
   chapterTitle: string;
   chapterId: string;
   versionId?: string; // Optional for now, will use constant version 1
   onClose: () => void;
 }
 
+// Type adapter to convert MediaFile to SearchResult
+interface SearchResult {
+  remote_path: string;
+  file_size: number;
+}
+
 export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   visible,
-  bookName,
+  book,
   chapterTitle,
   chapterId,
   versionId,
@@ -47,7 +67,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
 
   const {
     isSearching,
-    searchResults,
+    searchResults: mediaFiles,
     searchError: mediaSearchError,
     searchMediaFiles,
   } = useMediaSearch();
@@ -61,9 +81,98 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     initializeDownloadProgress,
     updateFileProgress,
     setDownloadError,
+    setDownloadCompletionCallback,
   } = useDownloadProgress();
 
+  // Background downloads hook
+  const {
+    isInitialized: backgroundInitialized,
+    isProcessing: backgroundProcessing,
+    addBatchToBackgroundQueue,
+  } = useBackgroundDownloads();
+
   const [isDownloading, setIsDownloading] = useState(false);
+  const [enableBackgroundDownloads, setEnableBackgroundDownloads] =
+    useState(true);
+  const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
+
+  // Filter and convert MediaFile to SearchResult, excluding null values
+  const searchResults: SearchResult[] = useMemo(() => {
+    return mediaFiles
+      .filter(file => file.remote_path !== null && file.file_size !== null)
+      .map(file => ({
+        remote_path: file.remote_path!,
+        file_size: file.file_size!,
+      }));
+  }, [mediaFiles]);
+
+  // Download completion callback using utility function
+  const handleDownloadCompletion = useCallback(
+    createDownloadCompletionCallback({
+      showSuccessNotification: true,
+      showErrorNotification: true,
+      autoCloseModal: false, // Set to true if you want auto-close
+      refreshDownloads: true,
+      // Media file integration
+      addToMediaFiles: true,
+      originalSearchResults: searchResults,
+      mediaFileOptions: {
+        chapterId: chapterId,
+        mediaType: 'audio',
+        uploadStatus: 'completed',
+        publishStatus: 'published',
+        checkStatus: 'checked',
+        version: 1,
+      },
+      onSuccess: () => {
+        logger.info('All downloads completed successfully');
+        // Add any success-specific logic here
+      },
+      onError: failedFiles => {
+        logger.warn('Some downloads failed', {
+          failedCount: failedFiles.length,
+          failedFiles: failedFiles.map(f => ({
+            fileName: f.fileName,
+            error: f.error,
+          })),
+        });
+        // Add any error-specific logic here
+      },
+      onComplete: (completedFiles, failedFiles, totalFiles) => {
+        logger.info('Download session completed', {
+          completedCount: completedFiles.length,
+          failedCount: failedFiles.length,
+          totalCount: totalFiles,
+        });
+        // Add any completion-specific logic here
+      },
+      onMediaFileAdded: (mediaFileId, fileName) => {
+        logger.info('Media file added to local database:', {
+          mediaFileId,
+          fileName,
+        });
+        // Add any media file added logic here
+      },
+      onMediaFileError: (fileName, error) => {
+        logger.error('Failed to add media file to local database:', {
+          fileName,
+          error,
+        });
+        // Add any media file error logic here
+      },
+    }),
+    [searchResults, chapterId]
+  );
+
+  // Set completion callback when component mounts
+  useEffect(() => {
+    setDownloadCompletionCallback(handleDownloadCompletion);
+
+    // Cleanup callback when component unmounts
+    return () => {
+      setDownloadCompletionCallback(null);
+    };
+  }, [setDownloadCompletionCallback, handleDownloadCompletion]);
 
   // Memoized values
   const searchError = useMemo(
@@ -95,75 +204,148 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
 
     setIsDownloading(true);
     setDownloadError(null);
-    handleInitializeDownloadProgress();
 
     try {
-      // Download files sequentially to avoid overwhelming the system
-      for (let i = 0; i < searchResults.length; i++) {
-        const file = searchResults[i];
-        const progressItem = downloadProgress[i];
+      logger.info('Starting download of files:', {
+        count: searchResults.length,
+        useBackground: enableBackgroundDownloads,
+        files: searchResults.map(f => ({
+          remote_path: f.remote_path,
+          file_size: f.file_size,
+        })),
+      });
 
-        if (!progressItem) continue;
+      if (enableBackgroundDownloads && backgroundInitialized) {
+        // Use background downloads
+        const files = searchResults.map((file, index) => ({
+          filePath: file.remote_path,
+          fileName: `${chapterId}_${index + 1}.mp3`,
+        }));
 
-        try {
-          // Update status to downloading
-          updateFileProgress(
-            file.file_path,
-            { bytesWritten: 0, contentLength: 0, progress: 0 },
-            'downloading'
-          );
+        const downloadIds = await addBatchToBackgroundQueue(files, {
+          priority: 1,
+          batchId: `chapter_${chapterId}_${Date.now()}`,
+          metadata: {
+            chapterId,
+            bookName: book.name,
+            chapterTitle,
+            addToMediaFiles: true,
+            originalSearchResults: searchResults,
+            mediaFileOptions: {
+              chapterId: chapterId,
+              mediaType: 'audio',
+              uploadStatus: 'completed',
+              publishStatus: 'published',
+              checkStatus: 'checked',
+              version: 1,
+            },
+            maxRetries: 3,
+          },
+        });
 
-          await downloadFile(file.file_path, progressItem.fileName, {
-            onProgress: (progress: {
-              bytesWritten: number;
-              contentLength: number;
-              progress: number;
-            }) => {
-              updateFileProgress(file.file_path, progress, 'downloading');
-            },
-            onComplete: (item: { fileSize?: number }) => {
-              updateFileProgress(
-                file.file_path,
-                {
-                  bytesWritten: item.fileSize || 0,
-                  contentLength: item.fileSize || 0,
-                  progress: 1,
-                },
-                'completed'
-              );
-            },
-            onError: (error: string) => {
-              updateFileProgress(
-                file.file_path,
-                { bytesWritten: 0, contentLength: 0, progress: 0 },
-                'failed',
-                error
-              );
-            },
+        setCurrentBatchId(`chapter_${chapterId}_${Date.now()}`);
+        logger.info('Added files to background download queue:', downloadIds);
+
+        // Show success message and close modal
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      } else {
+        // Fallback to original download method
+        logger.info('Using fallback download method');
+
+        // Initialize progress tracking for all files
+        handleInitializeDownloadProgress();
+
+        // Wait a bit for state to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Download files sequentially to avoid overwhelming the system
+        for (let i = 0; i < searchResults.length; i++) {
+          const file = searchResults[i];
+          if (!file) continue; // Skip if file is undefined
+
+          const filePath = file.remote_path;
+          const fileName = `${chapterId}_${i + 1}.mp3`;
+
+          logger.info(`Starting download ${i + 1}/${searchResults.length}:`, {
+            filePath,
+            fileName,
           });
-        } catch (error) {
-          const errorMsg = (error as Error).message;
-          updateFileProgress(
-            file.file_path,
-            { bytesWritten: 0, contentLength: 0, progress: 0 },
-            'failed',
-            errorMsg
-          );
+
+          try {
+            // Update status to downloading
+            updateFileProgress(
+              filePath,
+              { bytesWritten: 0, contentLength: 0, progress: 0 },
+              'downloading'
+            );
+
+            await downloadFile(filePath, fileName, {
+              onProgress: (progress: {
+                bytesWritten: number;
+                contentLength: number;
+                progress: number;
+              }) => {
+                logger.debug(`Download progress for ${fileName}:`, progress);
+                updateFileProgress(filePath, progress, 'downloading');
+              },
+              onComplete: (item: { fileSize?: number }) => {
+                logger.info(`Download completed for ${fileName}:`, item);
+                updateFileProgress(
+                  filePath,
+                  {
+                    bytesWritten: item.fileSize || 0,
+                    contentLength: item.fileSize || 0,
+                    progress: 1,
+                  },
+                  'completed'
+                );
+              },
+              onError: (error: string) => {
+                logger.error(`Download failed for ${fileName}:`, error);
+                updateFileProgress(
+                  filePath,
+                  { bytesWritten: 0, contentLength: 0, progress: 0 },
+                  'failed',
+                  error
+                );
+              },
+            });
+          } catch (error) {
+            const errorMsg = (error as Error).message;
+            logger.error(`Download error for ${fileName}:`, errorMsg);
+            updateFileProgress(
+              filePath,
+              { bytesWritten: 0, contentLength: 0, progress: 0 },
+              'failed',
+              errorMsg
+            );
+          }
         }
+
+        logger.info('All download requests completed');
       }
     } catch (error) {
       const errorMsg = (error as Error).message;
+      logger.error('Download batch error:', errorMsg);
       setDownloadError(errorMsg);
     } finally {
       setIsDownloading(false);
     }
   }, [
     searchResults,
-    downloadProgress,
+    enableBackgroundDownloads,
+    backgroundInitialized,
+    addBatchToBackgroundQueue,
     downloadFile,
     updateFileProgress,
     setDownloadError,
     handleInitializeDownloadProgress,
+    chapterId,
+    book.name,
+    chapterTitle,
+    onClose,
   ]);
 
   // Check online capabilities when modal becomes visible
@@ -202,6 +384,22 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
               shadowColor: theme.colors.shadow,
             },
           ]}>
+          {/* Header with close button */}
+          <View style={styles.header}>
+            <View style={styles.headerSpacer} />
+
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              disabled={isDownloading}>
+              <MaterialIcons
+                name='close'
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.iconContainer}>
             <MaterialIcons
               name='cloud-download'
@@ -209,27 +407,94 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
               color={theme.colors.textSecondary}
             />
           </View>
-
-          <Text style={[styles.title, { color: theme.colors.text }]}>
-            Download Chapter
-          </Text>
-
-          <Text
-            style={[styles.bookName, { color: theme.colors.textSecondary }]}>
-            {bookName}
-          </Text>
-
           <Text
             style={[
               styles.chapterTitle,
               { color: theme.colors.textSecondary },
             ]}>
-            {chapterTitle}
+            {`Download ${book.name} ${chapterTitle}`}
           </Text>
 
           <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
             Download to listen offline at your convenience.
           </Text>
+
+          {/* Background Download Toggle */}
+          <View style={styles.backgroundToggleContainer}>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                {
+                  backgroundColor: enableBackgroundDownloads
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                },
+              ]}
+              onPress={() =>
+                setEnableBackgroundDownloads(!enableBackgroundDownloads)
+              }>
+              <MaterialIcons
+                name={
+                  enableBackgroundDownloads ? 'cloud-download' : 'cloud-off'
+                }
+                size={16}
+                color={
+                  enableBackgroundDownloads
+                    ? theme.colors.textInverse
+                    : theme.colors.textSecondary
+                }
+              />
+              <Text
+                style={[
+                  styles.toggleText,
+                  {
+                    color: enableBackgroundDownloads
+                      ? theme.colors.textInverse
+                      : theme.colors.textSecondary,
+                  },
+                ]}>
+                {enableBackgroundDownloads
+                  ? 'Background Downloads'
+                  : 'Foreground Downloads'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Background Download Status */}
+          {enableBackgroundDownloads && currentBatchId && (
+            <View style={styles.backgroundStatusContainer}>
+              <Text
+                style={[
+                  styles.backgroundStatusTitle,
+                  { color: theme.colors.text },
+                ]}>
+                Background Downloads Active
+              </Text>
+              <Text
+                style={[
+                  styles.backgroundStatusText,
+                  { color: theme.colors.textSecondary },
+                ]}>
+                Downloads will continue in the background even when you close
+                this modal.
+              </Text>
+              {backgroundProcessing && (
+                <View style={styles.processingIndicator}>
+                  <ActivityIndicator
+                    size='small'
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.processingText,
+                      { color: theme.colors.textSecondary },
+                    ]}>
+                    Processing downloads...
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Search Results Display */}
           <SearchResultsDisplay
@@ -252,17 +517,19 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
             downloadError={downloadError}
           />
 
-          {/* Network Status Display */}
-          <NetworkStatusDisplay
-            isOnline={isOnline}
-            isCheckingOnline={isCheckingOnline}
-            hasCheckedOnline={hasCheckedOnline}
-            isConnected={isConnected}
-            connectionType={connectionType}
-            isInternetReachable={isInternetReachable}
-            onRetry={handleRetryInternetCheck}
-            disabled={isDownloading}
-          />
+          {/* Network Status Display - only show when there is no internet */}
+          {!isOnline && (
+            <NetworkStatusDisplay
+              isOnline={isOnline}
+              isCheckingOnline={isCheckingOnline}
+              hasCheckedOnline={hasCheckedOnline}
+              isConnected={isConnected}
+              connectionType={connectionType}
+              isInternetReachable={isInternetReachable}
+              onRetry={handleRetryInternetCheck}
+              disabled={isDownloading}
+            />
+          )}
 
           <View style={styles.buttonContainer}>
             {/* Download button - only show when files are found */}
@@ -270,40 +537,36 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
               <TouchableOpacity
                 style={[
                   styles.downloadButton,
-                  { backgroundColor: theme.colors.success },
+                  {
+                    backgroundColor: isDownloading
+                      ? theme.colors.border
+                      : theme.colors.success,
+                    opacity: isDownloading ? 0.6 : 1,
+                  },
                 ]}
                 onPress={handleDownload}
                 disabled={isDownloading}>
-                <MaterialIcons
-                  name='cloud-download'
-                  size={20}
-                  color={theme.colors.textInverse}
-                />
+                {isDownloading ? (
+                  <ActivityIndicator
+                    size='small'
+                    color={theme.colors.textInverse}
+                  />
+                ) : (
+                  <MaterialIcons
+                    name='cloud-download'
+                    size={20}
+                    color={theme.colors.textInverse}
+                  />
+                )}
                 <Text
                   style={[
                     styles.downloadButtonText,
                     { color: theme.colors.textInverse },
                   ]}>
-                  Download Files
+                  {isDownloading ? 'Downloading...' : 'Download Files'}
                 </Text>
               </TouchableOpacity>
             )}
-
-            <TouchableOpacity
-              style={[
-                styles.cancelButton,
-                { borderColor: theme.colors.border },
-              ]}
-              onPress={onClose}
-              disabled={isDownloading}>
-              <Text
-                style={[
-                  styles.cancelButtonText,
-                  { color: theme.colors.textSecondary },
-                ]}>
-                Close
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -332,21 +595,24 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  headerSpacer: {
+    width: 24,
+  },
+  closeButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  bookName: {
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 10,
   },
   chapterTitle: {
     fontSize: 18,
@@ -377,15 +643,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  cancelButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
+  backgroundToggleContainer: {
+    marginBottom: 16,
   },
-  cancelButtonText: {
-    fontSize: 16,
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  backgroundStatusContainer: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    marginBottom: 16,
+  },
+  backgroundStatusTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  backgroundStatusText: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 8,
+  },
+  processingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  processingText: {
+    fontSize: 12,
     fontWeight: '500',
   },
 });

@@ -61,8 +61,14 @@ export interface SignedUrlRequest {
 }
 
 export interface SignedUrlResponse {
+  success: boolean;
   urls: Record<string, string>;
-  expiresAt: string;
+  expiresIn: number;
+  totalFiles: number;
+  successfulUrls: number;
+  failedFiles?: string[];
+  errors?: Record<string, string>;
+  fallback?: boolean;
 }
 
 // Service configuration

@@ -325,7 +325,7 @@ export const ChapterScreen: React.FC = () => {
       <View style={styles.content}>{renderContent()}</View>
 
       <ChapterDownloadModal
-        bookName={'Psalms'}
+        book={book}
         visible={showUnavailableModal}
         chapterTitle={
           selectedChapter ? `Chapter ${selectedChapter.chapter_number}` : ''

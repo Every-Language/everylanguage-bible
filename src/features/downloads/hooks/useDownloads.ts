@@ -46,6 +46,7 @@ export interface UseDownloadsReturn {
 
   // Utilities
   refreshDownloads: () => void;
+  clearError: () => void;
 }
 
 export const useDownloads = (): UseDownloadsReturn => {
@@ -121,7 +122,7 @@ export const useDownloads = (): UseDownloadsReturn => {
         setDownloads(prev => [...prev, downloadItem]);
         return downloadItem;
       } catch (err: unknown) {
-        const errorMsg = (err as any)?.message || 'Download failed';
+        const errorMsg = err instanceof Error ? err.message : 'Download failed';
         setError(errorMsg);
         throw err;
       } finally {
@@ -143,7 +144,8 @@ export const useDownloads = (): UseDownloadsReturn => {
         await downloadService.downloadBatch(files, options);
         refreshDownloads(); // Reload all downloads after batch operation
       } catch (err: unknown) {
-        const errorMsg = (err as any)?.message || 'Batch download failed';
+        const errorMsg =
+          err instanceof Error ? err.message : 'Batch download failed';
         setError(errorMsg);
         throw err;
       } finally {
@@ -159,7 +161,8 @@ export const useDownloads = (): UseDownloadsReturn => {
         await downloadService.pauseDownload(id);
         refreshDownloads();
       } catch (err: unknown) {
-        const errorMsg = (err as any)?.message || 'Failed to pause download';
+        const errorMsg =
+          err instanceof Error ? err.message : 'Failed to pause download';
         setError(errorMsg);
         throw err;
       }
@@ -174,7 +177,8 @@ export const useDownloads = (): UseDownloadsReturn => {
         refreshDownloads();
         return download;
       } catch (err: unknown) {
-        const errorMsg = (err as any)?.message || 'Failed to resume download';
+        const errorMsg =
+          err instanceof Error ? err.message : 'Failed to resume download';
         setError(errorMsg);
         throw err;
       }
@@ -188,7 +192,8 @@ export const useDownloads = (): UseDownloadsReturn => {
         await downloadService.cancelDownload(id);
         refreshDownloads();
       } catch (err: unknown) {
-        const errorMsg = (err as any)?.message || 'Failed to cancel download';
+        const errorMsg =
+          err instanceof Error ? err.message : 'Failed to cancel download';
         setError(errorMsg);
         throw err;
       }
@@ -202,7 +207,8 @@ export const useDownloads = (): UseDownloadsReturn => {
         await downloadService.deleteDownload(id);
         refreshDownloads();
       } catch (err: unknown) {
-        const errorMsg = (err as any)?.message || 'Failed to delete download';
+        const errorMsg =
+          err instanceof Error ? err.message : 'Failed to delete download';
         setError(errorMsg);
         throw err;
       }
@@ -216,7 +222,9 @@ export const useDownloads = (): UseDownloadsReturn => {
       refreshDownloads();
     } catch (err: unknown) {
       const errorMsg =
-        (err as any)?.message || 'Failed to clear completed downloads';
+        err instanceof Error
+          ? err.message
+          : 'Failed to clear completed downloads';
       setError(errorMsg);
       throw err;
     }
@@ -261,6 +269,10 @@ export const useDownloads = (): UseDownloadsReturn => {
     return downloadService.getTotalDownloadSize();
   }, []);
 
+  const clearError = useCallback((): void => {
+    setError(null);
+  }, []);
+
   return {
     // State
     downloads,
@@ -292,5 +304,6 @@ export const useDownloads = (): UseDownloadsReturn => {
 
     // Utilities
     refreshDownloads,
+    clearError,
   };
 };

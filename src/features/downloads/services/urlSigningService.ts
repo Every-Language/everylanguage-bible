@@ -10,44 +10,6 @@ export class UrlSigningService {
   );
 
   /**
-   * Get signed URLs for file downloads
-   */
-  async getDownloadUrls(
-    filePaths: string[],
-    expirationHours = 24
-  ): Promise<SignedUrlResponse> {
-    const {
-      data: { session },
-    } = await this.supabaseClient.auth.getSession();
-
-    if (!session) {
-      throw new Error('Authentication required for URL signing');
-    }
-
-    const response = await fetch(
-      `${downloadServiceConfig.baseUrl}/functions/v1/get-download-urls`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          filePaths,
-          expirationHours,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to get download URLs');
-    }
-
-    return await response.json();
-  }
-
-  /**
    * Get signed URLs for external URLs using Supabase Edge Function
    */
   async getSignedUrlsForExternalUrls(
@@ -106,8 +68,11 @@ export class UrlSigningService {
   /**
    * Validate if a signed URL is still valid
    */
-  isUrlValid(expiresAt: string): boolean {
-    const expirationTime = new Date(expiresAt).getTime();
+  isUrlValid(expiresAt: string | Date): boolean {
+    const expirationTime =
+      typeof expiresAt === 'string'
+        ? new Date(expiresAt).getTime()
+        : expiresAt.getTime();
     const currentTime = Date.now();
     return currentTime < expirationTime;
   }

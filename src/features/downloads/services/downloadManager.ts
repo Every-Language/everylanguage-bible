@@ -53,7 +53,12 @@ export class DownloadManager {
       }
 
       downloadItem.signedUrl = signedUrl;
-      downloadItem.expiresAt = new Date(signedUrls.expiresAt);
+      // Calculate expiration date from expiresIn seconds
+      const expirationDate = new Date();
+      expirationDate.setSeconds(
+        expirationDate.getSeconds() + signedUrls.expiresIn
+      );
+      downloadItem.expiresAt = expirationDate;
       downloadItem.status = 'downloading';
 
       // Check if we can start this download

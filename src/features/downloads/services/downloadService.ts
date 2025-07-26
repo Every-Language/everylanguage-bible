@@ -107,16 +107,6 @@ export class DownloadService {
   }
 
   /**
-   * Get signed URLs for file downloads
-   */
-  async getDownloadUrls(
-    filePaths: string[],
-    expirationHours = 24
-  ): Promise<SignedUrlResponse> {
-    return urlSigningService.getDownloadUrls(filePaths, expirationHours);
-  }
-
-  /**
    * Get signed URLs for external URLs
    */
   async getSignedUrlsForExternalUrls(
@@ -132,7 +122,7 @@ export class DownloadService {
   /**
    * Validate if a signed URL is still valid
    */
-  isUrlValid(expiresAt: string): boolean {
+  isUrlValid(expiresAt: string | Date): boolean {
     return urlSigningService.isUrlValid(expiresAt);
   }
 

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useTranslations } from '@/shared/context/LocalizationContext';
+import { Theme } from '@/shared/types/theme';
 import { useDownloads } from '../hooks';
 import { downloadService } from '../services';
 import { logger } from '@/shared/utils/logger';
@@ -298,7 +299,11 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
       <TouchableOpacity
         style={[
           styles.downloadButton,
-          getDownloadButtonStyle(theme, isFormValid),
+          getDownloadButtonStyle(
+            theme,
+            isFormValid,
+            !isFormValid || isProcessing || isLoading
+          ),
         ]}
         onPress={handleGetSignedUrls}
         disabled={!isFormValid || isProcessing || isLoading}>
@@ -328,8 +333,17 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
   );
 };
 
-const getDownloadButtonStyle = (theme: any, isFormValid: boolean) => ({
-  backgroundColor: isFormValid ? theme.colors.primary : theme.colors.border,
+const getDownloadButtonStyle = (
+  theme: Theme,
+  isFormValid: boolean,
+  isDisabled: boolean
+) => ({
+  backgroundColor: isDisabled
+    ? theme.colors.border
+    : isFormValid
+      ? theme.colors.primary
+      : theme.colors.border,
+  opacity: isDisabled ? 0.6 : 1,
 });
 
 const styles = StyleSheet.create({

@@ -23,15 +23,15 @@ export const DownloadsScreen: React.FC = () => {
     downloads,
     isLoading,
     error,
+    stats,
     pauseDownload,
     resumeDownload,
     cancelDownload,
     deleteDownload,
     clearCompletedDownloads,
     getDownloadsByStatus,
-    getDownloadStats,
+    refreshDownloads,
     clearError,
-    refresh,
   } = useDownloads();
 
   const [selectedFilter, setSelectedFilter] = useState<DownloadStatus | 'all'>(
@@ -40,8 +40,6 @@ export const DownloadsScreen: React.FC = () => {
 
   const filteredDownloads =
     selectedFilter === 'all' ? downloads : getDownloadsByStatus(selectedFilter);
-
-  const stats = getDownloadStats();
 
   const handlePauseDownload = async (id: string) => {
     try {
@@ -245,7 +243,7 @@ export const DownloadsScreen: React.FC = () => {
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
-            onRefresh={refresh}
+            onRefresh={refreshDownloads}
             colors={[theme.colors.primary]}
             tintColor={theme.colors.primary}
           />
@@ -254,11 +252,11 @@ export const DownloadsScreen: React.FC = () => {
         <UrlDownloadForm
           onDownloadStart={() => {
             // Refresh the downloads list when a new download starts
-            refresh();
+            refreshDownloads();
           }}
           onDownloadComplete={() => {
             // Refresh the downloads list when a download completes
-            refresh();
+            refreshDownloads();
           }}
         />
 

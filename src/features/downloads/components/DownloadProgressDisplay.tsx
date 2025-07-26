@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { logger } from '@/shared/utils/logger';
 
 interface FileDownloadProgress {
   filePath: string;
@@ -35,6 +36,17 @@ export const DownloadProgressDisplay: React.FC<
 }) => {
   const { theme } = useTheme();
 
+  // Debug logging
+  logger.debug('DownloadProgressDisplay render:', {
+    isDownloading,
+    downloadProgressLength: downloadProgress.length,
+    searchResultsLength: searchResults.length,
+    overallProgress,
+    completedFiles,
+    failedFiles,
+    downloadError,
+  });
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
@@ -61,7 +73,8 @@ export const DownloadProgressDisplay: React.FC<
     }
   };
 
-  if (!isDownloading || downloadProgress.length === 0) {
+  // Show progress display when downloading OR when there are progress items (even if not currently downloading)
+  if (downloadProgress.length === 0) {
     return null;
   }
 

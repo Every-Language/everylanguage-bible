@@ -1,13 +1,19 @@
 import { useState, useCallback } from 'react';
-import { DownloadProgress } from '../types';
+import { DownloadProgress } from '../services/types';
+import { logger } from '@/shared/utils/logger';
 
-interface FileDownloadProgress {
+export interface FileDownloadProgress {
   filePath: string;
   fileName: string;
   progress: number;
   status: 'pending' | 'downloading' | 'completed' | 'failed';
   error?: string;
   fileSize?: number;
+}
+
+interface SearchResult {
+  remote_path: string;
+  file_size: number;
 }
 
 interface DownloadProgressState {
@@ -18,6 +24,13 @@ interface DownloadProgressState {
   downloadError: string | null;
 }
 
+// Download completion callback type
+export type DownloadCompletionCallback = (
+  completedFiles: FileDownloadProgress[],
+  failedFiles: FileDownloadProgress[],
+  totalFiles: number
+) => Promise<void>;
+
 export const useDownloadProgress = () => {
   const [state, setState] = useState<DownloadProgressState>({
     downloadProgress: [],
@@ -27,17 +40,31 @@ export const useDownloadProgress = () => {
     downloadError: null,
   });
 
+  const [completionCallback, setCompletionCallback] =
+    useState<DownloadCompletionCallback | null>(null);
+
   const initializeDownloadProgress = useCallback(
-    (searchResults: any[], chapterId: string) => {
+    (searchResults: SearchResult[], chapterId: string) => {
+      logger.debug('Initializing download progress:', {
+        searchResultsLength: searchResults.length,
+        chapterId,
+        searchResults: searchResults.map(f => ({
+          remote_path: f.remote_path,
+          file_size: f.file_size,
+        })),
+      });
+
       const progress: FileDownloadProgress[] = searchResults.map(
         (file, index) => ({
-          filePath: file.file_path,
+          filePath: file.remote_path,
           fileName: `${chapterId}_${index + 1}.mp3`,
           progress: 0,
           status: 'pending',
           fileSize: file.file_size,
         })
       );
+
+      logger.debug('Created progress items:', progress);
 
       setState(prev => ({
         ...prev,
@@ -88,16 +115,47 @@ export const useDownloadProgress = () => {
           f => f.status === 'failed'
         ).length;
 
-        return {
+        const newState = {
           ...prev,
           downloadProgress: updatedProgress,
           overallProgress: overall,
           completedFiles: completed,
           failedFiles: failed,
         };
+
+        // Check if all downloads are complete
+        const totalFiles = updatedProgress.length;
+        const totalCompleted = completed + failed;
+
+        if (totalCompleted === totalFiles && totalFiles > 0) {
+          logger.info('All downloads completed', {
+            completed,
+            failed,
+            totalFiles,
+            overallProgress: overall,
+          });
+
+          // Execute completion callback if provided
+          if (completionCallback) {
+            const completedFiles = updatedProgress.filter(
+              f => f.status === 'completed'
+            );
+            const failedFiles = updatedProgress.filter(
+              f => f.status === 'failed'
+            );
+            // Execute callback asynchronously to avoid blocking state updates
+            completionCallback(completedFiles, failedFiles, totalFiles).catch(
+              error => {
+                logger.error('Error in download completion callback:', error);
+              }
+            );
+          }
+        }
+
+        return newState;
       });
     },
-    []
+    [completionCallback]
   );
 
   const setDownloadError = useCallback((error: string | null) => {
@@ -117,11 +175,34 @@ export const useDownloadProgress = () => {
     });
   }, []);
 
+  // Set completion callback
+  const setDownloadCompletionCallback = useCallback(
+    (callback: DownloadCompletionCallback | null) => {
+      setCompletionCallback(() => callback);
+    },
+    []
+  );
+
+  // Get current progress state
+  const getCurrentProgress = useCallback(() => {
+    return state;
+  }, [state]);
+
+  // Check if all downloads are complete
+  const isAllDownloadsComplete = useCallback(() => {
+    const totalFiles = state.downloadProgress.length;
+    const totalCompleted = state.completedFiles + state.failedFiles;
+    return totalCompleted === totalFiles && totalFiles > 0;
+  }, [state.downloadProgress.length, state.completedFiles, state.failedFiles]);
+
   return {
     ...state,
     initializeDownloadProgress,
     updateFileProgress,
     setDownloadError,
     resetDownloadProgress,
+    setDownloadCompletionCallback,
+    getCurrentProgress,
+    isAllDownloadsComplete,
   };
 };
