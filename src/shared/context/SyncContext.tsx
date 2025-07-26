@@ -91,8 +91,14 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       try {
         await backgroundSyncService.registerBackgroundTask();
         logger.info('Background sync registered successfully');
-      } catch (error) {
-        logger.warn('Failed to register background sync:', error);
+      } catch (error: unknown) {
+        logger.warn('Failed to register background sync:', {
+          error: error,
+          errorType: typeof error,
+          errorConstructor: (error as any)?.constructor?.name,
+          errorMessage: (error as any)?.message || 'No message',
+          errorStack: (error as any)?.stack || 'No stack',
+        });
       }
     } catch (error) {
       logger.error('Failed to initialize app:', error);
@@ -164,7 +170,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       const lastSync = await localDataService.getLastSyncedAt();
       setLastSyncAt(lastSync);
 
-      logger.sync('Bible sync completed:', results);
+      logger.info('Bible sync completed:', results);
     } catch (error) {
       logger.error('Bible sync failed:', error);
       setSyncProgress({
@@ -219,7 +225,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       const lastSync = await localDataService.getLastSyncedAt();
       setLastSyncAt(lastSync);
 
-      logger.sync('Force sync completed:', results);
+      logger.info('Force sync completed:', results);
     } catch (error) {
       logger.error('Force sync failed:', error);
       setSyncProgress({

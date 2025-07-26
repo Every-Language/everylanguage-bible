@@ -55,7 +55,7 @@
     "expo-notifications": "~0.31.4",
     "expo-router": "~5.1.4",
     "expo-sharing": "~13.1.5",
-    "expo-sqlite": "~15.2.14",
+    "expo-sqlite": "~15.2.13",
     "expo-status-bar": "~2.2.3",
     "expo-task-manager": "~13.1.6",
     "expo-updates": "~0.28.17",

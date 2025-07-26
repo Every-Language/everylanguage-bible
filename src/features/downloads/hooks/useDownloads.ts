@@ -5,21 +5,72 @@ import {
   DownloadStatus,
   DownloadProgress,
   DownloadOptions,
-} from '../types';
+  DownloadStats,
+} from '../services/types';
 
-export const useDownloads = () => {
+export interface UseDownloadsReturn {
+  // State
+  downloads: DownloadItem[];
+  isLoading: boolean;
+  error: string | null;
+  stats: DownloadStats;
+
+  // Actions
+  downloadFile: (
+    filePath: string,
+    fileName: string,
+    options?: DownloadOptions
+  ) => Promise<DownloadItem>;
+  downloadBatch: (
+    files: Array<{ filePath: string; fileName: string }>,
+    options?: DownloadOptions
+  ) => Promise<void>;
+  pauseDownload: (id: string) => Promise<void>;
+  resumeDownload: (id: string) => Promise<DownloadItem>;
+  cancelDownload: (id: string) => Promise<void>;
+  deleteDownload: (id: string) => Promise<void>;
+  clearCompletedDownloads: () => Promise<void>;
+
+  // Queries
+  getDownload: (id: string) => DownloadItem | undefined;
+  getDownloadsByStatus: (status: DownloadStatus) => DownloadItem[];
+  isDownloadActive: (id: string) => boolean;
+
+  // Statistics
+  getActiveDownloadsCount: () => number;
+  getPendingDownloadsCount: () => number;
+  getCompletedDownloadsCount: () => number;
+  getFailedDownloadsCount: () => number;
+  getTotalDownloadedSize: () => number;
+  getTotalDownloadSize: () => number;
+
+  // Utilities
+  refreshDownloads: () => void;
+}
+
+export const useDownloads = (): UseDownloadsReturn => {
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<DownloadStats>({
+    totalDownloads: 0,
+    completedDownloads: 0,
+    failedDownloads: 0,
+    totalSize: 0,
+    downloadedSize: 0,
+  });
 
-  // Load downloads on mount
+  // Load downloads and stats on mount
   useEffect(() => {
-    loadDownloads();
+    refreshDownloads();
   }, []);
 
-  const loadDownloads = useCallback(() => {
+  const refreshDownloads = useCallback(() => {
     const allDownloads = downloadService.getAllDownloads();
+    const downloadStats = downloadService.getDownloadStats();
+
     setDownloads(allDownloads);
+    setStats(downloadStats);
   }, []);
 
   const downloadFile = useCallback(
@@ -27,7 +78,7 @@ export const useDownloads = () => {
       filePath: string,
       fileName: string,
       options: DownloadOptions = {}
-    ) => {
+    ): Promise<DownloadItem> => {
       setIsLoading(true);
       setError(null);
 
@@ -56,10 +107,12 @@ export const useDownloads = () => {
               setDownloads(prev =>
                 prev.map(d => (d.id === item.id ? item : d))
               );
+              refreshDownloads(); // Refresh stats
               options.onComplete?.(item);
             },
             onError: (errorMsg: string) => {
               setError(errorMsg);
+              refreshDownloads(); // Refresh stats
               options.onError?.(errorMsg);
             },
           }
@@ -67,116 +120,155 @@ export const useDownloads = () => {
 
         setDownloads(prev => [...prev, downloadItem]);
         return downloadItem;
-      } catch (err) {
-        const errorMsg = (err as Error).message;
+      } catch (err: unknown) {
+        const errorMsg = (err as any)?.message || 'Download failed';
         setError(errorMsg);
         throw err;
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [refreshDownloads]
   );
 
   const downloadBatch = useCallback(
     async (
       files: Array<{ filePath: string; fileName: string }>,
       options: DownloadOptions = {}
-    ) => {
+    ): Promise<void> => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const result = await downloadService.downloadBatch(files, options);
-        loadDownloads(); // Reload all downloads after batch operation
-        return result;
-      } catch (err) {
-        const errorMsg = (err as Error).message;
+        await downloadService.downloadBatch(files, options);
+        refreshDownloads(); // Reload all downloads after batch operation
+      } catch (err: unknown) {
+        const errorMsg = (err as any)?.message || 'Batch download failed';
         setError(errorMsg);
         throw err;
       } finally {
         setIsLoading(false);
       }
     },
-    [loadDownloads]
+    [refreshDownloads]
   );
 
   const pauseDownload = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<void> => {
       try {
         await downloadService.pauseDownload(id);
-        loadDownloads();
-      } catch (err) {
-        setError((err as Error).message);
+        refreshDownloads();
+      } catch (err: unknown) {
+        const errorMsg = (err as any)?.message || 'Failed to pause download';
+        setError(errorMsg);
         throw err;
       }
     },
-    [loadDownloads]
+    [refreshDownloads]
   );
 
-  const resumeDownload = useCallback(async (id: string) => {
-    try {
-      const downloadItem = await downloadService.resumeDownload(id);
-      setDownloads(prev => prev.map(d => (d.id === id ? downloadItem : d)));
-      return downloadItem;
-    } catch (err) {
-      setError((err as Error).message);
-      throw err;
-    }
-  }, []);
+  const resumeDownload = useCallback(
+    async (id: string): Promise<DownloadItem> => {
+      try {
+        const download = await downloadService.resumeDownload(id);
+        refreshDownloads();
+        return download;
+      } catch (err: unknown) {
+        const errorMsg = (err as any)?.message || 'Failed to resume download';
+        setError(errorMsg);
+        throw err;
+      }
+    },
+    [refreshDownloads]
+  );
 
   const cancelDownload = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<void> => {
       try {
         await downloadService.cancelDownload(id);
-        loadDownloads();
-      } catch (err) {
-        setError((err as Error).message);
+        refreshDownloads();
+      } catch (err: unknown) {
+        const errorMsg = (err as any)?.message || 'Failed to cancel download';
+        setError(errorMsg);
         throw err;
       }
     },
-    [loadDownloads]
+    [refreshDownloads]
   );
 
-  const deleteDownload = useCallback(async (id: string) => {
-    try {
-      await downloadService.deleteDownload(id);
-      setDownloads(prev => prev.filter(d => d.id !== id));
-    } catch (err) {
-      setError((err as Error).message);
-      throw err;
-    }
-  }, []);
+  const deleteDownload = useCallback(
+    async (id: string): Promise<void> => {
+      try {
+        await downloadService.deleteDownload(id);
+        refreshDownloads();
+      } catch (err: unknown) {
+        const errorMsg = (err as any)?.message || 'Failed to delete download';
+        setError(errorMsg);
+        throw err;
+      }
+    },
+    [refreshDownloads]
+  );
 
-  const clearCompletedDownloads = useCallback(async () => {
+  const clearCompletedDownloads = useCallback(async (): Promise<void> => {
     try {
       await downloadService.clearCompletedDownloads();
-      loadDownloads();
-    } catch (err) {
-      setError((err as Error).message);
+      refreshDownloads();
+    } catch (err: unknown) {
+      const errorMsg =
+        (err as any)?.message || 'Failed to clear completed downloads';
+      setError(errorMsg);
       throw err;
     }
-  }, [loadDownloads]);
+  }, [refreshDownloads]);
 
-  const getDownloadsByStatus = useCallback(
-    (status: DownloadStatus) => {
-      return downloads.filter(download => download.status === status);
-    },
-    [downloads]
-  );
-
-  const getDownloadStats = useCallback(() => {
-    return downloadService.getDownloadStats();
+  const getDownload = useCallback((id: string): DownloadItem | undefined => {
+    return downloadService.getDownload(id);
   }, []);
 
-  const clearError = useCallback(() => {
-    setError(null);
+  const getDownloadsByStatus = useCallback(
+    (status: DownloadStatus): DownloadItem[] => {
+      return downloadService.getDownloadsByStatus(status);
+    },
+    []
+  );
+
+  const isDownloadActive = useCallback((id: string): boolean => {
+    return downloadService.isDownloadActive(id);
+  }, []);
+
+  const getActiveDownloadsCount = useCallback((): number => {
+    return downloadService.getActiveDownloadsCount();
+  }, []);
+
+  const getPendingDownloadsCount = useCallback((): number => {
+    return downloadService.getPendingDownloadsCount();
+  }, []);
+
+  const getCompletedDownloadsCount = useCallback((): number => {
+    return downloadService.getCompletedDownloadsCount();
+  }, []);
+
+  const getFailedDownloadsCount = useCallback((): number => {
+    return downloadService.getFailedDownloadsCount();
+  }, []);
+
+  const getTotalDownloadedSize = useCallback((): number => {
+    return downloadService.getTotalDownloadedSize();
+  }, []);
+
+  const getTotalDownloadSize = useCallback((): number => {
+    return downloadService.getTotalDownloadSize();
   }, []);
 
   return {
+    // State
     downloads,
     isLoading,
     error,
+    stats,
+
+    // Actions
     downloadFile,
     downloadBatch,
     pauseDownload,
@@ -184,9 +276,21 @@ export const useDownloads = () => {
     cancelDownload,
     deleteDownload,
     clearCompletedDownloads,
+
+    // Queries
+    getDownload,
     getDownloadsByStatus,
-    getDownloadStats,
-    clearError,
-    refresh: loadDownloads,
+    isDownloadActive,
+
+    // Statistics
+    getActiveDownloadsCount,
+    getPendingDownloadsCount,
+    getCompletedDownloadsCount,
+    getFailedDownloadsCount,
+    getTotalDownloadedSize,
+    getTotalDownloadSize,
+
+    // Utilities
+    refreshDownloads,
   };
 };

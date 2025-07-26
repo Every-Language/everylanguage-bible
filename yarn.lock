@@ -4469,9 +4469,9 @@ expo-sharing@~13.1.5:
   resolved "https://registry.npmjs.org/expo-sharing/-/expo-sharing-13.1.5.tgz"
   integrity sha512-X/5sAEiWXL2kdoGE3NO5KmbfcmaCWuWVZXHu8OQef7Yig4ZgHFkGD11HKJ5KqDrDg+SRZe4ISd6MxE7vGUgm4w==
 
-expo-sqlite@~15.2.14:
+expo-sqlite@~15.2.13:
   version "15.2.14"
-  resolved "https://registry.npmjs.org/expo-sqlite/-/expo-sqlite-15.2.14.tgz"
+  resolved "https://registry.yarnpkg.com/expo-sqlite/-/expo-sqlite-15.2.14.tgz#53a63d1bab5e6ab3f5e515bf79d2070dd4fe08c4"
   integrity sha512-6tWnEE0fcir30/e7eVwjeC7eKdncfVnIgo2JvnKpRndedyiFMXLMyOQWNVGnuhnSrPV2BHvGGjLByS/j5VgH4w==
   dependencies:
     await-lock "^2.2.2"

@@ -104,7 +104,7 @@ class DatabaseManager {
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        logger.database(
+        logger.info(
           `Database initialization attempt ${attempt}/${this.maxRetries}`
         );
 
@@ -124,7 +124,20 @@ class DatabaseManager {
           progress: 10,
         });
 
-        this.db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+        try {
+          this.db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+          logger.info('Database opened successfully');
+        } catch (dbError: unknown) {
+          logger.error('Failed to open database:', {
+            error: dbError,
+            errorType: typeof dbError,
+            errorConstructor: (dbError as any)?.constructor?.name,
+            errorMessage: (dbError as any)?.message || 'No message',
+            errorStack: (dbError as any)?.stack || 'No stack',
+            databaseName: DATABASE_NAME,
+          });
+          throw dbError;
+        }
 
         // Stage 2: Verify database access
         this.updateProgress({
@@ -170,27 +183,36 @@ class DatabaseManager {
           progress: 100,
         });
 
-        logger.database('Database initialized successfully');
+        logger.info('Database initialized successfully');
         return;
-      } catch (error) {
+      } catch (error: unknown) {
         lastError = error as Error;
-        logger.error(
-          `Database initialization attempt ${attempt} failed:`,
-          error
-        );
+
+        // Enhanced error logging
+        logger.error(`Database initialization attempt ${attempt} failed:`, {
+          error: error,
+          errorType: typeof error,
+          errorConstructor: (error as any)?.constructor?.name,
+          errorMessage: (error as any)?.message || 'No message',
+          errorStack: (error as any)?.stack || 'No stack',
+          errorStringified: JSON.stringify(
+            error,
+            Object.getOwnPropertyNames(error || {})
+          ),
+        });
 
         this.state = DatabaseState.ERROR;
         this.initializationError = lastError;
 
         this.updateProgress({
           stage: 'error',
-          message: `Initialization failed: ${lastError.message}`,
+          message: `Initialization failed: ${(lastError as any)?.message || 'Unknown error'}`,
           progress: 0,
-          error: lastError.message,
+          error: (lastError as any)?.message || 'Unknown error',
         });
 
         if (attempt < this.maxRetries) {
-          logger.database(`Retrying in ${this.retryDelay}ms...`);
+          logger.info(`Retrying in ${this.retryDelay}ms...`);
           await this.delay(this.retryDelay);
           this.retryDelay *= 2; // Exponential backoff
         }
@@ -200,7 +222,7 @@ class DatabaseManager {
     // All retries failed
     this.initializationPromise = null;
     throw new DatabaseError(
-      `Database initialization failed after ${this.maxRetries} attempts: ${lastError?.message}`,
+      `Database initialization failed after ${this.maxRetries} attempts: ${(lastError as any)?.message || 'Unknown error'}`,
       'INIT_FAILED',
       { originalError: lastError }
     );
@@ -211,7 +233,7 @@ class DatabaseManager {
 
     // Test basic database operations
     await this.db.execAsync('SELECT 1');
-    logger.database('Database access verified');
+    logger.info('Database access verified');
   }
 
   private async createTablesWithVerification(): Promise<void> {
@@ -224,7 +246,7 @@ class DatabaseManager {
       // Verify critical tables exist
       await this.verifyCriticalTables();
 
-      logger.database('Tables created and verified successfully');
+      logger.info('Tables created and verified successfully');
     } catch (error) {
       logger.error('Failed to create tables:', error);
       throw error;
@@ -264,7 +286,7 @@ class DatabaseManager {
       throw new Error('Final database verification failed');
     }
 
-    logger.database('Final verification passed');
+    logger.info('Final verification passed');
   }
 
   private async performMigrations(): Promise<void> {
@@ -278,12 +300,12 @@ class DatabaseManager {
       );
       currentVersion = result?.user_version || 1;
     } catch {
-      logger.database(
+      logger.info(
         'No previous database version found, starting from version 1'
       );
     }
 
-    logger.database(
+    logger.info(
       `Current database version: ${currentVersion}, target version: ${CURRENT_DATABASE_VERSION}`
     );
 
@@ -317,7 +339,7 @@ class DatabaseManager {
   private async migrateToVersion2(): Promise<void> {
     if (!this.db) return;
 
-    logger.database(
+    logger.info(
       'Migrating database to version 2: Adding last_version_check column'
     );
 
@@ -328,7 +350,7 @@ class DatabaseManager {
       );
 
       if (!tableExists || tableExists.count === 0) {
-        logger.database(
+        logger.info(
           'sync_metadata table does not exist yet, skipping migration to version 2'
         );
         return;
@@ -346,11 +368,11 @@ class DatabaseManager {
         await this.db.execAsync(
           'ALTER TABLE sync_metadata ADD COLUMN last_version_check TEXT'
         );
-        logger.database(
+        logger.info(
           'Successfully added last_version_check column to sync_metadata table'
         );
       } else {
-        logger.database(
+        logger.info(
           'last_version_check column already exists in sync_metadata table'
         );
       }
@@ -364,9 +386,7 @@ class DatabaseManager {
   private async migrateToVersion3(): Promise<void> {
     if (!this.db) return;
 
-    logger.database(
-      'Migrating database to version 3: Adding availability columns'
-    );
+    logger.info('Migrating database to version 3: Adding availability columns');
 
     try {
       // Check if language_entities_cache table exists
@@ -399,12 +419,12 @@ class DatabaseManager {
           await this.db.execAsync(
             'ALTER TABLE language_entities_cache ADD COLUMN last_availability_check TEXT DEFAULT CURRENT_TIMESTAMP'
           );
-          logger.database(
+          logger.info(
             'Added availability columns to language_entities_cache table'
           );
         }
       } else {
-        logger.database(
+        logger.info(
           'language_entities_cache table does not exist yet, skipping migration for this table'
         );
       }
@@ -436,17 +456,17 @@ class DatabaseManager {
           await this.db.execAsync(
             'ALTER TABLE available_versions_cache ADD COLUMN last_availability_check TEXT DEFAULT CURRENT_TIMESTAMP'
           );
-          logger.database(
+          logger.info(
             'Added availability columns to available_versions_cache table'
           );
         }
       } else {
-        logger.database(
+        logger.info(
           'available_versions_cache table does not exist yet, skipping migration for this table'
         );
       }
 
-      logger.database('Successfully migrated to version 3');
+      logger.info('Successfully migrated to version 3');
     } catch (error) {
       logger.error('Error during migration to version 3:', error);
       throw error;
@@ -456,7 +476,7 @@ class DatabaseManager {
   private async migrateToVersion4(): Promise<void> {
     if (!this.db) return;
 
-    logger.database(
+    logger.info(
       'Migrating database to version 4: Making testament field nullable'
     );
 
@@ -468,9 +488,7 @@ class DatabaseManager {
 
       if (booksTableExists && booksTableExists.count > 0) {
         // SQLite doesn't support ALTER COLUMN directly, so we need to recreate the table
-        logger.database(
-          'Recreating books table with nullable testament field...'
-        );
+        logger.info('Recreating books table with nullable testament field...');
 
         // Create a temporary table with the new structure
         await this.db.execAsync(`
@@ -511,14 +529,14 @@ class DatabaseManager {
           'CREATE INDEX IF NOT EXISTS idx_books_updated_at ON books(updated_at)'
         );
 
-        logger.database(
+        logger.info(
           'Successfully made testament field nullable in books table'
         );
       } else {
-        logger.database('Books table does not exist yet, skipping migration');
+        logger.info('Books table does not exist yet, skipping migration');
       }
 
-      logger.database('Successfully migrated to version 4');
+      logger.info('Successfully migrated to version 4');
     } catch (error) {
       logger.error('Error during migration to version 4:', error);
       throw error;
@@ -528,7 +546,7 @@ class DatabaseManager {
   private async migrateToVersion5(): Promise<void> {
     if (!this.db) return;
 
-    logger.database(
+    logger.info(
       'Migrating database to version 5: Updating media_files_verses table schema'
     );
 
@@ -536,9 +554,9 @@ class DatabaseManager {
       // Check if there's a schema mismatch by trying to access the table
       try {
         await this.db.execAsync('SELECT COUNT(*) FROM media_files_verses');
-        logger.database('media_files_verses table exists and is accessible');
+        logger.info('media_files_verses table exists and is accessible');
       } catch {
-        logger.database(
+        logger.info(
           'media_files_verses table has schema issues, dropping and recreating'
         );
 
@@ -560,7 +578,7 @@ class DatabaseManager {
         );
       }
 
-      logger.database('Successfully migrated to version 5');
+      logger.info('Successfully migrated to version 5');
     } catch (error) {
       logger.error('Error during migration to version 5:', error);
       throw error;
@@ -676,7 +694,7 @@ class DatabaseManager {
       await this.db.execAsync(
         `PRAGMA user_version = ${CURRENT_DATABASE_VERSION}`
       );
-      logger.database('Database reset successfully');
+      logger.info('Database reset successfully');
     } catch (error) {
       logger.error('Failed to reset database:', error);
       throw new DatabaseError('Database reset failed', 'RESET_FAILED', {
