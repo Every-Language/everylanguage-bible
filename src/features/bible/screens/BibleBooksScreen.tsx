@@ -16,6 +16,7 @@ import { BookGrid } from '../components/BookGrid';
 import { useBibleBooks } from '../hooks/useBibleBooks';
 import type { Book } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
+import { logger } from '@/shared/utils/logger';
 
 type BibleBooksScreenNavigationProp = NativeStackNavigationProp<
   BibleStackParamList,
@@ -40,7 +41,7 @@ export const BibleBooksScreen: React.FC = () => {
     try {
       await refreshBooks();
     } catch (error) {
-      console.error('Failed to refresh books:', error);
+      logger.error('Failed to refresh books:', error);
     }
   };
 
@@ -48,7 +49,7 @@ export const BibleBooksScreen: React.FC = () => {
     try {
       await syncNow();
     } catch (error) {
-      console.error('Failed to sync data:', error);
+      logger.error('Failed to sync data:', error);
     }
   };
 

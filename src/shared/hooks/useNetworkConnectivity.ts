@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
-import NetInfo from '@react-native-community/netinfo';
+import { NetworkService, NetworkState } from '../services/network';
 
-export interface NetworkState {
-  isConnected: boolean;
-  connectionType: string | null;
-  isInternetReachable: boolean | null;
-}
+export { NetworkState } from '../services/network';
 
 export const useNetworkConnectivity = () => {
   const [networkState, setNetworkState] = useState<NetworkState>({
@@ -17,23 +13,15 @@ export const useNetworkConnectivity = () => {
   useEffect(() => {
     // Get initial state
     const getInitialState = async () => {
-      const state = await NetInfo.fetch();
-      setNetworkState({
-        isConnected: state.isConnected ?? false,
-        connectionType: state.type,
-        isInternetReachable: state.isInternetReachable,
-      });
+      const state = await NetworkService.getNetworkState();
+      setNetworkState(state);
     };
 
     getInitialState();
 
     // Subscribe to network state changes
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setNetworkState({
-        isConnected: state.isConnected ?? false,
-        connectionType: state.type,
-        isInternetReachable: state.isInternetReachable,
-      });
+    const unsubscribe = NetworkService.subscribeToNetworkChanges(state => {
+      setNetworkState(state);
     });
 
     return unsubscribe;

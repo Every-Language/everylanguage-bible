@@ -21,6 +21,7 @@ import {
 } from '../types';
 import { useLanguageHierarchy } from '../hooks';
 import { useLanguageSelection } from '../hooks/useLanguageSelection';
+import { logger } from '@/shared/utils/logger';
 
 // Individual Language Node Component with proper expansion handling
 interface LanguageNodeWrapperProps {
@@ -282,7 +283,7 @@ export const LanguageHierarchyBrowser: React.FC<
           setAvailableVersions(versions);
           setShowingAvailableVersions(true);
         } catch (error) {
-          console.error('Error loading available versions:', error);
+          logger.error('Error loading available versions:', error);
           Alert.alert(
             'Error',
             'Failed to load available versions for this language'
@@ -312,7 +313,7 @@ export const LanguageHierarchyBrowser: React.FC<
 
         onClose();
       } catch (error) {
-        console.error('Error adding version to saved list:', error);
+        logger.error('Error adding version to saved list:', error);
 
         // Still proceed with selection even if saving fails
         if (onVersionSelect) {

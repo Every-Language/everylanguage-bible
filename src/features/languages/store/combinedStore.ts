@@ -16,6 +16,7 @@ import {
   type LanguageHierarchySlice,
 } from './slices/languageHierarchy';
 import { createSyncSlice, type SyncSlice } from './slices/sync';
+import { logger } from '../../../shared/utils/logger';
 
 // Combined store type
 export type CombinedLanguageSelectionStore = CurrentSelectionsSlice &
@@ -72,9 +73,9 @@ export const initializeCombinedLanguageSelectionStore = async () => {
       await store.loadLanguageHierarchy();
     }
 
-    console.log('Combined language selection store initialized successfully');
+    logger.info('Combined language selection store initialized successfully');
   } catch (error) {
-    console.error(
+    logger.error(
       'Error initializing combined language selection store:',
       error
     );

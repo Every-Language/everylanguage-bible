@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { languageService, userVersionsService } from '../../services';
+import { logger } from '../../../../shared/utils/logger';
 
 // Sync Slice State
 export interface SyncState {
@@ -45,9 +46,9 @@ export const createSyncSlice: StateCreator<SyncSlice, [], [], SyncSlice> = (
         syncError: null,
       });
 
-      console.log('Successfully synced with cloud');
+      logger.info('Successfully synced with cloud');
     } catch (error) {
-      console.error('Error syncing with cloud:', error);
+      logger.error('Error syncing with cloud:', error);
       set({
         syncInProgress: false,
         syncError: 'Failed to sync with cloud',

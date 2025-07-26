@@ -1,7 +1,14 @@
 import { supabase } from '../../api/supabase';
 import DatabaseManager from '../../database/DatabaseManager';
-import { SyncMetadata } from '../../database/schema';
-import { BaseSyncService, SyncResult, SyncOptions, SyncConfig } from '../types';
+import type {
+  SyncOptions,
+  SyncResult,
+  BaseSyncService,
+  SyncConfig,
+} from '../types';
+import type { SyncMetadata } from '../../database/schema';
+
+import { logger } from '../../../utils/logger';
 
 const databaseManager = DatabaseManager.getInstance();
 
@@ -98,7 +105,7 @@ class LanguageSyncService implements BaseSyncService {
         tables: tablesToUpdate,
       };
     } catch (error) {
-      console.error('Error checking for language updates:', error);
+      logger.error('Error checking for language updates:', error);
       return { needsUpdate: false, tables: [] };
     }
   }
@@ -119,7 +126,7 @@ class LanguageSyncService implements BaseSyncService {
       if (!options.forceFullSync) {
         const updateCheck = await this.needsUpdate();
         if (!updateCheck.needsUpdate) {
-          console.log('Language data is up to date, skipping sync');
+          logger.info('Language data is up to date, skipping sync');
           return [
             {
               success: true,
@@ -129,7 +136,7 @@ class LanguageSyncService implements BaseSyncService {
           ];
         }
 
-        console.log(
+        logger.info(
           'Language data needs updating for tables:',
           updateCheck.tables
         );
@@ -159,7 +166,7 @@ class LanguageSyncService implements BaseSyncService {
       // Update last successful sync time
       await this.updateLastFullSync();
     } catch (error) {
-      console.error('Language sync failed:', error);
+      logger.error('Language sync failed:', error);
     } finally {
       this.isSyncing = false;
     }
@@ -245,7 +252,7 @@ class LanguageSyncService implements BaseSyncService {
       }
       await this.updateSyncStatus('language_entities_cache', 'idle');
 
-      console.log(`Synced ${allEntities.length} language entities`);
+      logger.info(`Synced ${allEntities.length} language entities`);
 
       return {
         success: true,
@@ -253,7 +260,7 @@ class LanguageSyncService implements BaseSyncService {
         recordsSynced: allEntities.length,
       };
     } catch (error) {
-      console.error('Language entities sync failed:', error);
+      logger.error('Language entities sync failed:', error);
       await this.updateSyncStatus(
         'language_entities_cache',
         'error',
@@ -320,7 +327,7 @@ class LanguageSyncService implements BaseSyncService {
         );
         await availabilityService.updateLanguageAvailability();
       } catch (error) {
-        console.error('Failed to update language availability data:', error);
+        logger.error('Failed to update language availability data:', error);
       }
 
       return {
@@ -329,7 +336,7 @@ class LanguageSyncService implements BaseSyncService {
         recordsSynced: totalVersions,
       };
     } catch (error) {
-      console.error('Available versions sync failed:', error);
+      logger.error('Available versions sync failed:', error);
       await this.updateSyncStatus(
         'available_versions_cache',
         'error',
@@ -404,7 +411,7 @@ class LanguageSyncService implements BaseSyncService {
           .is('deleted_at', null);
 
         if (countError) {
-          console.error(
+          logger.error(
             `Error counting media files for audio version ${audioVersion.id}:`,
             countError
           );
@@ -545,7 +552,7 @@ class LanguageSyncService implements BaseSyncService {
         recordsSynced: 0,
       };
     } catch (error) {
-      console.error('User saved versions sync failed:', error);
+      logger.error('User saved versions sync failed:', error);
       await this.updateSyncStatus(
         'user_saved_versions',
         'error',
@@ -747,13 +754,13 @@ class LanguageSyncService implements BaseSyncService {
         .limit(1);
 
       if (error) {
-        console.error(`Error checking for changes in ${tableName}:`, error);
+        logger.error(`Error checking for changes in ${tableName}:`, error);
         return false;
       }
 
       return data && data.length > 0;
     } catch (error) {
-      console.error(`Error in hasRemoteChanges for ${tableName}:`, error);
+      logger.error(`Error in hasRemoteChanges for ${tableName}:`, error);
       return false;
     }
   }
@@ -794,7 +801,7 @@ class LanguageSyncService implements BaseSyncService {
         }
       }
     } catch (error) {
-      console.error('Failed to reset language sync metadata:', error);
+      logger.error('Failed to reset language sync metadata:', error);
       throw error;
     }
   }

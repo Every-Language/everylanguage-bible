@@ -1,7 +1,8 @@
 import { StateCreator } from 'zustand';
-import type { AudioVersion, TextVersion } from '../../types';
-import { userVersionsService } from '../../services';
+import { userVersionsService } from '../../services/domain/userVersionsService';
 import VerseTextSyncService from '../../../../shared/services/sync/bible/VerseTextSyncService';
+import type { AudioVersion, TextVersion } from '../../types/entities';
+import { logger } from '../../../../shared/utils/logger';
 
 // Current Selections Slice State
 export interface CurrentSelectionsState {
@@ -56,13 +57,13 @@ export const createCurrentSelectionsSlice: StateCreator<
     get()
       .persistCurrentSelections()
       .catch(error => {
-        console.error('Error auto-persisting audio version:', error);
+        logger.error('Error auto-persisting audio version:', error);
         set({ persistError: 'Failed to save audio version selection' });
       });
   },
 
   setCurrentTextVersion: (version: TextVersion | null) => {
-    console.log(
+    logger.log(
       '🏪 Store - setCurrentTextVersion called with:',
       version?.name || 'null'
     );
@@ -76,17 +77,17 @@ export const createCurrentSelectionsSlice: StateCreator<
     get()
       .persistCurrentSelections()
       .catch(error => {
-        console.error('Error auto-persisting text version:', error);
+        logger.error('Error auto-persisting text version:', error);
         set({ persistError: 'Failed to save text version selection' });
       });
 
     // ✅ NEW: Trigger verse text sync for the new version
     if (version) {
-      console.log('🏪 Store - Triggering verse text sync for:', version.name);
+      logger.log('🏪 Store - Triggering verse text sync for:', version.name);
       get()
         .syncVerseTextsForCurrentVersion()
         .catch(error => {
-          console.error('🏪 Store - Error syncing verse texts:', error);
+          logger.error('🏪 Store - Error syncing verse texts:', error);
         });
     }
   },
@@ -103,7 +104,7 @@ export const createCurrentSelectionsSlice: StateCreator<
 
       set({ isPersisting: false });
     } catch (error) {
-      console.error('Error persisting current selections:', error);
+      logger.error('Error persisting current selections:', error);
       set({
         isPersisting: false,
         persistError: 'Failed to save current selections',
@@ -123,7 +124,7 @@ export const createCurrentSelectionsSlice: StateCreator<
         isPersisting: false,
       });
     } catch (error) {
-      console.error('Error restoring current selections:', error);
+      logger.error('Error restoring current selections:', error);
       set({
         isPersisting: false,
         persistError: 'Failed to restore current selections',
@@ -139,19 +140,19 @@ export const createCurrentSelectionsSlice: StateCreator<
   // ✅ NEW: Verse text sync actions
   syncVerseTextsForCurrentVersion: async () => {
     const { currentTextVersion } = get();
-    console.log(
+    logger.log(
       '🔄 Sync - syncVerseTextsForCurrentVersion called for:',
       currentTextVersion?.name || 'no version'
     );
 
     if (!currentTextVersion) {
-      console.log('🔄 Sync - No current text version, skipping sync');
+      logger.log('🔄 Sync - No current text version, skipping sync');
       return;
     }
 
     try {
       set({ isSyncingVerseTexts: true, verseTextSyncError: null });
-      console.log('🔄 Sync - Starting verse text sync for:', {
+      logger.log('🔄 Sync - Starting verse text sync for:', {
         name: currentTextVersion.name,
         id: currentTextVersion.id,
         source: currentTextVersion.source,
@@ -169,11 +170,11 @@ export const createCurrentSelectionsSlice: StateCreator<
         verseTextSyncError: null,
       });
 
-      console.log(
+      logger.log(
         `🔄 Sync - Successfully synced verse texts for ${currentTextVersion.name}`
       );
     } catch (error) {
-      console.error('🔄 Sync - Failed to sync verse texts:', error);
+      logger.error('🔄 Sync - Failed to sync verse texts:', error);
       set({
         isSyncingVerseTexts: false,
         verseTextSyncError: 'Failed to sync verse texts',

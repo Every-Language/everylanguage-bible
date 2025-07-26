@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '../utils/logger';
 
 const ONBOARDING_STORAGE_KEY = '@bible_app_onboarding';
 
@@ -34,7 +35,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
         setShowOnboarding(true);
       }
     } catch (error) {
-      console.error('Failed to check onboarding status:', error);
+      logger.error('Failed to check onboarding status:', error);
       setShowOnboarding(true);
     }
   }, []);
@@ -44,7 +45,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       await AsyncStorage.removeItem(ONBOARDING_STORAGE_KEY);
       setShowOnboarding(true);
     } catch (error) {
-      console.error('Failed to reset onboarding:', error);
+      logger.error('Failed to reset onboarding:', error);
     }
   }, []);
 
@@ -56,7 +57,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
       );
       setShowOnboarding(false);
     } catch (error) {
-      console.error('Failed to save onboarding completion:', error);
+      logger.error('Failed to save onboarding completion:', error);
       setShowOnboarding(false);
     }
   }, []);

@@ -17,6 +17,7 @@ import { AudioVersion, TextVersion } from '@/features/languages/types';
 import { HomeTabNavigator, HomeContainer } from '../components';
 import { useHomeNavigation } from '../hooks';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { logger } from '@/shared/utils/logger';
 
 export const HomeScreen: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -64,13 +65,13 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleAudioVersionSelect = (version: AudioVersion | TextVersion) => {
-    console.log('Selected audio version:', version);
+    logger.log('Selected audio version:', version);
     setAudioVersion(version as AudioVersion);
     setShowAudioVersionModal(false);
   };
 
   const handleTextVersionSelect = (version: AudioVersion | TextVersion) => {
-    console.log('Selected text version:', version);
+    logger.log('Selected text version:', version);
     setTextVersion(version as TextVersion);
     setShowTextVersionModal(false);
   };

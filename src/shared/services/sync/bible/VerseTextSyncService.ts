@@ -3,6 +3,7 @@ import DatabaseManager from '../../database/DatabaseManager';
 import type { LocalVerseText } from '../../database/schema';
 import type { SyncOptions, SyncResult, BaseSyncService } from '../types';
 import type { Tables } from '@everylanguage/shared-types';
+import { logger } from '../../../utils/logger';
 
 const databaseManager = DatabaseManager.getInstance();
 
@@ -61,15 +62,13 @@ class VerseTextSyncService implements BaseSyncService {
     versionId: string,
     options: VerseTextSyncOptions = {}
   ): Promise<SyncResult> {
-    console.log('🌐 VerseTextSync - syncVerseTextsForVersion called:', {
+    logger.info('VerseTextSync - syncVerseTextsForVersion called:', {
       versionId,
       options,
     });
 
     if (this.isSyncing) {
-      console.log(
-        '🌐 VerseTextSync - Sync already in progress, throwing error'
-      );
+      logger.warn('VerseTextSync - Sync already in progress, throwing error');
       throw new VerseTextSyncError(
         'Verse text sync is already in progress',
         'SYNC_IN_PROGRESS'
@@ -82,16 +81,16 @@ class VerseTextSyncService implements BaseSyncService {
     try {
       await this.updateSyncStatus('verse_texts', 'syncing');
 
-      console.log(
-        `🌐 VerseTextSync - Starting verse text sync for text_version: ${versionId}`
+      logger.info(
+        `VerseTextSync - Starting verse text sync for text_version: ${versionId}`
       );
 
       const lastSync = options.forceFullSync
         ? '1970-01-01T00:00:00.000Z'
         : await this.getLastSync('verse_texts');
 
-      console.log(
-        `🌐 VerseTextSync - Last sync: ${lastSync}, Force full sync: ${options.forceFullSync}`
+      logger.info(
+        `VerseTextSync - Last sync: ${lastSync}, Force full sync: ${options.forceFullSync}`
       );
 
       let allVerseTexts: Tables<'verse_texts'>[] = [];
@@ -100,8 +99,8 @@ class VerseTextSyncService implements BaseSyncService {
       const mobileBatchSize = Math.min(batchSize, 500);
 
       while (hasMoreData) {
-        console.log(
-          `🌐 VerseTextSync - Fetching batch (limit: ${mobileBatchSize}, lastFetchedId: ${lastFetchedId})`
+        logger.info(
+          `VerseTextSync - Fetching batch (limit: ${mobileBatchSize}, lastFetchedId: ${lastFetchedId})`
         );
 
         // Build query based on version type
@@ -116,8 +115,8 @@ class VerseTextSyncService implements BaseSyncService {
           .limit(mobileBatchSize);
 
         // Filter by the specific version
-        console.log(
-          `🌐 VerseTextSync - Filtering by text_version_id: ${versionId}`
+        logger.info(
+          `VerseTextSync - Filtering by text_version_id: ${versionId}`
         );
         query = query.eq('text_version_id', versionId);
 
@@ -125,11 +124,11 @@ class VerseTextSyncService implements BaseSyncService {
           query = query.gt('id', lastFetchedId);
         }
 
-        console.log(`🌐 VerseTextSync - Executing Supabase query...`);
+        logger.info(`VerseTextSync - Executing Supabase query...`);
         const { data: remoteVerseTexts, error } = await query;
 
         if (error) {
-          console.log(`🌐 VerseTextSync - Supabase query error:`, error);
+          logger.error(`VerseTextSync - Supabase query error:`, error);
           throw new VerseTextSyncError(
             `Failed to fetch verse texts: ${error.message}`,
             'FETCH_ERROR',
@@ -137,12 +136,12 @@ class VerseTextSyncService implements BaseSyncService {
           );
         }
 
-        console.log(
-          `🌐 VerseTextSync - Query returned ${remoteVerseTexts?.length || 0} verse texts`
+        logger.info(
+          `VerseTextSync - Query returned ${remoteVerseTexts?.length || 0} verse texts`
         );
         if (remoteVerseTexts && remoteVerseTexts.length > 0) {
           const firstVerseText = remoteVerseTexts[0];
-          console.log(`🌐 VerseTextSync - First verse text:`, {
+          logger.info(`VerseTextSync - First verse text:`, {
             id: firstVerseText?.id,
             verse_id: firstVerseText?.verse_id,
             text_version_id: firstVerseText?.text_version_id,
@@ -151,7 +150,7 @@ class VerseTextSyncService implements BaseSyncService {
         }
 
         if (!remoteVerseTexts || remoteVerseTexts.length === 0) {
-          console.log(`🌐 VerseTextSync - No more data, stopping fetch loop`);
+          logger.info(`VerseTextSync - No more data, stopping fetch loop`);
           hasMoreData = false;
           break;
         }
@@ -170,7 +169,7 @@ class VerseTextSyncService implements BaseSyncService {
 
       if (allVerseTexts.length === 0) {
         await this.updateSyncStatus('verse_texts', 'idle');
-        console.log(`No verse texts found for text_version: ${versionId}`);
+        logger.info(`No verse texts found for text_version: ${versionId}`);
 
         const result: SyncResult = {
           success: true,
@@ -192,7 +191,7 @@ class VerseTextSyncService implements BaseSyncService {
       }
       await this.updateSyncStatus('verse_texts', 'idle');
 
-      console.log(
+      logger.info(
         `Synced ${allVerseTexts.length} verse texts for text_version: ${versionId}`
       );
 
@@ -205,7 +204,7 @@ class VerseTextSyncService implements BaseSyncService {
       this.notifyListeners(result);
       return result;
     } catch (error) {
-      console.error('Verse texts sync failed:', error);
+      logger.error('Verse texts sync failed:', error);
       await this.updateSyncStatus(
         'verse_texts',
         'error',
@@ -254,7 +253,7 @@ class VerseTextSyncService implements BaseSyncService {
       const results = await db.getAllAsync<LocalVerseText>(query, params);
       return results;
     } catch (error) {
-      console.error('Error getting verse texts for chapter:', error);
+      logger.error('Error getting verse texts for chapter:', error);
       throw new VerseTextSyncError(
         'Failed to get verse texts for chapter',
         'QUERY_ERROR',
@@ -279,7 +278,7 @@ class VerseTextSyncService implements BaseSyncService {
       if (savedVersions.length === 0) {
         // If no saved versions, clean up all verse texts
         await db.execAsync('DELETE FROM verse_texts');
-        console.log('Cleaned up all verse texts (no saved text versions)');
+        logger.info('Cleaned up all verse texts (no saved text versions)');
         return;
       }
 
@@ -294,9 +293,9 @@ class VerseTextSyncService implements BaseSyncService {
       `;
 
       await databaseManager.execSingle(query, savedVersionIds);
-      console.log('Cleaned up unused verse texts');
+      logger.info('Cleaned up unused verse texts');
     } catch (error) {
-      console.error('Error cleaning up unused verse texts:', error);
+      logger.error('Error cleaning up unused verse texts:', error);
       throw new VerseTextSyncError(
         'Failed to clean up unused verse texts',
         'CLEANUP_ERROR',
@@ -355,7 +354,7 @@ class VerseTextSyncService implements BaseSyncService {
       );
       return result?.last_sync || '1970-01-01T00:00:00.000Z';
     } catch (error) {
-      console.error(`Error getting last sync for ${tableName}:`, error);
+      logger.error(`Error getting last sync for ${tableName}:`, error);
       return '1970-01-01T00:00:00.000Z';
     }
   }
@@ -372,7 +371,7 @@ class VerseTextSyncService implements BaseSyncService {
         [timestamp, tableName]
       );
     } catch (error) {
-      console.error(`Error updating last sync for ${tableName}:`, error);
+      logger.error(`Error updating last sync for ${tableName}:`, error);
     }
   }
 
@@ -389,7 +388,7 @@ class VerseTextSyncService implements BaseSyncService {
         [status, errorMessage || null, tableName]
       );
     } catch (error) {
-      console.error(`Error updating sync status for ${tableName}:`, error);
+      logger.error(`Error updating sync status for ${tableName}:`, error);
     }
   }
 }

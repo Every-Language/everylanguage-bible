@@ -1,16 +1,29 @@
 import Constants from 'expo-constants';
 import { logger } from '../../../shared/utils/logger';
 
+// Define proper types for global and process
+interface GlobalWithProcess {
+  process?: {
+    env?: {
+      [key: string]: string | undefined;
+    };
+  };
+}
+
 // Environment configuration for the app
 export const env = {
   supabase: {
     url:
       Constants.expoConfig?.extra?.['EXPO_PUBLIC_SUPABASE_URL'] ||
-      (global as any).process?.env?.EXPO_PUBLIC_SUPABASE_URL ||
+      (global as GlobalWithProcess).process?.env?.[
+        'EXPO_PUBLIC_SUPABASE_URL'
+      ] ||
       '',
     anonKey:
       Constants.expoConfig?.extra?.['EXPO_PUBLIC_SUPABASE_ANON_KEY'] ||
-      (global as any).process?.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+      (global as GlobalWithProcess).process?.env?.[
+        'EXPO_PUBLIC_SUPABASE_ANON_KEY'
+      ] ||
       '',
   },
 } as const;

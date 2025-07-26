@@ -10,6 +10,7 @@ import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Theme, ThemeMode, ThemeContextType } from '@/shared/types/theme';
 import { themes } from '@/shared/constants/theme';
+import { logger } from '@/shared/utils/logger';
 
 // Theme storage key
 const THEME_STORAGE_KEY = '@theme_mode';
@@ -53,7 +54,7 @@ export function ThemeProvider({ children, initialTheme }: ThemeProviderProps) {
         setMode(systemMode);
       }
     } catch (error) {
-      console.error('Error loading theme preference:', error);
+      logger.error('Error loading theme preference:', error);
       // Fallback to system preference
       const systemMode = systemColorScheme === 'dark' ? 'dark' : 'light';
       setMode(systemMode);
@@ -67,7 +68,7 @@ export function ThemeProvider({ children, initialTheme }: ThemeProviderProps) {
     try {
       await AsyncStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch (error) {
-      console.error('Error saving theme preference:', error);
+      logger.error('Error saving theme preference:', error);
     }
   };
 

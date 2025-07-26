@@ -5,10 +5,16 @@ import {
   useTranslations,
 } from '../context/LocalizationContext';
 import { useTheme } from '../context/ThemeContext';
+import type { Theme } from '../types/theme';
 
 interface LocaleSelectorProps {
   onLocaleChange?: (localeCode: string) => void;
 }
+
+const getLocaleItemStyle = (theme: Theme, isSelected: boolean) => ({
+  backgroundColor: isSelected ? theme.colors.primary : 'transparent',
+  borderColor: theme.colors.border,
+});
 
 export function LocaleSelector({ onLocaleChange }: LocaleSelectorProps) {
   const { supportedLocales, currentLocale, changeLocale } = useLocalization();
@@ -30,13 +36,7 @@ export function LocaleSelector({ onLocaleChange }: LocaleSelectorProps) {
             key={locale.code}
             style={[
               styles.localeItem,
-              {
-                backgroundColor:
-                  currentLocale === locale.code
-                    ? theme.colors.primary
-                    : 'transparent',
-                borderColor: theme.colors.border,
-              },
+              getLocaleItemStyle(theme, currentLocale === locale.code),
             ]}
             onPress={() => handleLocaleChange(locale.code)}>
             <View style={styles.localeInfo}>

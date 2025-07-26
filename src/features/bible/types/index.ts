@@ -56,7 +56,7 @@ export interface VersesWithTextState {
   loading: boolean;
   error: string | null;
   selectedVerse: Verse | null;
-  currentTextVersion: any; // Will be properly typed when we use it
+  currentTextVersion: unknown; // Will be properly typed when we use it
 }
 
 export interface BibleNavigationState {

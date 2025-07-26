@@ -14,11 +14,12 @@ import i18n, {
   isRTLLocale,
   getLocaleDirection,
 } from '../services/i18n/config';
+import { logger } from '@/shared/utils/logger';
 
 // Define types for context
 interface LocalizationContextType {
   // Localization functions
-  t: (key: string, options?: any) => string;
+  t: typeof i18n.t;
 
   // Current locale
   currentLocale: string;
@@ -103,7 +104,7 @@ export function LocalizationProvider({
         I18nManager.forceRTL(isRTL);
       }
     } catch (error) {
-      console.error('Failed to change locale:', error);
+      logger.error('Failed to change locale:', error);
     }
   }, []);
 

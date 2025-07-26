@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import DatabaseManager, {
   DatabaseInitProgress,
 } from '@/shared/services/database/DatabaseManager';
+import { logger } from '@/shared/utils/logger';
 
 export const useDatabaseStatus = () => {
   const [databaseStatus, setDatabaseStatus] = useState<
@@ -13,7 +14,7 @@ export const useDatabaseStatus = () => {
 
   const checkDatabaseStatus = async () => {
     try {
-      console.log('OnboardingMainScreen: Starting database status check');
+      logger.info('OnboardingMainScreen: Starting database status check');
       setDatabaseStatus('checking');
       setError(null);
 
@@ -21,24 +22,24 @@ export const useDatabaseStatus = () => {
 
       // Check if database is already initialized
       if (databaseManager.isReady()) {
-        console.log('OnboardingMainScreen: Database is already ready');
+        logger.info('OnboardingMainScreen: Database is already ready');
         setDatabaseStatus('ready');
         return;
       }
 
       // Check if database is currently being initialized (by SyncContext)
       if (databaseManager.initialized) {
-        console.log('OnboardingMainScreen: Database is being initialized');
+        logger.info('OnboardingMainScreen: Database is being initialized');
         setDatabaseStatus('initializing');
         return;
       }
 
       // Try to initialize database
-      console.log('OnboardingMainScreen: Attempting to initialize database');
+      logger.info('OnboardingMainScreen: Attempting to initialize database');
       setDatabaseStatus('initializing');
 
       const progressHandler = (progress: DatabaseInitProgress) => {
-        console.log('OnboardingMainScreen: Database progress:', progress);
+        logger.info('OnboardingMainScreen: Database progress:', progress);
         setDatabaseProgress(progress);
       };
 
@@ -47,11 +48,11 @@ export const useDatabaseStatus = () => {
 
       await initPromise;
 
-      console.log('OnboardingMainScreen: Database initialization completed');
+      logger.info('OnboardingMainScreen: Database initialization completed');
       setDatabaseStatus('ready');
       setDatabaseProgress(null);
     } catch (error) {
-      console.error(
+      logger.error(
         'OnboardingMainScreen: Database initialization failed:',
         error
       );
@@ -63,23 +64,20 @@ export const useDatabaseStatus = () => {
 
   const verifyDatabase = async () => {
     try {
-      console.log('OnboardingMainScreen: Verifying database');
+      logger.info('OnboardingMainScreen: Verifying database');
       const databaseManager = DatabaseManager.getInstance();
 
       if (databaseManager.isReady()) {
-        console.log('OnboardingMainScreen: Database verification successful');
+        logger.info('OnboardingMainScreen: Database verification successful');
         setDatabaseStatus('ready');
         setError(null);
       } else {
-        console.log('OnboardingMainScreen: Database verification failed');
+        logger.info('OnboardingMainScreen: Database verification failed');
         setDatabaseStatus('error');
         setError('Database is not properly initialized');
       }
     } catch (error) {
-      console.error(
-        'OnboardingMainScreen: Database verification error:',
-        error
-      );
+      logger.error('OnboardingMainScreen: Database verification error:', error);
       setDatabaseStatus('error');
       setError(error instanceof Error ? error.message : 'Verification failed');
     }

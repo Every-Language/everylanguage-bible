@@ -9,10 +9,12 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+
 import { bibleSync } from '@/shared/services/sync/bible/BibleSyncService';
 import { languageSync } from '@/shared/services/sync/language/LanguageSyncService';
 import { localDataService } from '@/shared/services/database/LocalDataService';
 import DatabaseManager from '@/shared/services/database/DatabaseManager';
+import { logger } from '@/shared/utils/logger';
 
 const databaseManager = DatabaseManager.getInstance();
 
@@ -111,7 +113,7 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
         const bibleResults = await bibleSync.syncAll({
           forceFullSync: !hasData,
         });
-        console.log('Bible sync results:', bibleResults);
+        logger.info('Bible sync results:', bibleResults);
       }
 
       // Step 4: Sync Language content if needed
@@ -126,7 +128,7 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
         const languageResults = await languageSync.syncAll({
           forceFullSync: !hasData,
         });
-        console.log('Language sync results:', languageResults);
+        logger.info('Language sync results:', languageResults);
       }
 
       // Step 5: Verify all tables have data
@@ -155,7 +157,7 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
         });
       }
     } catch (error) {
-      console.error('Sync failed:', error);
+      logger.error('Sync failed:', error);
       setProgress({
         current: 100,
         total: 100,
@@ -212,7 +214,7 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
             const count = await table.checkFn();
             return { table: table.name, hasData: count > 0, count };
           } catch (error) {
-            console.error(`Error checking ${table.name}:`, error);
+            logger.error(`Error checking ${table.name}:`, error);
             return { table: table.name, hasData: false, count: 0 };
           }
         })
@@ -228,7 +230,7 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
         results,
       };
     } catch (error) {
-      console.error('Error verifying tables:', error);
+      logger.error('Error verifying tables:', error);
       return {
         success: false,
         missingTables: ['unknown'],

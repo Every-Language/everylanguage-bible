@@ -21,6 +21,7 @@ import { ChapterCard } from '../components/ChapterCard';
 import type { Book, ChapterWithMetadata } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 import { ChapterDownloadModal } from '@/features/downloads/components/ChapterDownloadModal';
+import { logger } from '@/shared/utils/logger';
 
 type ChapterScreenProps = NativeStackScreenProps<
   BibleStackParamList,
@@ -140,7 +141,7 @@ export const ChapterScreen: React.FC = () => {
   });
 
   const formatTestament = (_book: Book) => {
-    console.log('Current book', _book);
+    logger.debug('Current book', _book);
 
     // You can implement proper testament detection based on book data
     return 'OLD TESTAMENT'; // Placeholder
@@ -191,7 +192,7 @@ export const ChapterScreen: React.FC = () => {
       if (firstChapter) {
         const mockTrack = createMockTrackForChapter(firstChapter);
 
-        console.log('Playing from first chapter:', firstChapter);
+        logger.info('Playing from first chapter:', firstChapter);
         mediaActions.setCurrentTrack(mockTrack);
         mediaActions.play();
       }
@@ -202,8 +203,8 @@ export const ChapterScreen: React.FC = () => {
     // Create mock track data and load it into the media player
     const mockTrack = createMockTrackForChapter(chapter);
 
-    console.log('Playing chapter:', chapter);
-    console.log('Mock track data:', mockTrack);
+    logger.info('Playing chapter:', chapter);
+    logger.debug('Mock track data:', mockTrack);
 
     // Set the track and start playback
     mediaActions.setCurrentTrack(mockTrack);
@@ -212,7 +213,7 @@ export const ChapterScreen: React.FC = () => {
 
   const handleQueueChapter = (chapter: ChapterWithMetadata) => {
     // TODO: Implement queue chapter functionality
-    console.log('Queue chapter:', chapter);
+    logger.info('Queue chapter:', chapter);
   };
 
   const handleCloseModal = () => {

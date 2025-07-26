@@ -1,7 +1,5 @@
 import { supabase } from '../../api/supabase';
 import DatabaseManager from '../../database/DatabaseManager';
-
-const databaseManager = DatabaseManager.getInstance();
 import type {
   SyncOptions,
   SyncResult,
@@ -11,6 +9,9 @@ import type {
 } from '../types';
 import { validateTestament } from '../types';
 import type { Tables } from '@everylanguage/shared-types';
+import { logger } from '../../../utils/logger';
+
+const databaseManager = DatabaseManager.getInstance();
 
 export interface BibleSyncOptions extends SyncOptions {
   forceFullSync?: boolean;
@@ -120,7 +121,7 @@ class BibleSyncService implements BaseSyncService {
         tables: tablesToUpdate,
       };
     } catch (error) {
-      console.error('Error checking for updates:', error);
+      logger.error('Error checking for updates:', error);
       return { needsUpdate: false, tables: [] };
     }
   }
@@ -141,7 +142,7 @@ class BibleSyncService implements BaseSyncService {
       if (!options.forceFullSync) {
         const updateCheck = await this.needsUpdate();
         if (!updateCheck.needsUpdate) {
-          console.log('Bible content is up to date, skipping sync');
+          logger.info('Bible content is up to date, skipping sync');
           return [
             {
               success: true,
@@ -151,7 +152,7 @@ class BibleSyncService implements BaseSyncService {
           ];
         }
 
-        console.log(
+        logger.info(
           'Bible content needs updating for tables:',
           updateCheck.tables
         );
@@ -178,7 +179,7 @@ class BibleSyncService implements BaseSyncService {
       // Update last successful sync time
       await this.updateLastFullSync();
     } catch (error) {
-      console.error('Bible sync failed:', error);
+      logger.error('Bible sync failed:', error);
     } finally {
       this.isSyncing = false;
     }
@@ -259,7 +260,7 @@ class BibleSyncService implements BaseSyncService {
       }
       await this.updateSyncStatus('books', 'idle');
 
-      console.log(`Synced ${allBooks.length} books`);
+      logger.info(`Synced ${allBooks.length} books`);
 
       return {
         success: true,
@@ -267,7 +268,7 @@ class BibleSyncService implements BaseSyncService {
         recordsSynced: allBooks.length,
       };
     } catch (error) {
-      console.error('Books sync failed:', error);
+      logger.error('Books sync failed:', error);
       await this.updateSyncStatus(
         'books',
         'error',
@@ -353,7 +354,7 @@ class BibleSyncService implements BaseSyncService {
       }
       await this.updateSyncStatus('chapters', 'idle');
 
-      console.log(`Synced ${allChapters.length} chapters`);
+      logger.info(`Synced ${allChapters.length} chapters`);
 
       return {
         success: true,
@@ -361,7 +362,7 @@ class BibleSyncService implements BaseSyncService {
         recordsSynced: allChapters.length,
       };
     } catch (error) {
-      console.error('Chapters sync failed:', error);
+      logger.error('Chapters sync failed:', error);
       await this.updateSyncStatus(
         'chapters',
         'error',
@@ -447,7 +448,7 @@ class BibleSyncService implements BaseSyncService {
       }
       await this.updateSyncStatus('verses', 'idle');
 
-      console.log(`Synced ${allVerses.length} verses`);
+      logger.info(`Synced ${allVerses.length} verses`);
 
       return {
         success: true,
@@ -455,7 +456,7 @@ class BibleSyncService implements BaseSyncService {
         recordsSynced: allVerses.length,
       };
     } catch (error) {
-      console.error('Verses sync failed:', error);
+      logger.error('Verses sync failed:', error);
       await this.updateSyncStatus(
         'verses',
         'error',
@@ -482,14 +483,14 @@ class BibleSyncService implements BaseSyncService {
           try {
             return validateBookData(book);
           } catch (error) {
-            console.warn('Skipping invalid book data:', error);
+            logger.warn('Skipping invalid book data:', error);
             return null;
           }
         })
         .filter(Boolean);
 
       if (validatedBooks.length === 0) {
-        console.warn('No valid books to insert after validation');
+        logger.warn('No valid books to insert after validation');
         return;
       }
 
@@ -671,13 +672,13 @@ class BibleSyncService implements BaseSyncService {
         .limit(1);
 
       if (error) {
-        console.error(`Error checking for changes in ${tableName}:`, error);
+        logger.error(`Error checking for changes in ${tableName}:`, error);
         return false;
       }
 
       return data && data.length > 0;
     } catch (error) {
-      console.error(`Error in hasRemoteChanges for ${tableName}:`, error);
+      logger.error(`Error in hasRemoteChanges for ${tableName}:`, error);
       return false;
     }
   }
@@ -714,7 +715,7 @@ class BibleSyncService implements BaseSyncService {
         }
       }
     } catch (error) {
-      console.error('Failed to reset sync metadata:', error);
+      logger.error('Failed to reset sync metadata:', error);
       throw error;
     }
   }

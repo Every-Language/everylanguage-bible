@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppState } from 'react-native';
-import {
-  backgroundSyncService,
-  BackgroundTaskStatus,
-} from '../services/sync/BackgroundSyncService';
+import { backgroundSyncService } from '../services/sync/BackgroundSyncService';
 import { bibleSync } from '../services/sync/bible/BibleSyncService';
 import { useSync } from '../context/SyncContext';
+import { BackgroundTaskStatus } from '../services/sync/BackgroundSyncService';
+import { logger } from '../utils/logger';
 
 export interface BackgroundSyncState {
   isRegistered: boolean;
@@ -53,7 +52,7 @@ export const useBackgroundSync = () => {
           setState(prev => ({ ...prev, isRegistered: true }));
         }
       } catch (error) {
-        console.error('Failed to initialize background sync:', error);
+        logger.error('Failed to initialize background sync:', error);
       } finally {
         setIsLoading(false);
       }
@@ -76,7 +75,7 @@ export const useBackgroundSync = () => {
           lastUpdateCheck: new Date().toISOString(),
         }));
       } catch (error) {
-        console.error('Failed to check for remote changes:', error);
+        logger.error('Failed to check for remote changes:', error);
       }
     };
 
@@ -122,10 +121,10 @@ export const useBackgroundSync = () => {
         return true;
       }
 
-      console.warn('Background tasks are not available:', status);
+      logger.warn('Background tasks are not available:', status);
       return false;
     } catch (error) {
-      console.error('Failed to enable background sync:', error);
+      logger.error('Failed to enable background sync:', error);
       return false;
     }
   };
@@ -142,7 +141,7 @@ export const useBackgroundSync = () => {
 
       return true;
     } catch (error) {
-      console.error('Failed to disable background sync:', error);
+      logger.error('Failed to disable background sync:', error);
       return false;
     }
   };
@@ -157,7 +156,7 @@ export const useBackgroundSync = () => {
       }));
       return updateCheck.needsUpdate;
     } catch (error) {
-      console.error('Failed to check for remote changes:', error);
+      logger.error('Failed to check for remote changes:', error);
       return false;
     }
   };
@@ -169,7 +168,7 @@ export const useBackgroundSync = () => {
     try {
       return await bibleSync.needsUpdate();
     } catch (error) {
-      console.error('Failed to get changes summary:', error);
+      logger.error('Failed to get changes summary:', error);
       return { needsUpdate: false, tables: [] };
     }
   };

@@ -1,6 +1,11 @@
 import { StateCreator } from 'zustand';
-import type { AudioVersion, TextVersion, SavedVersionInput } from '../../types';
-import { userVersionsService } from '../../services';
+import { userVersionsService } from '../../services/domain/userVersionsService';
+import type {
+  AudioVersion,
+  TextVersion,
+  SavedVersionInput,
+} from '../../types/entities';
+import { logger } from '../../../../shared/utils/logger';
 
 // Saved Versions Slice State
 export interface SavedVersionsState {
@@ -89,9 +94,9 @@ export const createSavedVersionsSlice: StateCreator<
         }));
       }
 
-      console.log(`Added ${type} version to saved list:`, version.name);
+      logger.info(`Added ${type} version to saved list:`, version.name);
     } catch (error) {
-      console.error('Error adding saved version:', error);
+      logger.error('Error adding saved version:', error);
       set({ versionsError: `Failed to add ${version.name} to saved versions` });
       throw error;
     }
@@ -118,9 +123,9 @@ export const createSavedVersionsSlice: StateCreator<
         }));
       }
 
-      console.log(`Removed ${type} version from saved list:`, versionId);
+      logger.info(`Removed ${type} version from saved list:`, versionId);
     } catch (error) {
-      console.error('Error removing saved version:', error);
+      logger.error('Error removing saved version:', error);
       set({ versionsError: 'Failed to remove version from saved list' });
       throw error;
     }
@@ -137,7 +142,7 @@ export const createSavedVersionsSlice: StateCreator<
         isLoadingVersions: false,
       });
     } catch (error) {
-      console.error('Error loading saved versions:', error);
+      logger.error('Error loading saved versions:', error);
       set({
         isLoadingVersions: false,
         versionsError: 'Failed to load saved versions',

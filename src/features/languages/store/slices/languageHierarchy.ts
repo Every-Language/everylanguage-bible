@@ -1,11 +1,12 @@
 import { StateCreator } from 'zustand';
+import { languageService } from '../../services/domain/languageService';
 import type {
   LanguageEntity,
-  LanguageHierarchyNode,
   AudioVersion,
   TextVersion,
-} from '../../types';
-import { languageService } from '../../services';
+  LanguageHierarchyNode,
+} from '../../types/entities';
+import { logger } from '../../../../shared/utils/logger';
 
 // Language Hierarchy Slice State
 export interface LanguageHierarchyState {
@@ -107,7 +108,7 @@ export const createLanguageHierarchySlice: StateCreator<
 
         // Optionally trigger background sync if data is stale
         languageService.syncInBackground().catch((error: any) => {
-          console.warn('Background sync failed:', error);
+          logger.warn('Background sync failed:', error);
         });
 
         return;
@@ -132,7 +133,7 @@ export const createLanguageHierarchySlice: StateCreator<
 
           // Trigger background sync if needed
           languageService.syncInBackground().catch((error: any) => {
-            console.warn('Background sync failed:', error);
+            logger.warn('Background sync failed:', error);
           });
 
           return;
@@ -140,7 +141,7 @@ export const createLanguageHierarchySlice: StateCreator<
       }
 
       // No cache available, need to sync first (slower)
-      console.log('No cached language data, performing initial sync...');
+      logger.log('No cached language data, performing initial sync...');
       const freshHierarchy = await languageService.getLanguageHierarchy();
       const hierarchyNodes = buildHierarchyNodes(freshHierarchy);
 
@@ -150,7 +151,7 @@ export const createLanguageHierarchySlice: StateCreator<
         hierarchyError: null,
       });
     } catch (error) {
-      console.error('Error loading language hierarchy:', error);
+      logger.error('Error loading language hierarchy:', error);
       set({
         isLoadingHierarchy: false,
         hierarchyError: 'Failed to load language hierarchy',
@@ -182,7 +183,7 @@ export const createLanguageHierarchySlice: StateCreator<
         set({ currentLanguagePath: path });
       })
       .catch((error: any) => {
-        console.error('Error getting language path:', error);
+        logger.error('Error getting language path:', error);
         set({ hierarchyError: 'Failed to navigate to language' });
       });
   },
@@ -215,7 +216,7 @@ export const createLanguageHierarchySlice: StateCreator<
         isSearching: false,
       });
     } catch (error) {
-      console.error('Error searching languages:', error);
+      logger.error('Error searching languages:', error);
       set({
         isSearching: false,
         hierarchyError: 'Failed to search languages',
@@ -244,7 +245,7 @@ export const createLanguageHierarchySlice: StateCreator<
         availableTextVersions: versions.text,
       });
     } catch (error) {
-      console.error('Error loading available versions:', error);
+      logger.error('Error loading available versions:', error);
       set({
         hierarchyError: 'Failed to load available versions',
       });

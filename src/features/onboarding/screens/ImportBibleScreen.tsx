@@ -92,6 +92,11 @@ const sampleBibleVersions: BibleVersion[] = [
   },
 ];
 
+const getCheckboxStyle = (theme: any, isSelected: boolean) => ({
+  backgroundColor: isSelected ? theme.colors.primary : 'transparent',
+  borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+});
+
 export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
   onBack,
   onComplete,
@@ -177,17 +182,7 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
         </Text>
       </View>
       <View
-        style={[
-          styles.checkbox,
-          {
-            backgroundColor: version.isSelected
-              ? theme.colors.primary
-              : 'transparent',
-            borderColor: version.isSelected
-              ? theme.colors.primary
-              : theme.colors.border,
-          },
-        ]}>
+        style={[styles.checkbox, getCheckboxStyle(theme, version.isSelected)]}>
         {version.isSelected && (
           <Text style={[styles.checkmark, { color: theme.colors.textInverse }]}>
             ✓

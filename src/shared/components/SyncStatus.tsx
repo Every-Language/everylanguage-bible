@@ -9,6 +9,7 @@ import {
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useSync } from '@/shared/context/SyncContext';
 import { useBackgroundSync } from '@/shared/hooks/useBackgroundSync';
+import { logger } from '@/shared/utils/logger';
 
 interface SyncStatusProps {
   showDetails?: boolean;
@@ -43,7 +44,7 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({
         await checkForRemoteChanges();
         await syncNow();
       } catch (error) {
-        console.error('Sync failed:', error);
+        logger.error('Sync failed:', error);
       }
     }
   };
@@ -120,7 +121,7 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({
           style={[
             styles.syncButton,
             { backgroundColor: theme.colors.primary },
-            isSyncing && { opacity: 0.6 },
+            isSyncing && styles.disabledOpacity,
           ]}
           onPress={handleSyncPress}
           disabled={isSyncing}>
@@ -189,5 +190,8 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 12,
+  },
+  disabledOpacity: {
+    opacity: 0.6,
   },
 });

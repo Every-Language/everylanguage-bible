@@ -5,6 +5,7 @@ import { useTheme } from '@/shared/context/ThemeContext';
 import { useAuthContext } from '@/features/auth/components/AuthProvider';
 import { SlideUpModal } from './ui/SlideUpModal';
 import { SyncStatusPill } from './SyncStatusPill';
+import { logger } from '../utils/logger';
 
 interface MenuModalProps {
   visible: boolean;
@@ -36,7 +37,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
       await signOut();
       onClose();
     } catch (error) {
-      console.error('Sign out error:', error);
+      logger.error('Sign out error:', error);
     }
   };
 

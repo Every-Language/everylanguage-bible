@@ -1,7 +1,13 @@
 import DatabaseManager from './DatabaseManager';
-import { LocalBook, LocalChapter, LocalVerse, LocalVerseText } from './schema';
 import type { Tables } from '@everylanguage/shared-types';
+import type {
+  LocalBook,
+  LocalChapter,
+  LocalVerse,
+  LocalVerseText,
+} from './schema';
 import { validateTestament } from '../sync/types';
+import { logger } from '../../utils/logger';
 
 const databaseManager = DatabaseManager.getInstance();
 
@@ -236,7 +242,7 @@ export class LocalDataService {
       );
       return (result[0]?.count || 0) > 0;
     } catch (error) {
-      console.error('Error checking media files for chapter:', error);
+      logger.error('Error checking media files for chapter:', error);
       return false;
     }
   }
@@ -279,7 +285,7 @@ export class LocalDataService {
 
       return availabilityMap;
     } catch (error) {
-      console.error('Error getting chapters media availability:', error);
+      logger.error('Error getting chapters media availability:', error);
       // Return all chapters as not available on error
       const availabilityMap = new Map<string, boolean>();
       for (const chapterId of chapterIds) {
@@ -775,7 +781,7 @@ export class LocalDataService {
           : null,
       }));
     } catch (error) {
-      console.error('Error getting verses with texts:', error);
+      logger.error('Error getting verses with texts:', error);
       throw error;
     }
   }
@@ -786,13 +792,13 @@ export class LocalDataService {
     textVersionId?: string
   ): Promise<Map<string, LocalVerseText>> {
     try {
-      console.log('🗃️ DB - getVerseTextsForChapter called with:', {
+      logger.log('🗃️ DB - getVerseTextsForChapter called with:', {
         chapterId,
         textVersionId,
       });
 
       if (!textVersionId) {
-        console.log('🗃️ DB - No textVersionId provided, returning empty map');
+        logger.log('🗃️ DB - No textVersionId provided, returning empty map');
         return new Map();
       }
 
@@ -817,7 +823,7 @@ export class LocalDataService {
         ORDER BY v.verse_number ASC
       `;
 
-      console.log('🗃️ DB - Executing query with params:', [
+      logger.log('🗃️ DB - Executing query with params:', [
         chapterId,
         textVersionId,
       ]);
@@ -826,7 +832,7 @@ export class LocalDataService {
       const allVerseTextsCount = await db.getFirstAsync<{ count: number }>(
         'SELECT COUNT(*) as count FROM verse_texts'
       );
-      console.log(
+      logger.log(
         '🗃️ DB - Total verse_texts in database:',
         allVerseTextsCount?.count || 0
       );
@@ -836,7 +842,7 @@ export class LocalDataService {
         'SELECT COUNT(*) as count FROM verse_texts WHERE text_version_id = ?',
         [textVersionId]
       );
-      console.log(
+      logger.log(
         '🗃️ DB - Verse texts for this version:',
         versionTextsCount?.count || 0
       );
@@ -846,10 +852,10 @@ export class LocalDataService {
         textVersionId,
       ]);
 
-      console.log('🗃️ DB - Found', rows.length, 'verse texts');
+      logger.log('🗃️ DB - Found', rows.length, 'verse texts');
       if (rows.length > 0) {
         const firstRow = rows[0];
-        console.log('🗃️ DB - First verse text:', {
+        logger.log('🗃️ DB - First verse text:', {
           id: firstRow?.id,
           verse_id: firstRow?.verse_id,
           text_version_id: firstRow?.text_version_id,
@@ -863,10 +869,10 @@ export class LocalDataService {
         verseTextsMap.set(verseText.verse_id, verseText);
       });
 
-      console.log('🗃️ DB - Created map with', verseTextsMap.size, 'entries');
+      logger.log('🗃️ DB - Created map with', verseTextsMap.size, 'entries');
       return verseTextsMap;
     } catch (error) {
-      console.error('🗃️ DB - Error getting verse texts for chapter:', error);
+      logger.error('🗃️ DB - Error getting verse texts for chapter:', error);
       throw error;
     }
   }

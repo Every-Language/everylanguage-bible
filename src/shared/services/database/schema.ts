@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { logger } from '@/shared/utils/logger';
 
 export interface SyncMetadata {
   table_name: string;
@@ -490,7 +491,7 @@ export const createTables = async (
     VALUES ('media_files_verses', '1970-01-01T00:00:00.000Z')
   `);
 
-  console.log('Database tables created successfully');
+  logger.info('Database tables created successfully');
 };
 
 export const dropTables = async (db: SQLite.SQLiteDatabase): Promise<void> => {

@@ -1,9 +1,14 @@
-import { supabase } from '../../../../shared/services/api/supabase';
-import type { AudioVersion, TextVersion, SavedVersionInput } from '../../types';
 import {
   userVersionsRepository,
   type UserVersionsRepositoryInterface,
 } from '../data/userVersionsRepository';
+import { supabase } from '../../../../shared/services/api/supabase';
+import type {
+  AudioVersion,
+  TextVersion,
+  SavedVersionInput,
+} from '../../types/entities';
+import { logger } from '../../../../shared/utils/logger';
 
 // Domain service errors
 export class UserVersionsServiceError extends Error {
@@ -124,7 +129,7 @@ class UserVersionsService implements UserVersionsServiceInterface {
 
       await this.repository.addSavedVersion(input);
 
-      console.log(
+      logger.info(
         `Added ${input.versionType} version to saved list:`,
         input.versionName
       );
@@ -150,7 +155,7 @@ class UserVersionsService implements UserVersionsServiceInterface {
     try {
       await this.repository.removeSavedVersion(versionId, versionType);
 
-      console.log(`Removed ${versionType} version from saved list:`, versionId);
+      logger.info(`Removed ${versionType} version from saved list:`, versionId);
 
       // Sync with cloud if user is authenticated
       await this.syncSavedVersions();
@@ -170,7 +175,7 @@ class UserVersionsService implements UserVersionsServiceInterface {
     try {
       return await this.repository.isVersionSaved(versionId, versionType);
     } catch (error) {
-      console.error('Error checking if version is saved:', error);
+      logger.error('Error checking if version is saved:', error);
       return false;
     }
   }
@@ -211,7 +216,7 @@ class UserVersionsService implements UserVersionsServiceInterface {
         text: textVersion,
       };
     } catch (error) {
-      console.error('Error getting current selections:', error);
+      logger.error('Error getting current selections:', error);
       return { audio: null, text: null };
     }
   }
@@ -225,7 +230,7 @@ class UserVersionsService implements UserVersionsServiceInterface {
       await this.repository.saveCurrentAudioVersionToStorage(audio);
       await this.repository.saveCurrentTextVersionToStorage(text);
 
-      console.log('Saved current selections to local storage');
+      logger.info('Saved current selections to local storage');
 
       // Sync with cloud for authenticated users
       await this.saveSelectionsToCloud(audio, text);
@@ -245,15 +250,15 @@ class UserVersionsService implements UserVersionsServiceInterface {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        console.log('User not authenticated, skipping cloud sync');
+        logger.info('User not authenticated, skipping cloud sync');
         return;
       }
 
       // In a full implementation, this would sync with the cloud
       // For now, we'll just log success
-      console.log('Successfully synced saved versions to cloud');
+      logger.info('Successfully synced saved versions to cloud');
     } catch (error) {
-      console.error('Error syncing saved versions:', error);
+      logger.error('Error syncing saved versions:', error);
       // Don't throw - sync failures shouldn't break local functionality
     }
   }
@@ -264,14 +269,14 @@ class UserVersionsService implements UserVersionsServiceInterface {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        console.log('User not authenticated, skipping cloud sync');
+        logger.info('User not authenticated, skipping cloud sync');
         return;
       }
 
       // In a full implementation, this would load from cloud and merge with local
-      console.log('Successfully loaded saved versions from cloud');
+      logger.info('Successfully loaded saved versions from cloud');
     } catch (error) {
-      console.error('Error loading saved versions from cloud:', error);
+      logger.error('Error loading saved versions from cloud:', error);
       // Don't throw - local functionality should continue working
     }
   }
@@ -284,7 +289,7 @@ class UserVersionsService implements UserVersionsServiceInterface {
       // Clear current selections from storage
       await this.repository.clearCurrentSelectionsFromStorage();
 
-      console.log('Cleared all user language selection data');
+      logger.info('Cleared all user language selection data');
     } catch (error) {
       throw new UserVersionsServiceError(
         'Failed to clear user data',
@@ -311,7 +316,7 @@ class UserVersionsService implements UserVersionsServiceInterface {
       // For now, returning null as we don't have the full version data
       return null;
     } catch (error) {
-      console.error('Error getting selections from cloud:', error);
+      logger.error('Error getting selections from cloud:', error);
       return null;
     }
   }
@@ -329,9 +334,9 @@ class UserVersionsService implements UserVersionsServiceInterface {
       }
 
       // In a full implementation, this would save to cloud
-      console.log('Selections saved to cloud');
+      logger.info('Selections saved to cloud');
     } catch (error) {
-      console.error('Error saving selections to cloud:', error);
+      logger.error('Error saving selections to cloud:', error);
       // Don't throw - local storage should still work
     }
   }

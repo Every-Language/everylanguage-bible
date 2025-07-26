@@ -18,6 +18,7 @@ import {
 } from '../types';
 import { LanguageHierarchyBrowser } from './LanguageHierarchyBrowser';
 import { useLanguageSelection } from '../hooks/useLanguageSelection';
+import { logger } from '@/shared/utils/logger';
 
 // Individual Version List Item Component
 const VersionListItem: React.FC<VersionListItemProps> = ({
@@ -47,10 +48,10 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
           <Text
             style={[
               styles.versionName,
-              {
-                color: theme.colors.text,
-                fontWeight: isSelected ? '600' : '500',
-              },
+              { color: theme.colors.text },
+              isSelected
+                ? styles.selectedVersionName
+                : styles.unselectedVersionName,
             ]}
             numberOfLines={2}>
             {version.name}
@@ -175,7 +176,7 @@ export const VersionSelectionModal: React.FC<VersionSelectionModalProps> = ({
         setShowLanguageBrowser(false);
         onClose();
       } catch (error) {
-        console.error('Error adding version:', error);
+        logger.error('Error adding version:', error);
         // Still select the version even if saving fails
         onVersionSelect(version);
         setShowLanguageBrowser(false);
@@ -189,17 +190,17 @@ export const VersionSelectionModal: React.FC<VersionSelectionModalProps> = ({
     async (versionId: string) => {
       try {
         await removeFromSavedVersions(versionId, versionType);
-        console.log(`Removed ${versionType} version:`, versionId);
+        logger.info(`Removed ${versionType} version:`, versionId);
       } catch (error) {
-        console.error('Error removing version:', error);
+        logger.error('Error removing version:', error);
       }
     },
     [removeFromSavedVersions, versionType]
   );
 
   const handleDebugTextVersions = useCallback(async () => {
-    console.log('🔍 DEBUG: Checking text versions for verse data...');
-    console.log(
+    logger.debug('🔍 DEBUG: Checking text versions for verse data...');
+    logger.debug(
       '🔍 DEBUG: Current saved versions:',
       savedVersions.map(v => ({
         name: v.name,
@@ -214,7 +215,7 @@ export const VersionSelectionModal: React.FC<VersionSelectionModalProps> = ({
       v => 'verseCount' in v && v.verseCount > 0
     );
 
-    console.log(
+    logger.debug(
       '🔍 DEBUG: Versions with verse data:',
       versionsWithData.map(v => ({
         name: v.name,
@@ -223,12 +224,12 @@ export const VersionSelectionModal: React.FC<VersionSelectionModalProps> = ({
     );
 
     if (versionsWithData.length === 0) {
-      console.log('🔍 DEBUG: ❌ No text versions have verse data available!');
-      console.log(
+      logger.debug('🔍 DEBUG: ❌ No text versions have verse data available!');
+      logger.debug(
         '🔍 DEBUG: This is why you\'re seeing "Text not available for MCV"'
       );
     } else {
-      console.log(
+      logger.debug(
         '🔍 DEBUG: ✅ Found',
         versionsWithData.length,
         'text versions with data'
@@ -387,7 +388,7 @@ export const VersionSelectionModal: React.FC<VersionSelectionModalProps> = ({
               onPress={handleDebugTextVersions}
               variant='secondary'
               fullWidth
-              style={{ marginTop: 8 }}
+              style={styles.marginTop8}
             />
           )}
         </View>
@@ -574,5 +575,14 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 16,
     paddingTop: 16,
+  },
+  marginTop8: {
+    marginTop: 8,
+  },
+  selectedVersionName: {
+    fontWeight: '600',
+  },
+  unselectedVersionName: {
+    fontWeight: '500',
   },
 });

@@ -59,8 +59,10 @@ export function useAuth() {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
       await authService.signIn({ email, password });
-    } catch (error: any) {
-      Alert.alert('Sign In Error', error.message);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Sign in failed';
+      Alert.alert('Sign In Error', errorMessage);
       throw error;
     } finally {
       setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -78,8 +80,10 @@ export function useAuth() {
           'Please check your email to verify your account!'
         );
       }
-    } catch (error: any) {
-      Alert.alert('Sign Up Error', error.message);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Sign up failed';
+      Alert.alert('Sign Up Error', errorMessage);
       throw error;
     } finally {
       setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -90,8 +94,10 @@ export function useAuth() {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
       await authService.signOut();
-    } catch (error: any) {
-      Alert.alert('Sign Out Error', error.message);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Sign out failed';
+      Alert.alert('Sign Out Error', errorMessage);
       throw error;
     } finally {
       setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -102,8 +108,10 @@ export function useAuth() {
     try {
       await authService.resetPassword(email);
       Alert.alert('Success', 'Password reset email sent!');
-    } catch (error: any) {
-      Alert.alert('Reset Password Error', error.message);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Password reset failed';
+      Alert.alert('Reset Password Error', errorMessage);
       throw error;
     }
   }, []);

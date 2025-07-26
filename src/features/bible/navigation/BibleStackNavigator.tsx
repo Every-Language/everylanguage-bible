@@ -1,5 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Book, Chapter } from '../types';
 
 // Type definitions for the Bible stack
@@ -15,7 +16,8 @@ export type BibleStackParamList = {
 };
 
 // Re-export the navigation types for use in components
-export type BibleStackNavigationProp = any;
+export type BibleStackNavigationProp =
+  NativeStackNavigationProp<BibleStackParamList>;
 
 const BibleStack = createNativeStackNavigator<BibleStackParamList>();
 

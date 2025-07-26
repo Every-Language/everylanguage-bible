@@ -67,24 +67,14 @@ export const SlideUpModal: React.FC<SlideUpModalProps> = ({
 
   // Custom backdrop component that covers the entire screen
   const renderBackdrop = useCallback(
-    (props: any) => (
+    (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}
         opacity={0.5}
-        onPress={enableDismissOnClose ? onClose : undefined}
-        style={[
-          props.style,
-          {
-            // Cover the entire screen from top to bottom
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            position: 'absolute',
-          },
-        ]}
+        onPress={enableDismissOnClose ? onClose : () => {}}
+        style={[props.style, styles.overlay]}
       />
     ),
     [enableDismissOnClose, onClose]
@@ -176,5 +166,12 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     paddingHorizontal: 16,
+  },
+  overlay: {
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    position: 'absolute',
   },
 });

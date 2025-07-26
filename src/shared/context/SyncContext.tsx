@@ -27,7 +27,7 @@ export interface SyncContextType {
   forceFullSync: () => Promise<void>;
   resetSyncTimestamp: () => Promise<void>;
   clearLocalData: () => Promise<void>;
-  getSyncMetadata: () => Promise<any[]>;
+  getSyncMetadata: () => Promise<unknown[]>;
   checkForUpdates: () => Promise<{ needsUpdate: boolean; tables: string[] }>;
 }
 
@@ -60,7 +60,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     if (isInitialized) return;
 
     try {
-      logger.sync('Starting app initialization...');
+      logger.info('Starting app initialization...');
 
       // Use the centralized initialization service
       await initializationService.initialize();
@@ -74,23 +74,23 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       setLastSyncAt(lastSync);
 
       setIsInitialized(true);
-      logger.sync('App initialization completed successfully');
+      logger.info('App initialization completed successfully');
 
       // For bible content, we can be more conservative about auto-syncing
       // Only auto-sync if no local data exists or if explicitly needed
       if (!dataAvailable) {
-        logger.sync('No local data found, starting initial sync...');
+        logger.info('No local data found, starting initial sync...');
         await syncNow();
       } else {
         // Check for updates in background without forcing sync
-        logger.sync('Checking for bible content updates...');
+        logger.info('Checking for bible content updates...');
         await checkForUpdates();
       }
 
       // Register background sync after successful initialization
       try {
         await backgroundSyncService.registerBackgroundTask();
-        logger.sync('Background sync registered successfully');
+        logger.info('Background sync registered successfully');
       } catch (error) {
         logger.warn('Failed to register background sync:', error);
       }
@@ -111,9 +111,9 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     try {
       const updateCheck = await bibleSync.needsUpdate();
       if (updateCheck.needsUpdate) {
-        logger.sync('Bible content updates available for:', updateCheck.tables);
+        logger.info('Bible content updates available for:', updateCheck.tables);
       } else {
-        logger.sync('Bible content is up to date');
+        logger.info('Bible content is up to date');
       }
       return updateCheck;
     } catch (error) {
@@ -241,7 +241,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       // Reset sync timestamp for all bible tables
       await bibleSync.resetSyncMetadata();
       setLastSyncAt(null);
-      logger.sync('Sync timestamp reset for all bible tables');
+      logger.info('Sync timestamp reset for all bible tables');
     } catch (error) {
       logger.error('Failed to reset sync timestamp:', error);
     }
@@ -255,7 +255,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       await bibleSync.clearLocalData();
       setHasLocalData(false);
       setLastSyncAt(null);
-      logger.sync('Local bible data cleared');
+      logger.info('Local bible data cleared');
     } catch (error) {
       logger.error('Failed to clear local data:', error);
     }
@@ -267,14 +267,16 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     try {
       return await bibleSync.getSyncMetadata();
     } catch (error) {
-      console.error('Failed to get sync metadata:', error);
+      logger.error('Failed to get sync metadata:', error);
       return [];
     }
   }, [isInitialized]);
 
   // Initialize database on mount
   useEffect(() => {
-    initializeDatabase().catch(console.error);
+    initializeDatabase().catch(error => {
+      logger.error('Failed to initialize database:', error);
+    });
   }, [initializeDatabase]);
 
   // Listen to sync events

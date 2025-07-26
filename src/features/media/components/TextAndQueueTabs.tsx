@@ -2,17 +2,18 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
+  StyleSheet,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useTheme } from '../../../shared/context/ThemeContext';
+import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
 import { useCurrentVersions } from '../../languages/hooks';
 import { localDataService } from '../../../shared/services/database/LocalDataService';
-import type { LocalVerseText } from '../../../shared/services/database/schema';
 import type { Verse } from '../../bible/types';
+import type { LocalVerseText } from '../../../shared/services/database/schema';
+import { logger } from '../../../shared/utils/logger';
 
 interface TextAndQueueTabsProps {
   // Optional prop to control the tab from parent if needed
@@ -30,104 +31,72 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
   const [verseTexts, setVerseTexts] = useState<Map<string, LocalVerseText>>(
     new Map()
   );
-  const [loadingVerses, setLoadingVerses] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Extract chapter ID from current track
-  // Track ID format is "book-book-chapter" (e.g., "gen-gen-1")
-  // We need to get the last two parts and join them: "gen-1"
   const extractChapterId = (
     trackId: string | undefined
   ): string | undefined => {
     if (!trackId) return undefined;
-    const parts = trackId.split('-');
-    if (parts.length >= 3) {
-      // Take the last two parts and join them
-      return `${parts[parts.length - 2]}-${parts[parts.length - 1]}`;
-    }
-    return undefined;
+    // Extract chapter ID from track ID format: "chapter_123"
+    const match = trackId.match(/chapter_(\d+)/);
+    return match ? match[1] : undefined;
   };
 
-  const chapterId = extractChapterId(state.currentTrack?.id);
-
-  // Load verses when chapter changes
   useEffect(() => {
     const loadVerses = async () => {
-      console.log('🎵 Media Player - Loading verses for chapterId:', chapterId);
-      console.log('🎵 Media Player - Current track:', state.currentTrack);
-
+      const chapterId = extractChapterId(state.currentTrack?.id);
       if (!chapterId) {
-        console.log('🎵 Media Player - No chapterId, setting verses to empty');
         setVerses([]);
+        setVerseTexts(new Map());
         return;
       }
 
       try {
-        setLoadingVerses(true);
-        const versesData = await localDataService.getVersesForUI(chapterId);
-        console.log(
-          '🎵 Media Player - Loaded verses:',
-          versesData.length,
-          'verses'
+        setLoading(true);
+        setError(null);
+        const chapterVerses =
+          await localDataService.getVersesByChapterId(chapterId);
+        setVerses(chapterVerses);
+        logger.info(
+          'Loaded verses for chapter:',
+          chapterId,
+          chapterVerses.length
         );
-        setVerses(versesData);
-      } catch (error) {
-        console.error('🎵 Media Player - Error loading verses:', error);
-        setVerses([]);
+      } catch (err) {
+        logger.error('Error loading verses:', err);
+        setError('Failed to load verses');
       } finally {
-        setLoadingVerses(false);
+        setLoading(false);
+      }
+    };
+
+    const loadVerseTexts = async () => {
+      const chapterId = extractChapterId(state.currentTrack?.id);
+      if (!chapterId || !currentTextVersion) {
+        setVerseTexts(new Map());
+        return;
+      }
+
+      try {
+        const texts = await localDataService.getVerseTextsForChapter(
+          chapterId,
+          currentTextVersion.id
+        );
+        setVerseTexts(texts);
+        logger.info('Loaded verse texts for chapter:', chapterId, texts.size);
+      } catch (err) {
+        logger.error('Error loading verse texts:', err);
+        setVerseTexts(new Map());
       }
     };
 
     loadVerses();
-  }, [chapterId]);
-
-  // Load verse texts when text version changes
-  useEffect(() => {
-    const loadVerseTexts = async () => {
-      console.log(
-        '🎵 Media Player - Loading verse texts for chapterId:',
-        chapterId
-      );
-      console.log(
-        '🎵 Media Player - Current text version:',
-        currentTextVersion
-      );
-
-      if (!chapterId || !currentTextVersion) {
-        console.log(
-          '🎵 Media Player - No chapterId or textVersion, setting verse texts to empty'
-        );
-        setVerseTexts(new Map());
-        return;
-      }
-
-      try {
-        const textsMap = await localDataService.getVerseTextsForChapter(
-          chapterId,
-          currentTextVersion.id
-        );
-        console.log(
-          '🎵 Media Player - Loaded verse texts:',
-          textsMap.size,
-          'texts for version:',
-          currentTextVersion.name
-        );
-        console.log(
-          '🎵 Media Player - First few verse text IDs:',
-          Array.from(textsMap.keys()).slice(0, 3)
-        );
-        setVerseTexts(textsMap);
-      } catch (error) {
-        console.error('🎵 Media Player - Error loading verse texts:', error);
-        setVerseTexts(new Map());
-      }
-    };
-
     loadVerseTexts();
-  }, [chapterId, currentTextVersion?.id]);
+  }, [state.currentTrack?.id, currentTextVersion]);
 
   const renderTextContent = () => {
-    if (loadingVerses) {
+    if (loading) {
       return (
         <View style={styles.contentScrollView}>
           <Text
@@ -138,32 +107,54 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
       );
     }
 
-    const hasVerses = verses.length > 0;
-
-    if (!hasVerses) {
+    if (error) {
       return (
         <View style={styles.contentScrollView}>
           <Text
             style={[styles.noDataText, { color: theme.colors.textSecondary }]}>
-            {currentTextVersion
-              ? `No verses available for this chapter`
-              : 'Select a text version to view verse text'}
+            Error: {error}
           </Text>
         </View>
       );
     }
 
-    // Check if current text version has no data
-    const showNoDataWarning =
-      currentTextVersion &&
-      'verseCount' in currentTextVersion &&
-      currentTextVersion.verseCount === 0;
+    if (!currentTextVersion) {
+      return (
+        <ScrollView
+          style={styles.contentScrollView}
+          contentContainerStyle={styles.scrollContentContainer}
+          showsVerticalScrollIndicator={false}>
+          <View
+            style={[
+              styles.textVersionBadge,
+              { backgroundColor: theme.colors.surface },
+            ]}>
+            <MaterialIcons name='book' size={16} color={theme.colors.primary} />
+            <View style={styles.textVersionInfo}>
+              <Text
+                style={[styles.textVersionName, { color: theme.colors.text }]}>
+                No Text Version Selected
+              </Text>
+              <Text
+                style={[
+                  styles.textVersionLanguage,
+                  { color: theme.colors.textSecondary },
+                ]}>
+                Please select a text version to view verse texts
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    const showNoDataWarning = verses.length > 0 && verseTexts.size === 0;
 
     if (showNoDataWarning) {
       return (
         <ScrollView
           style={styles.contentScrollView}
-          contentContainerStyle={{ padding: 16 }}
+          contentContainerStyle={styles.scrollContentContainer}
           showsVerticalScrollIndicator={false}>
           {/* Text Version Badge */}
           <View
@@ -237,11 +228,10 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
                   </Text>
                   {currentTextVersion && (
                     <Text
-                      style={{
-                        color: theme.colors.primary,
-                        fontSize: 12,
-                        fontWeight: '600',
-                      }}>
+                      style={[
+                        styles.versionBadge,
+                        { color: theme.colors.primary },
+                      ]}>
                       {currentTextVersion.name}
                     </Text>
                   )}
@@ -268,26 +258,10 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
   };
 
   const renderQueueContent = () => {
-    const mockQueue = [
-      {
-        id: 1,
-        title: 'John Chapter 2',
-        subtitle: 'ENGLISH - BSB',
-        current: false,
-      },
-      {
-        id: 2,
-        title: 'John Chapter 3',
-        subtitle: 'ENGLISH - BSB',
-        current: false,
-      },
-      {
-        id: 3,
-        title: 'John Chapter 4',
-        subtitle: 'ENGLISH - BSB',
-        current: false,
-      },
-    ];
+    const queue = state.queue || [];
+    const currentIndex = state.currentTrack
+      ? queue.findIndex(track => track.id === state.currentTrack?.id)
+      : -1;
 
     return (
       <ScrollView
@@ -299,45 +273,41 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
         <View style={styles.queueContainer}>
           <Text
             style={[styles.queueSectionTitle, { color: theme.colors.text }]}>
-            User queue
+            Current Queue ({queue.length} tracks)
           </Text>
 
-          {mockQueue.map(item => (
-            <View key={item.id} style={styles.queueItem}>
+          {/* Current Track */}
+          {state.currentTrack && (
+            <View
+              key={`current-${state.currentTrack.id}`}
+              style={styles.queueItem}>
               <MaterialIcons
-                name='drag-handle'
-                size={20}
-                color={theme.colors.textSecondary}
+                name='play-circle-filled'
+                size={24}
+                color={theme.colors.primary}
               />
               <View style={styles.queueItemText}>
                 <Text
                   style={[styles.queueItemTitle, { color: theme.colors.text }]}>
-                  {item.title}
+                  {state.currentTrack.title}
                 </Text>
                 <Text
                   style={[
                     styles.queueItemSubtitle,
                     { color: theme.colors.textSecondary },
                   ]}>
-                  {item.subtitle}
+                  Now Playing
                 </Text>
               </View>
             </View>
-          ))}
+          )}
 
-          <Text
-            style={[
-              styles.queueSectionTitle,
-              { color: theme.colors.text, marginTop: 24 },
-            ]}>
-            Up next
-          </Text>
-
-          {mockQueue.map(item => (
+          {/* Next Tracks */}
+          {queue.slice(currentIndex + 1).map((item, _index) => (
             <View key={`next-${item.id}`} style={styles.queueItem}>
               <MaterialIcons
-                name='play-arrow'
-                size={20}
+                name='queue-music'
+                size={24}
                 color={theme.colors.textSecondary}
               />
               <View style={styles.queueItemText}>
@@ -350,7 +320,7 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
                     styles.queueItemSubtitle,
                     { color: theme.colors.textSecondary },
                   ]}>
-                  {item.subtitle}
+                  Up Next
                 </Text>
               </View>
             </View>
@@ -362,15 +332,12 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Toggle Buttons */}
+      {/* Tab Toggle */}
       <View style={styles.toggleContainer}>
         <TouchableOpacity
           style={[
             styles.toggleButton,
-            activeTab === 'text' && [
-              styles.activeToggle,
-              { backgroundColor: theme.colors.primary },
-            ],
+            activeTab === 'text' && { backgroundColor: theme.colors.primary },
           ]}
           onPress={() => setActiveTab('text')}>
           <Text
@@ -379,20 +346,18 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
               {
                 color:
                   activeTab === 'text'
-                    ? theme.colors.background
+                    ? theme.colors.textInverse
                     : theme.colors.text,
               },
             ]}>
             Text
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[
             styles.toggleButton,
-            activeTab === 'queue' && [
-              styles.activeToggle,
-              { backgroundColor: theme.colors.primary },
-            ],
+            activeTab === 'queue' && { backgroundColor: theme.colors.primary },
           ]}
           onPress={() => setActiveTab('queue')}>
           <Text
@@ -401,7 +366,7 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
               {
                 color:
                   activeTab === 'queue'
-                    ? theme.colors.background
+                    ? theme.colors.textInverse
                     : theme.colors.text,
               },
             ]}>
@@ -416,18 +381,15 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
         <View
           style={[
             styles.scrollableBackground,
-            {
-              backgroundColor:
-                theme.mode === 'dark'
-                  ? 'rgba(255, 255, 255, 0.08)'
-                  : 'rgba(0, 0, 0, 0.05)',
-            },
+            theme.mode === 'dark'
+              ? styles.darkBackground
+              : styles.lightBackground,
           ]}>
           {/* Text Content */}
           <View
             style={[
               styles.tabContent,
-              { display: activeTab === 'text' ? 'flex' : 'none' },
+              activeTab === 'text' ? styles.tabVisible : styles.tabHidden,
             ]}>
             {renderTextContent()}
           </View>
@@ -436,7 +398,7 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
           <View
             style={[
               styles.tabContent,
-              { display: activeTab === 'queue' ? 'flex' : 'none' },
+              activeTab === 'queue' ? styles.tabVisible : styles.tabHidden,
             ]}>
             {renderQueueContent()}
           </View>
@@ -464,9 +426,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
   },
-  activeToggle: {
-    // backgroundColor will be set dynamically from theme
-  },
   toggleButtonText: {
     fontSize: 14,
     fontWeight: '600',
@@ -489,6 +448,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
+  scrollContentContainer: {
+    padding: 16,
+  },
+  textVersionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  textVersionInfo: {
+    flex: 1,
+  },
+  textVersionName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  textVersionLanguage: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+  noDataContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  noDataTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  noDataMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    lineHeight: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 32,
+  },
+  noDataText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 32,
+  },
   versesContainer: {
     paddingBottom: 20,
   },
@@ -509,79 +517,52 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  versionBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   verseText: {
-    fontSize: 18,
-    lineHeight: 28,
+    fontSize: 16,
+    lineHeight: 24,
   },
   queueContainer: {
     paddingBottom: 20,
   },
   queueSectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 16,
   },
   queueItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    padding: 16,
     marginBottom: 8,
     borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    gap: 12,
   },
   queueItemText: {
     flex: 1,
-    marginLeft: 12,
   },
   queueItemTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
+    marginBottom: 4,
   },
   queueItemSubtitle: {
     fontSize: 14,
-    marginTop: 2,
   },
-  loadingText: {
-    fontSize: 16,
-    textAlign: 'center',
-    paddingTop: 40,
+  darkBackground: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
-  noDataText: {
-    fontSize: 16,
-    textAlign: 'center',
-    paddingTop: 40,
+  lightBackground: {
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
-  textVersionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
+  tabVisible: {
+    display: 'flex',
   },
-  textVersionInfo: {
-    marginLeft: 8,
-  },
-  textVersionName: {
-    fontWeight: '600',
-  },
-  textVersionLanguage: {
-    fontSize: 12,
-  },
-  noDataContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  noDataTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  noDataMessage: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 20,
+  tabHidden: {
+    display: 'none',
   },
 });

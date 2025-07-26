@@ -1,5 +1,6 @@
 import { supabase } from '../../../shared/services/api/supabase';
 import DatabaseManager from '../../../shared/services/database/DatabaseManager';
+import { logger } from '../../../shared/utils/logger';
 
 const databaseManager = DatabaseManager.getInstance();
 
@@ -9,7 +10,7 @@ export class AvailabilityService {
    */
   async updateLanguageAvailability(): Promise<void> {
     try {
-      console.log('Starting availability update for all languages...');
+      logger.info('Starting availability update for all languages...');
 
       // Get all language entities
       const allLanguages = await databaseManager.executeQuery(
@@ -22,7 +23,7 @@ export class AvailabilityService {
       for (const language of allLanguages) {
         if (!language || !language.id) continue;
 
-        const languageId = language.id;
+        const languageId = language.id!;
         const availability = await this.checkLanguageAvailability(languageId);
 
         // Update the language entity cache
@@ -39,7 +40,7 @@ export class AvailabilityService {
             availability.textCount,
             new Date().toISOString().split('T')[0] +
               ' ' +
-              new Date().toISOString().split('T')[1].slice(0, 8),
+              (new Date().toISOString().split('T')[1] || '').slice(0, 8),
             languageId,
           ]
         );
@@ -50,11 +51,11 @@ export class AvailabilityService {
         }
       }
 
-      console.log(
+      logger.info(
         `Updated availability for ${updatedCount} languages. ${hasContentCount} have available versions.`
       );
     } catch (error) {
-      console.error('Error updating language availability:', error);
+      logger.error('Error updating language availability:', error);
       throw error;
     }
   }
@@ -77,7 +78,7 @@ export class AvailabilityService {
         textCount,
       };
     } catch (error) {
-      console.error('Error checking language availability:', error);
+      logger.error('Error checking language availability:', error);
       return {
         hasAvailableVersions: false,
         audioCount: 0,
@@ -139,7 +140,7 @@ export class AvailabilityService {
         totalTextVersions: (result as any).total_text_versions || 0,
       };
     } catch (error) {
-      console.error('Error getting availability summary:', error);
+      logger.error('Error getting availability summary:', error);
       throw error;
     }
   }

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Animated, Dimensions } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { View, Text, Animated, Dimensions, StyleSheet } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 import { Button } from './ui/Button';
-import DatabaseManager, {
-  DatabaseInitProgress,
-} from '@/shared/services/database/DatabaseManager';
+import DatabaseManager from '../services/database/DatabaseManager';
+import type { DatabaseInitProgress } from '../services/database/DatabaseManager';
+import type { Theme } from '../types/theme';
+import { logger } from '../utils/logger';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -14,48 +15,27 @@ interface DatabaseOnboardingProps {
 }
 
 // Sub-component for the icon section
-const IconSection: React.FC<{ theme: any }> = ({ theme }) => (
+const IconSection: React.FC<{ theme: Theme }> = ({ theme }) => (
   <View
-    style={{
-      width: 120,
-      height: 120,
-      borderRadius: 60,
-      backgroundColor: theme.colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: theme.spacing.xl,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 4,
-    }}>
-    <Text style={{ fontSize: 48 }}>🗄️</Text>
+    style={[
+      styles.iconContainer,
+      {
+        backgroundColor: theme.colors.surface,
+        shadowColor: theme.colors.shadow,
+      },
+    ]}>
+    <Text style={styles.iconText}>🗄️</Text>
   </View>
 );
 
 // Sub-component for the content section
-const ContentSection: React.FC<{ theme: any }> = ({ theme }) => (
-  <View style={{ alignItems: 'center', marginBottom: theme.spacing.lg }}>
-    <Text
-      style={{
-        fontSize: theme.typography.fontSize.xxl,
-        fontWeight: 'bold',
-        color: theme.colors.text,
-        textAlign: 'center',
-        marginBottom: theme.spacing.sm,
-        lineHeight: theme.typography.lineHeight.xxl,
-      }}>
+const ContentSection: React.FC<{ theme: Theme }> = ({ theme }) => (
+  <View style={styles.contentSection}>
+    <Text style={[styles.contentTitle, { color: theme.colors.text }]}>
       Setting Up Your Bible App
     </Text>
     <Text
-      style={{
-        fontSize: theme.typography.fontSize.md,
-        color: theme.colors.textSecondary,
-        textAlign: 'center',
-        lineHeight: theme.typography.lineHeight.md,
-        paddingHorizontal: theme.spacing.md,
-      }}>
+      style={[styles.contentSubtitle, { color: theme.colors.textSecondary }]}>
       We&apos;re preparing your Bible app with all the features you need to
       read, listen, and study scripture.
     </Text>
@@ -64,28 +44,15 @@ const ContentSection: React.FC<{ theme: any }> = ({ theme }) => (
 
 // Sub-component for the error section
 const ErrorSection: React.FC<{
-  theme: any;
+  theme: Theme;
   error: string;
   onRetry: () => void;
 }> = ({ theme, error, onRetry }) => (
-  <View style={{ alignItems: 'center', marginBottom: theme.spacing.lg }}>
-    <Text
-      style={{
-        fontSize: theme.typography.fontSize.lg,
-        fontWeight: '600',
-        color: theme.colors.error,
-        textAlign: 'center',
-        marginBottom: theme.spacing.sm,
-      }}>
+  <View style={styles.errorSection}>
+    <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
       Setup Failed
     </Text>
-    <Text
-      style={{
-        fontSize: theme.typography.fontSize.md,
-        color: theme.colors.textSecondary,
-        textAlign: 'center',
-        marginBottom: theme.spacing.md,
-      }}>
+    <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
       {error}
     </Text>
     <Button title='Retry' onPress={onRetry} variant='secondary' />
@@ -94,48 +61,27 @@ const ErrorSection: React.FC<{
 
 // Sub-component for the progress section
 const ProgressSection: React.FC<{
-  theme: any;
+  theme: Theme;
   progress: DatabaseInitProgress;
 }> = ({ theme, progress }) => (
-  <View style={{ width: '100%', marginBottom: theme.spacing.lg }}>
+  <View style={styles.progressSection}>
     <View
-      style={{
-        width: '100%',
-        height: 8,
-        backgroundColor: theme.colors.border,
-        borderRadius: 4,
-        overflow: 'hidden',
-        marginBottom: theme.spacing.sm,
-      }}>
+      style={[styles.progressBar, { backgroundColor: theme.colors.border }]}>
       <View
-        style={{
-          width: `${progress.progress}%`,
-          height: '100%',
-          backgroundColor: theme.colors.primary,
-          borderRadius: 4,
-        }}
+        style={[
+          styles.progressFill,
+          {
+            width: `${progress.progress}%`,
+            backgroundColor: theme.colors.primary,
+          },
+        ]}
       />
     </View>
-    <Text
-      style={{
-        fontSize: theme.typography.fontSize.sm,
-        color: theme.colors.textSecondary,
-        textAlign: 'center',
-        marginBottom: theme.spacing.xs,
-      }}>
+    <Text style={[styles.progressText, { color: theme.colors.textSecondary }]}>
       {progress.message}
     </Text>
-    <View
-      style={{
-        alignItems: 'center',
-        marginTop: theme.spacing.sm,
-      }}>
-      <Text
-        style={{
-          fontSize: theme.typography.fontSize.sm,
-          color: theme.colors.accent,
-          fontWeight: '500',
-        }}>
+    <View style={styles.progressStageContainer}>
+      <Text style={[styles.progressStage, { color: theme.colors.accent }]}>
         {progress.stage}
       </Text>
     </View>
@@ -144,11 +90,11 @@ const ProgressSection: React.FC<{
 
 // Sub-component for the actions section
 const ActionsSection: React.FC<{
-  _theme: any;
+  _theme: Theme;
   isComplete: boolean;
   onComplete: () => void;
 }> = ({ _theme, isComplete, onComplete }) => (
-  <View style={{ width: '100%', alignItems: 'center' }}>
+  <View style={styles.actionsSection}>
     {isComplete && (
       <Button
         title='Continue'
@@ -190,11 +136,11 @@ export const DatabaseOnboarding: React.FC<DatabaseOnboardingProps> = ({
 
   const initializeDatabase = async () => {
     try {
-      console.log('DatabaseOnboarding: Starting database initialization');
+      logger.info('DatabaseOnboarding: Starting database initialization');
       const databaseManager = DatabaseManager.getInstance();
 
       databaseManager.setProgressCallback(progress => {
-        console.log('DatabaseOnboarding: Progress update:', progress);
+        logger.info('DatabaseOnboarding: Progress update:', progress);
         setProgress(progress);
 
         if (progress.stage === 'complete') {
@@ -203,9 +149,9 @@ export const DatabaseOnboarding: React.FC<DatabaseOnboardingProps> = ({
       });
 
       await databaseManager.initialize();
-      console.log('DatabaseOnboarding: Database initialization completed');
+      logger.info('DatabaseOnboarding: Database initialization completed');
     } catch (err) {
-      console.error('DatabaseOnboarding: Database initialization failed:', err);
+      logger.error('DatabaseOnboarding: Database initialization failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
       onError?.(errorMessage);
@@ -221,18 +167,14 @@ export const DatabaseOnboarding: React.FC<DatabaseOnboardingProps> = ({
 
   return (
     <Animated.View
-      style={{
-        flex: 1,
-        width: screenWidth,
-        paddingHorizontal: theme.spacing.lg,
-        paddingTop: theme.spacing.xl,
-        paddingBottom: theme.spacing.lg,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: theme.colors.background,
-        opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }],
-      }}>
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.background,
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        },
+      ]}>
       <IconSection theme={theme} />
 
       <ContentSection theme={theme} />
@@ -251,3 +193,94 @@ export const DatabaseOnboarding: React.FC<DatabaseOnboardingProps> = ({
     </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    width: screenWidth,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 40,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  iconText: {
+    fontSize: 48,
+  },
+  contentSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  contentTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 36,
+  },
+  contentSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 16,
+  },
+  errorSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  progressSection: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  progressBar: {
+    width: '100%',
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  progressStageContainer: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  progressStage: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  actionsSection: {
+    width: '100%',
+    alignItems: 'center',
+  },
+});

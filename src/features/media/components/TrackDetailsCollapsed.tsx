@@ -4,8 +4,10 @@ import Animated from 'react-native-reanimated';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 
+import type { ViewStyle } from 'react-native';
+
 interface TrackDetailsCollapsedProps {
-  style?: any; // For animated styles passed from parent
+  style?: ViewStyle; // For animated styles passed from parent
 }
 
 export const TrackDetailsCollapsed: React.FC<TrackDetailsCollapsedProps> = ({

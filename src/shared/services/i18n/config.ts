@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '@/shared/utils/logger';
 
 // Import translation files
 import enTranslations from './locales/en.json';
@@ -65,7 +66,7 @@ function getDeviceLocale(): string {
 
     return 'en'; // Default fallback
   } catch (error) {
-    console.error('Error getting device locale:', error);
+    logger.error('Error getting device locale:', error);
     return 'en'; // Default fallback
   }
 }
@@ -75,7 +76,7 @@ async function getSavedLocale(): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(LOCALE_STORAGE_KEY);
   } catch (error) {
-    console.error('Error getting saved locale:', error);
+    logger.error('Error getting saved locale:', error);
     return null;
   }
 }
@@ -85,7 +86,7 @@ export async function saveLocalePreference(localeCode: string): Promise<void> {
   try {
     await AsyncStorage.setItem(LOCALE_STORAGE_KEY, localeCode);
   } catch (error) {
-    console.error('Error saving locale preference:', error);
+    logger.error('Error saving locale preference:', error);
   }
 }
 
@@ -127,7 +128,7 @@ const initializeI18n = async () => {
       // Missing key handler
       missingKeyHandler: (lng, ns, key, fallbackValue) => {
         if (__DEV__) {
-          console.warn(`Missing translation key: ${key} for locale: ${lng}`);
+          logger.warn(`Missing translation key: ${key} for locale: ${lng}`);
         }
         return fallbackValue || key;
       },
@@ -145,9 +146,9 @@ const initializeI18n = async () => {
       },
     });
 
-    console.log('i18n initialized successfully');
+    logger.info('i18n initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize i18n:', error);
+    logger.error('Failed to initialize i18n:', error);
   }
 };
 

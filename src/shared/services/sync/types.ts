@@ -1,5 +1,6 @@
 // Import auto-generated database types for IntelliSense
 import type { Database } from '@everylanguage/shared-types';
+import { logger } from '@/shared/utils/logger';
 
 // Use flexible types that accept any string but provide IntelliSense for known values
 export type SyncStatus = Database['public']['Enums']['upload_status'] | string;
@@ -34,7 +35,7 @@ export const createValidator = <T extends string>(
       }
 
       if (config.warnOnUnknownValues) {
-        console.warn(`${message}. Using as-is.`);
+        logger.warn(`${message}. Using as-is.`);
       }
     }
 
@@ -72,7 +73,7 @@ export const validateTestament = (value: string | null): string | null => {
   const isKnown = knownValues.includes(value as any);
 
   if (!isKnown) {
-    console.warn(`Unknown testament: ${value}. Using as-is.`);
+    logger.warn(`Unknown testament: ${value}. Using as-is.`);
   }
 
   return value;

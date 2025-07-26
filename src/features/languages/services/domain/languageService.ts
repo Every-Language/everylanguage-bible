@@ -1,9 +1,15 @@
-import type { LanguageEntity, AudioVersion, TextVersion } from '../../types';
 import {
   languageRepository,
   type LanguageRepositoryInterface,
 } from '../data/languageRepository';
-import { languageSync } from '../../../../shared/services/sync';
+import { languageSync } from '../../../../shared/services/sync/language/LanguageSyncService';
+import type {
+  LanguageEntity,
+  AudioVersion,
+  TextVersion,
+} from '../../types/entities';
+import type { LanguageEntityCache } from '../../../../shared/services/database/schema';
+import { logger } from '../../../../shared/utils/logger';
 
 // Domain service errors
 export class LanguageServiceError extends Error {
@@ -133,7 +139,7 @@ class LanguageService implements LanguageServiceInterface {
       const cachedEntities = await this.repository.getAllLanguageEntities();
       return buildHierarchy(cachedEntities);
     } catch (error) {
-      console.error('Error getting hierarchy from cache:', error);
+      logger.error('Error getting hierarchy from cache:', error);
       return [];
     }
   }
@@ -143,7 +149,7 @@ class LanguageService implements LanguageServiceInterface {
       const count = await this.repository.getLanguageEntityCount();
       return count > 0;
     } catch (error) {
-      console.error('Error checking cached language data:', error);
+      logger.error('Error checking cached language data:', error);
       return false;
     }
   }
@@ -154,14 +160,14 @@ class LanguageService implements LanguageServiceInterface {
       const updateCheck = await languageSync.needsUpdate();
 
       if (updateCheck.needsUpdate) {
-        console.log('Performing background sync');
+        logger.info('Performing background sync');
         await languageSync.syncAll({
           syncAvailableVersions: true,
           syncUserVersions: false,
         });
       }
     } catch (error) {
-      console.warn('Background sync failed silently:', error);
+      logger.warn('Background sync failed silently:', error);
       // Don't throw error for background operations
     }
   }
@@ -203,7 +209,8 @@ class LanguageService implements LanguageServiceInterface {
       let currentId: string | null = languageId;
 
       while (currentId) {
-        const entity = await this.repository.getLanguageEntity(currentId);
+        const entity: LanguageEntityCache | null =
+          await this.repository.getLanguageEntity(currentId);
         if (!entity) break;
 
         path.unshift(validateLanguageEntity(entity));
@@ -268,7 +275,7 @@ class LanguageService implements LanguageServiceInterface {
         text: textVersions,
       };
     } catch (error) {
-      console.error('Error getting available versions:', error);
+      logger.error('Error getting available versions:', error);
       return {
         audio: [],
         text: [],
@@ -322,7 +329,7 @@ class LanguageService implements LanguageServiceInterface {
       const entity = await this.repository.getLanguageEntity(languageEntityId);
       return entity?.name || 'Unknown Language';
     } catch (error) {
-      console.error(
+      logger.error(
         `Error getting language name for ${languageEntityId}:`,
         error
       );

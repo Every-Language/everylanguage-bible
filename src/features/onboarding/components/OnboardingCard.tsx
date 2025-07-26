@@ -53,10 +53,7 @@ export const OnboardingCard: React.FC<OnboardingCardProps> = ({
           <Text
             style={[
               styles.cardDescription,
-              {
-                color: textColor,
-                opacity: 0.9,
-              },
+              getCardDescriptionStyle(textColor),
             ]}>
             {description}
           </Text>
@@ -66,6 +63,11 @@ export const OnboardingCard: React.FC<OnboardingCardProps> = ({
   );
 };
 
+const getCardDescriptionStyle = (textColor: string) => ({
+  color: textColor,
+  opacity: 0.9,
+});
+
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
@@ -74,7 +76,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 20,
     width: '100%',
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,

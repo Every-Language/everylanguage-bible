@@ -2,6 +2,7 @@ import DatabaseManager, { DatabaseState } from '../database/DatabaseManager';
 import { backgroundSyncService } from '../sync/BackgroundSyncService';
 import { localDataService } from '../database/LocalDataService';
 import { initializeCombinedLanguageSelectionStore } from '../../../features/languages/store';
+import { logger } from '@/shared/utils/logger';
 
 interface InitializationStep {
   name: string;
@@ -115,7 +116,7 @@ export class InitializationService {
     try {
       for (const step of steps) {
         this.progress.currentStep = step.name;
-        console.log(`Initializing ${step.name}...`);
+        logger.info(`Initializing ${step.name}...`);
 
         try {
           if (step.timeout) {
@@ -129,16 +130,16 @@ export class InitializationService {
           }
 
           this.progress.completedSteps.push(step.name);
-          console.log(`✅ ${step.name} initialized successfully`);
+          logger.info(`✅ ${step.name} initialized successfully`);
         } catch (error) {
-          console.error(`❌ ${step.name} initialization failed:`, error);
+          logger.error(`❌ ${step.name} initialization failed:`, error);
 
           if (step.required) {
             throw new Error(
               `Required service ${step.name} failed to initialize: ${error}`
             );
           } else {
-            console.warn(
+            logger.warn(
               `⚠️ Optional service ${step.name} failed, continuing...`
             );
             // Add to completed with warning
@@ -152,14 +153,14 @@ export class InitializationService {
       this.isInitialized = true;
       this.isInitializing = false;
 
-      console.log('🎉 App initialization completed successfully');
+      logger.info('🎉 App initialization completed successfully');
     } catch (error) {
       this.isInitializing = false;
       this.initializationError =
         error instanceof Error ? error : new Error(String(error));
       this.progress.error = this.initializationError.message;
 
-      console.error('💥 App initialization failed:', error);
+      logger.error('💥 App initialization failed:', error);
       throw this.initializationError;
     }
   }

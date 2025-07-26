@@ -1,96 +1,110 @@
 // Logging utility for the Bible App
 // This provides a centralized way to handle logging with environment-based control
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export enum LogLevel {
+  ERROR = 0,
+  WARN = 1,
+  INFO = 2,
+  DEBUG = 3,
+}
 
-interface LoggerConfig {
+interface LogConfig {
   level: LogLevel;
   enableConsole: boolean;
   enableRemote?: boolean;
 }
 
 class Logger {
-  private config: LoggerConfig = {
-    level: __DEV__ ? 'debug' : 'warn',
-    enableConsole: __DEV__,
-  };
+  private config: LogConfig;
 
-  setConfig(config: Partial<LoggerConfig>): void {
-    this.config = { ...this.config, ...config };
+  constructor(
+    config: LogConfig = { level: LogLevel.INFO, enableConsole: true }
+  ) {
+    this.config = config;
   }
 
   private shouldLog(level: LogLevel): boolean {
-    const levels: Record<LogLevel, number> = {
-      debug: 0,
-      info: 1,
-      warn: 2,
-      error: 3,
-    };
-    return levels[level] >= levels[this.config.level];
+    return level <= this.config.level;
   }
 
   private formatMessage(
-    level: LogLevel,
+    level: string,
     message: string,
-    ..._args: unknown[]
+    ...args: any[]
   ): string {
     const timestamp = new Date().toISOString();
-    const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
-    return `${prefix} ${message}`;
+    const formattedArgs =
+      args.length > 0
+        ? ` ${args
+            .map(arg =>
+              typeof arg === 'object'
+                ? JSON.stringify(arg, null, 2)
+                : String(arg)
+            )
+            .join(' ')}`
+        : '';
+    return `[${timestamp}] ${level}: ${message}${formattedArgs}`;
   }
 
-  debug(message: string, ...args: unknown[]): void {
-    if (this.shouldLog('debug') && this.config.enableConsole) {
-      // eslint-disable-next-line no-console
-      console.log(this.formatMessage('debug', message), ...args);
+  error(message: string, ...args: any[]): void {
+    if (this.shouldLog(LogLevel.ERROR)) {
+      const formattedMessage = this.formatMessage('ERROR', message, ...args);
+      if (this.config.enableConsole) {
+        console.error(formattedMessage);
+      }
+      // TODO: Send to remote logging service if enabled
     }
   }
 
-  info(message: string, ...args: unknown[]): void {
-    if (this.shouldLog('info') && this.config.enableConsole) {
-      // eslint-disable-next-line no-console
-      console.info(this.formatMessage('info', message), ...args);
+  warn(message: string, ...args: any[]): void {
+    if (this.shouldLog(LogLevel.WARN)) {
+      const formattedMessage = this.formatMessage('WARN', message, ...args);
+      if (this.config.enableConsole) {
+        console.warn(formattedMessage);
+      }
     }
   }
 
-  warn(message: string, ...args: unknown[]): void {
-    if (this.shouldLog('warn') && this.config.enableConsole) {
-      // eslint-disable-next-line no-console
-      console.warn(this.formatMessage('warn', message), ...args);
+  info(message: string, ...args: any[]): void {
+    if (this.shouldLog(LogLevel.INFO)) {
+      const formattedMessage = this.formatMessage('INFO', message, ...args);
+      if (this.config.enableConsole) {
+        console.info(formattedMessage);
+      }
     }
   }
 
-  error(message: string, ...args: unknown[]): void {
-    if (this.shouldLog('error') && this.config.enableConsole) {
-      // eslint-disable-next-line no-console
-      console.error(this.formatMessage('error', message), ...args);
+  debug(message: string, ...args: any[]): void {
+    if (this.shouldLog(LogLevel.DEBUG)) {
+      const formattedMessage = this.formatMessage('DEBUG', message, ...args);
+      if (this.config.enableConsole) {
+        console.debug(formattedMessage);
+      }
     }
   }
 
-  // Convenience methods for specific contexts
-  database(message: string, ...args: unknown[]): void {
-    this.debug(`[DB] ${message}`, ...args);
+  // Convenience method for backward compatibility
+  log(message: string, ...args: any[]): void {
+    this.info(message, ...args);
   }
 
-  sync(message: string, ...args: unknown[]): void {
-    this.debug(`[SYNC] ${message}`, ...args);
+  setConfig(config: Partial<LogConfig>): void {
+    this.config = { ...this.config, ...config };
   }
 
-  auth(message: string, ...args: unknown[]): void {
-    this.debug(`[AUTH] ${message}`, ...args);
-  }
-
-  media(message: string, ...args: unknown[]): void {
-    this.debug(`[MEDIA] ${message}`, ...args);
-  }
-
-  api(message: string, ...args: unknown[]): void {
-    this.debug(`[API] ${message}`, ...args);
+  getConfig(): LogConfig {
+    return { ...this.config };
   }
 }
 
-// Export singleton instance
-export const logger = new Logger();
+// Create default logger instance
+export const logger = new Logger({
+  level: __DEV__ ? LogLevel.DEBUG : LogLevel.INFO,
+  enableConsole: true,
+});
 
-// Export types for use in other files
-export type { LogLevel, LoggerConfig };
+// Export individual log methods for convenience
+export const { error, warn, info, debug, log } = logger;
+
+// Export logger instance for advanced usage
+export default logger;

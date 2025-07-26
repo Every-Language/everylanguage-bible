@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { mediaFilesVersesService } from '../services/database';
+import { mediaFilesVersesService } from '../services/database/MediaFilesVersesService';
 import type { LocalMediaFileVerse } from '../services/database/schema';
+import { logger } from '../utils/logger';
 
 export interface UseMediaFilesVersesOptions {
   mediaFileId?: string;
@@ -73,7 +74,7 @@ export function useMediaFilesVerses(
           ? err.message
           : 'Failed to fetch media files verses';
       setError(errorMessage);
-      console.error('Error fetching media files verses:', err);
+      logger.error('Error fetching media files verses:', err);
     } finally {
       setLoading(false);
     }
@@ -224,7 +225,7 @@ export function useMediaFileVerse(id: string) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to fetch media file verse';
       setError(errorMessage);
-      console.error('Error fetching media file verse:', err);
+      logger.error('Error fetching media file verse:', err);
     } finally {
       setLoading(false);
     }
@@ -281,7 +282,7 @@ export function useMediaFileVerse(id: string) {
 
 // Hook for media files verses with related data
 export function useMediaFilesVersesWithRelatedData(mediaFileId?: string) {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<LocalMediaFileVerse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -300,10 +301,7 @@ export function useMediaFilesVersesWithRelatedData(mediaFileId?: string) {
           ? err.message
           : 'Failed to fetch media files verses with related data';
       setError(errorMessage);
-      console.error(
-        'Error fetching media files verses with related data:',
-        err
-      );
+      logger.error('Error fetching media files verses with related data:', err);
     } finally {
       setLoading(false);
     }

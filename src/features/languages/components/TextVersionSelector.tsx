@@ -44,7 +44,7 @@ export const TextVersionSelector: React.FC<TextVersionSelectorProps> = ({
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
         },
-        disabled && { opacity: 0.6 },
+        disabled && styles.disabledOpacity,
       ]}
       onPress={onPress}
       disabled={disabled}
@@ -76,7 +76,7 @@ export const TextVersionSelector: React.FC<TextVersionSelectorProps> = ({
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
         },
-        disabled && { opacity: 0.6 },
+        disabled && styles.disabledOpacity,
       ]}
       onPress={onPress}
       disabled={disabled}
@@ -193,5 +193,8 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontWeight: '500',
     fontStyle: 'italic',
+  },
+  disabledOpacity: {
+    opacity: 0.6,
   },
 });

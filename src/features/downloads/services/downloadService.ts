@@ -9,6 +9,7 @@ import {
 // Import your Supabase configuration
 import { env } from '@/app/config/env';
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '@/shared/utils/logger';
 
 export class DownloadService {
   private supabaseClient = createClient(
@@ -61,7 +62,7 @@ export class DownloadService {
   async getSignedUrlsForExternalUrls(urls: string[], expirationHours = 24) {
     try {
       // Call the Supabase Edge Function using the proper API
-      console.log(
+      logger.info(
         '🔐 [URL Signing] Calling Supabase Edge Function: get-download-urls'
       );
 
@@ -70,7 +71,7 @@ export class DownloadService {
         expirationHours: expirationHours,
       };
 
-      console.log(
+      logger.info(
         '🔐 [URL Signing] Request body:',
         JSON.stringify(requestBody, null, 2)
       );
@@ -81,28 +82,28 @@ export class DownloadService {
           body: JSON.stringify(requestBody),
         });
 
-      console.log(
+      logger.info(
         '🔐 [URL Signing] Edge function response data:',
         responseData
       );
-      console.log('🔐 [URL Signing] Edge function error:', error);
+      logger.error('🔐 [URL Signing] Edge function error:', error);
 
       if (error) {
-        console.error('🔐 [URL Signing] Edge function error:', error);
+        logger.error('🔐 [URL Signing] Edge function error:', error);
         throw new Error(
           error.message || 'Failed to get signed URLs from edge function'
         );
       }
 
       if (!responseData) {
-        console.error('🔐 [URL Signing] No response data from edge function');
+        logger.error('🔐 [URL Signing] No response data from edge function');
         throw new Error('No response data from edge function');
       }
 
       // Validate response structure
       if (!responseData.success) {
-        console.error('🔐 [URL Signing] Edge function returned success: false');
-        console.error(
+        logger.error('🔐 [URL Signing] Edge function returned success: false');
+        logger.error(
           '🔐 [URL Signing] Error details:',
           responseData.error || responseData.message
         );
@@ -114,20 +115,20 @@ export class DownloadService {
       }
 
       if (!responseData.urls || typeof responseData.urls !== 'object') {
-        console.error(
+        logger.error(
           '🔐 [URL Signing] Invalid response structure - missing or invalid urls field'
         );
-        console.error('🔐 [URL Signing] Response structure:', responseData);
+        logger.error('🔐 [URL Signing] Response structure:', responseData);
         throw new Error('Invalid response structure from edge function');
       }
 
-      console.log('🔐 [URL Signing] Successfully received signed URLs');
-      console.log(
+      logger.info('🔐 [URL Signing] Successfully received signed URLs');
+      logger.info(
         '🔐 [URL Signing] Number of signed URLs:',
         Object.keys(responseData.urls).length
       );
-      console.log('🔐 [URL Signing] Signed URLs mapping:', responseData.urls);
-      console.log('🔐 [URL Signing] Expiration info:', {
+      logger.info('🔐 [URL Signing] Signed URLs mapping:', responseData.urls);
+      logger.info('🔐 [URL Signing] Expiration info:', {
         expiresIn: responseData.expiresIn,
         totalFiles: responseData.totalFiles,
         successfulUrls: responseData.successfulUrls,
@@ -142,14 +143,11 @@ export class DownloadService {
           responseData.successfulUrls || Object.keys(responseData.urls).length,
       };
     } catch (error) {
-      console.error(
-        '🔐 [URL Signing] Exception during signing process:',
-        error
-      );
-      console.error('🔐 [URL Signing] Error stack:', (error as Error).stack);
+      logger.error('🔐 [URL Signing] Exception during signing process:', error);
+      logger.error('🔐 [URL Signing] Error stack:', (error as Error).stack);
 
       // Fallback to returning original URLs if signing fails
-      console.log(
+      logger.warn(
         '🔐 [URL Signing] Falling back to original URLs due to signing failure'
       );
 
@@ -158,7 +156,7 @@ export class DownloadService {
         signedUrls[url] = url; // Return the original URL as fallback
       });
 
-      console.log('🔐 [URL Signing] Fallback URLs mapping:', signedUrls);
+      logger.info('🔐 [URL Signing] Fallback URLs mapping:', signedUrls);
 
       return {
         success: true,
@@ -179,16 +177,16 @@ export class DownloadService {
     fileName: string,
     options: DownloadOptions = {}
   ): Promise<DownloadItem> {
-    console.log('📥 [Download] Starting file download...');
-    console.log('📥 [Download] File path:', filePath);
-    console.log('📥 [Download] File name:', fileName);
-    console.log('📥 [Download] Options:', options);
+    logger.info('📥 [Download] Starting file download...');
+    logger.info('📥 [Download] File path:', filePath);
+    logger.info('📥 [Download] File name:', fileName);
+    logger.info('📥 [Download] Options:', options);
 
     const id = this.generateId();
     const localPath = `${FileSystem.documentDirectory}downloads/${fileName}`;
 
-    console.log('📥 [Download] Generated ID:', id);
-    console.log('📥 [Download] Local path:', localPath);
+    logger.info('📥 [Download] Generated ID:', id);
+    logger.info('📥 [Download] Local path:', localPath);
 
     // Ensure downloads directory exists
     await this.ensureDownloadsDirectory();
@@ -203,7 +201,7 @@ export class DownloadService {
       createdAt: new Date(),
     };
 
-    console.log('📥 [Download] Created download item:', downloadItem);
+    logger.info('📥 [Download] Created download item:', downloadItem);
     this.downloads.set(id, downloadItem);
 
     try {
@@ -212,14 +210,14 @@ export class DownloadService {
       // Check if this is a direct URL download
       if (filePath.startsWith('direct://')) {
         signedUrl = filePath.replace('direct://', '');
-        console.log('📥 [Download] Direct URL download detected:', signedUrl);
+        logger.info('📥 [Download] Direct URL download detected:', signedUrl);
       } else {
-        console.log('📥 [Download] Getting signed URL from API for:', filePath);
+        logger.info('📥 [Download] Getting signed URL from API for:', filePath);
         // Get signed URL from API
         const { urls, success } = await this.getDownloadUrls([filePath]);
 
         if (!success || !urls[filePath]) {
-          console.error(
+          logger.error(
             '📥 [Download] Failed to get download URL for:',
             filePath
           );
@@ -227,14 +225,14 @@ export class DownloadService {
         }
 
         signedUrl = urls[filePath];
-        console.log('📥 [Download] Got signed URL:', signedUrl);
+        logger.info('📥 [Download] Got signed URL:', signedUrl);
       }
       downloadItem.signedUrl = signedUrl;
       downloadItem.status = 'downloading';
       downloadItem.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
       // Create resumable download
-      console.log('📥 [Download] Creating download resumable for:', signedUrl);
+      logger.info('📥 [Download] Creating download resumable for:', signedUrl);
       const downloadResumable = FileSystem.createDownloadResumable(
         signedUrl,
         localPath,
@@ -244,7 +242,7 @@ export class DownloadService {
             downloadProgress.totalBytesWritten /
             downloadProgress.totalBytesExpectedToWrite;
 
-          console.log('📥 [Download] Progress update:', {
+          logger.info('📥 [Download] Progress update:', {
             progress: progress,
             percentage: `${(progress * 100).toFixed(1)}%`,
             bytesWritten: downloadProgress.totalBytesWritten,
@@ -265,16 +263,16 @@ export class DownloadService {
       this.downloadResumables.set(id, downloadResumable);
 
       // Start download
-      console.log('📥 [Download] Starting download...');
+      logger.info('📥 [Download] Starting download...');
       const result = await downloadResumable.downloadAsync();
 
       if (!result) {
-        console.error('📥 [Download] Download was cancelled');
+        logger.error('📥 [Download] Download was cancelled');
         throw new Error('Download was cancelled');
       }
 
-      console.log('📥 [Download] Download completed successfully!');
-      console.log('📥 [Download] Final URI:', result.uri);
+      logger.info('📥 [Download] Download completed successfully!');
+      logger.info('📥 [Download] Final URI:', result.uri);
 
       downloadItem.status = 'completed';
       downloadItem.progress = 1;
@@ -284,16 +282,16 @@ export class DownloadService {
       options.onComplete?.(downloadItem);
       return downloadItem;
     } catch (error) {
-      console.error('📥 [Download] Download failed:', error);
-      console.error('📥 [Download] Error details:', (error as Error).message);
-      console.error('📥 [Download] Error stack:', (error as Error).stack);
+      logger.error('📥 [Download] Download failed:', error);
+      logger.error('📥 [Download] Error details:', (error as Error).message);
+      logger.error('📥 [Download] Error stack:', (error as Error).stack);
 
       downloadItem.status = 'failed';
       downloadItem.error = (error as Error).message;
       options.onError?.((error as Error).message);
       throw error;
     } finally {
-      console.log('📥 [Download] Cleaning up download resumable for ID:', id);
+      logger.info('📥 [Download] Cleaning up download resumable for ID:', id);
       this.downloadResumables.delete(id);
     }
   }
@@ -485,7 +483,7 @@ export class DownloadService {
       try {
         await this.deleteDownload(download.id);
       } catch (error) {
-        console.warn(`Failed to delete download ${download.id}:`, error);
+        logger.warn(`Failed to delete download ${download.id}:`, error);
       }
     }
   }

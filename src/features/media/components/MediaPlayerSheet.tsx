@@ -322,7 +322,7 @@ export const MediaPlayerSheet: React.FC = () => {
         android_keyboardInputMode='adjustResize'
         enableHandlePanningGesture={true}
         enableContentPanningGesture={true}
-        style={{ marginBottom: 0 }} // Ensure no extra margin that could interfere with safe area
+        style={styles.bottomSheetContainer} // Ensure no extra margin that could interfere with safe area
       >
         <BottomSheetView style={styles.content}>
           <MediaPlayerContent />
@@ -336,6 +336,9 @@ const styles = StyleSheet.create({
   // Content wrapper - no longer needs blur background
   contentWrapper: {
     flex: 1,
+  },
+  bottomSheetContainer: {
+    marginBottom: 0,
   },
   handle: {
     width: 40,

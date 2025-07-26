@@ -1,10 +1,6 @@
 import { supabase } from '../../api/supabase';
 import DatabaseManager from '../../database/DatabaseManager';
 import { MediaFilesService } from '../../database/MediaFilesService';
-
-const databaseManager = DatabaseManager.getInstance();
-const mediaFilesService = MediaFilesService.getInstance();
-
 import type {
   SyncOptions,
   SyncResult,
@@ -13,6 +9,10 @@ import type {
   SyncConfig,
 } from '../types';
 import type { Tables } from '@everylanguage/shared-types';
+import { logger } from '@/shared/utils/logger';
+
+const databaseManager = DatabaseManager.getInstance();
+const mediaFilesService = MediaFilesService.getInstance();
 
 export interface MediaFilesVersesSyncOptions extends SyncOptions {
   forceFullSync?: boolean;
@@ -113,7 +113,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
         tables: tablesToUpdate,
       };
     } catch (error) {
-      console.error('Error checking if media files verses need update:', error);
+      logger.error('Error checking if media files verses need update:', error);
       return { needsUpdate: false, tables: [] };
     }
   }
@@ -135,16 +135,16 @@ class MediaFilesVersesSyncService implements BaseSyncService {
     const results: SyncResult[] = [];
 
     try {
-      console.log('Starting media files verses sync...');
+      logger.info('Starting media files verses sync...');
 
       // Sync media files verses using the new approach
       const mediaFilesVersesResult = await this.syncMediaFilesVerses(options);
       results.push(mediaFilesVersesResult);
 
-      console.log('Media files verses sync completed successfully');
+      logger.info('Media files verses sync completed successfully');
       return results;
     } catch (error) {
-      console.error('Error during media files verses sync:', error);
+      logger.error('Error during media files verses sync:', error);
       const errorResult: SyncResult = {
         success: false,
         tableName: 'media_files_verses',
@@ -170,7 +170,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
     try {
       await this.updateSyncStatus('media_files_verses', 'syncing');
 
-      console.log('Starting media files verses sync with new approach...');
+      logger.info('Starting media files verses sync with new approach...');
 
       // Step 1: Get media files from local media_files table
       let mediaFiles;
@@ -184,17 +184,17 @@ class MediaFilesVersesSyncService implements BaseSyncService {
             mediaFiles.push(mediaFile);
           }
         }
-        console.log(`Syncing ${mediaFiles.length} specific media files`);
+        logger.info(`Syncing ${mediaFiles.length} specific media files`);
       } else {
         // Get all media files
         mediaFiles = await mediaFilesService.getMediaFiles({
           include_deleted: false, // Don't sync deleted files
         });
-        console.log(`Found ${mediaFiles.length} media files to check`);
+        logger.info(`Found ${mediaFiles.length} media files to check`);
       }
 
       if (!mediaFiles || mediaFiles.length === 0) {
-        console.log('No media files found to sync');
+        logger.info('No media files found to sync');
         await this.updateSyncStatus('media_files_verses', 'idle');
         return {
           success: true,
@@ -207,7 +207,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
       let totalRecordsSynced = 0;
       const mediaFileIds = mediaFiles.map((mf: any) => mf.id);
 
-      console.log(
+      logger.info(
         `Checking for media_files_verses data for ${mediaFileIds.length} media files`
       );
 
@@ -228,7 +228,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
       }
 
       if (!mediaFilesVerses || mediaFilesVerses.length === 0) {
-        console.log(
+        logger.info(
           'No media_files_verses data found in Supabase for these media files'
         );
         await this.updateSyncStatus('media_files_verses', 'idle');
@@ -239,7 +239,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
         };
       }
 
-      console.log(
+      logger.info(
         `Found ${mediaFilesVerses.length} media_files_verses records in Supabase`
       );
 
@@ -260,11 +260,11 @@ class MediaFilesVersesSyncService implements BaseSyncService {
         {} as Record<string, typeof validatedMediaFilesVerses>
       );
 
-      console.log(
+      logger.info(
         `Syncing verses data for ${Object.keys(groupedByMediaFile).length} media files:`
       );
       Object.entries(groupedByMediaFile).forEach(([mediaFileId, verses]) => {
-        console.log(
+        logger.debug(
           `  - Media file ${mediaFileId}: ${(verses as any[]).length} verses`
         );
       });
@@ -286,7 +286,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
       this.notifyListeners(result);
       return result;
     } catch (error) {
-      console.error('Error syncing media files verses:', error);
+      logger.error('Error syncing media files verses:', error);
       await this.updateSyncStatus(
         'media_files_verses',
         'error',
@@ -362,7 +362,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
 
       return '1970-01-01T00:00:00.000Z';
     } catch (error) {
-      console.error(`Error getting last sync for ${tableName}:`, error);
+      logger.error(`Error getting last sync for ${tableName}:`, error);
       return '1970-01-01T00:00:00.000Z';
     }
   }
@@ -382,7 +382,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
         [timestamp, tableName]
       );
     } catch (error) {
-      console.error(`Error updating last sync for ${tableName}:`, error);
+      logger.error(`Error updating last sync for ${tableName}:`, error);
       throw error;
     }
   }
@@ -403,7 +403,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
         [status, errorMessage || null, tableName]
       );
     } catch (error) {
-      console.error(`Error updating sync status for ${tableName}:`, error);
+      logger.error(`Error updating sync status for ${tableName}:`, error);
     }
   }
 
@@ -420,7 +420,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
       const result = await databaseManager.executeQuery(query, params);
       return result || [];
     } catch (error) {
-      console.error('Error getting sync metadata:', error);
+      logger.error('Error getting sync metadata:', error);
       return [];
     }
   }
@@ -447,13 +447,13 @@ class MediaFilesVersesSyncService implements BaseSyncService {
         .limit(1);
 
       if (error) {
-        console.error(`Error checking remote changes for ${tableName}:`, error);
+        logger.error(`Error checking remote changes for ${tableName}:`, error);
         return false;
       }
 
       return data && data.length > 0;
     } catch (error) {
-      console.error(`Error checking remote changes for ${tableName}:`, error);
+      logger.error(`Error checking remote changes for ${tableName}:`, error);
       return false;
     }
   }
@@ -489,9 +489,9 @@ class MediaFilesVersesSyncService implements BaseSyncService {
         }
       }
 
-      console.log(`Sync metadata reset for ${tableName || 'all tables'}`);
+      logger.info(`Sync metadata reset for ${tableName || 'all tables'}`);
     } catch (error) {
-      console.error('Error resetting sync metadata:', error);
+      logger.error('Error resetting sync metadata:', error);
       throw error;
     }
   }
@@ -514,9 +514,9 @@ class MediaFilesVersesSyncService implements BaseSyncService {
       } else {
         await databaseManager.executeQuery('DELETE FROM media_files_verses');
       }
-      console.log(`Local data cleared for ${tableName || 'all tables'}`);
+      logger.info(`Local data cleared for ${tableName || 'all tables'}`);
     } catch (error) {
-      console.error('Error clearing local data:', error);
+      logger.error('Error clearing local data:', error);
       throw error;
     }
   }

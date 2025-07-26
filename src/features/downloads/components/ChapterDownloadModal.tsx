@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
-import { useNetworkConnectivity } from '@/shared/hooks/useNetworkConnectivity';
-import { supabase } from '@/shared/services/api/supabase';
+import { useDownloads } from '../hooks/useDownloads';
+import { NetworkStatusDisplay } from './NetworkStatusDisplay';
+import { SearchResultsDisplay } from './SearchResultsDisplay';
+import { DownloadProgressDisplay } from './DownloadProgressDisplay';
+import { useNetworkCapabilities } from '../hooks/useNetworkCapabilities';
+import { useMediaSearch } from '../hooks/useMediaSearch';
+import { useDownloadProgress } from '../hooks/useDownloadProgress';
+import { formatFileSize } from '../utils/fileUtils';
+import { logger } from '@/shared/utils/logger';
 
 interface ChapterDownloadModalProps {
   visible: boolean;
@@ -30,205 +30,162 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
-  const { isConnected, connectionType, isInternetReachable } =
-    useNetworkConnectivity();
+  const { downloadFile } = useDownloads();
 
-  // State for online capability check and search
-  const [isCheckingOnline, setIsCheckingOnline] = useState(false);
-  const [isOnline, setIsOnline] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  // Custom hooks for state management
+  const {
+    isOnline,
+    isCheckingOnline,
+    hasCheckedOnline,
+    searchError: networkError,
+    isConnected,
+    connectionType,
+    isInternetReachable,
+    checkOnlineCapabilities,
+    retryInternetCheck,
+  } = useNetworkCapabilities();
+
+  const {
+    isSearching,
+    searchResults,
+    searchError: mediaSearchError,
+    searchMediaFiles,
+  } = useMediaSearch();
+
+  const {
+    downloadProgress,
+    overallProgress,
+    completedFiles,
+    failedFiles,
+    downloadError,
+    initializeDownloadProgress,
+    updateFileProgress,
+    setDownloadError,
+  } = useDownloadProgress();
+
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Constant version number for now
-  const VERSION_ID = 1;
+  // Memoized values
+  const searchError = useMemo(
+    () => networkError || mediaSearchError,
+    [networkError, mediaSearchError]
+  );
+  const canDownload = useMemo(
+    () =>
+      searchResults.length > 0 && !isSearching && !isDownloading && isOnline,
+    [searchResults.length, isSearching, isDownloading, isOnline]
+  );
 
-  // Check online capabilities
-  const checkOnlineCapabilities = async () => {
-    setIsCheckingOnline(true);
-    setSearchError(null);
-
-    try {
-      // Test internet connectivity by making a simple request
-      const response = await fetch('https://httpbin.org/get', {
-        method: 'GET',
-      });
-
-      if (response.ok) {
-        setIsOnline(true);
-        // Automatically search for media files when online
-        await searchMediaFiles();
-      } else {
-        setIsOnline(false);
-        setSearchError('Unable to reach online services');
-      }
-    } catch {
-      setIsOnline(false);
-      setSearchError('No internet connection available');
-    } finally {
-      setIsCheckingOnline(false);
+  // Check online capabilities and search for media files
+  const handleOnlineCapabilitiesCheck = useCallback(async () => {
+    const isOnlineCapable = await checkOnlineCapabilities();
+    if (isOnlineCapable) {
+      await searchMediaFiles(chapterId, versionId);
     }
-  };
+  }, [checkOnlineCapabilities, searchMediaFiles, chapterId, versionId]);
 
-  // Search for media files in Supabase
-  const searchMediaFiles = async () => {
-    if (!isOnline) return;
+  // Initialize download progress for all files
+  const handleInitializeDownloadProgress = useCallback(() => {
+    initializeDownloadProgress(searchResults, chapterId);
+  }, [initializeDownloadProgress, searchResults, chapterId]);
 
-    setIsSearching(true);
-    setSearchError(null);
+  // Download all files
+  const handleDownload = useCallback(async () => {
+    if (searchResults.length === 0) return;
 
-    console.log(chapterId);
+    setIsDownloading(true);
+    setDownloadError(null);
+    handleInitializeDownloadProgress();
 
     try {
-      // First search attempt
-      const { data: firstSearchData, error: firstError } = await supabase
-        .from('media_files')
-        .select('*')
-        .ilike('start_verse_id', `${chapterId}%`) // Match chapter ID pattern like ps-1-1, ps-1-2, etc.
-        .eq('version', Number(versionId) || VERSION_ID)
-        .is('deleted_at', null);
+      // Download files sequentially to avoid overwhelming the system
+      for (let i = 0; i < searchResults.length; i++) {
+        const file = searchResults[i];
+        const progressItem = downloadProgress[i];
 
-      if (firstError) {
-        throw firstError;
+        if (!progressItem) continue;
+
+        try {
+          // Update status to downloading
+          updateFileProgress(
+            file.file_path,
+            { bytesWritten: 0, contentLength: 0, progress: 0 },
+            'downloading'
+          );
+
+          await downloadFile(file.file_path, progressItem.fileName, {
+            onProgress: (progress: {
+              bytesWritten: number;
+              contentLength: number;
+              progress: number;
+            }) => {
+              updateFileProgress(file.file_path, progress, 'downloading');
+            },
+            onComplete: (item: { fileSize?: number }) => {
+              updateFileProgress(
+                file.file_path,
+                {
+                  bytesWritten: item.fileSize || 0,
+                  contentLength: item.fileSize || 0,
+                  progress: 1,
+                },
+                'completed'
+              );
+            },
+            onError: (error: string) => {
+              updateFileProgress(
+                file.file_path,
+                { bytesWritten: 0, contentLength: 0, progress: 0 },
+                'failed',
+                error
+              );
+            },
+          });
+        } catch (error) {
+          const errorMsg = (error as Error).message;
+          updateFileProgress(
+            file.file_path,
+            { bytesWritten: 0, contentLength: 0, progress: 0 },
+            'failed',
+            errorMsg
+          );
+        }
       }
-
-      // If first search found results, use them
-      if (firstSearchData && firstSearchData.length > 0) {
-        setSearchResults(firstSearchData);
-        console.log(
-          `Found ${firstSearchData.length} media files for chapter ${chapterId} on first search`
-        );
-        return;
-      }
-
-      // If no results found, perform second search with same logic
-      console.log(
-        'No media files found on first search, performing second search...'
-      );
-
-      const { data: secondSearchData, error: secondError } = await supabase
-        .from('media_files')
-        .select('*')
-        .ilike('start_verse_id', `${chapterId}%`) // Match chapter ID pattern like ps-1-1, ps-1-2, etc.
-        .eq('version', Number(versionId) || VERSION_ID)
-        .is('deleted_at', null);
-
-      if (secondError) {
-        throw secondError;
-      }
-
-      setSearchResults(secondSearchData || []);
-      console.log(
-        `Found ${secondSearchData?.length || 0} media files for chapter ${chapterId} on second search`
-      );
     } catch (error) {
-      console.error('Error searching media files:', error);
-      setSearchError('Failed to search for media files');
-      setSearchResults([]);
+      const errorMsg = (error as Error).message;
+      setDownloadError(errorMsg);
     } finally {
-      setIsSearching(false);
+      setIsDownloading(false);
     }
-  };
+  }, [
+    searchResults,
+    downloadProgress,
+    downloadFile,
+    updateFileProgress,
+    setDownloadError,
+    handleInitializeDownloadProgress,
+  ]);
 
   // Check online capabilities when modal becomes visible
   useEffect(() => {
     if (visible) {
-      checkOnlineCapabilities();
+      logger.info('Modal opened - checking online capabilities');
+      logger.info('Network state:', {
+        isConnected,
+        connectionType,
+        isInternetReachable,
+      });
+      handleOnlineCapabilitiesCheck();
     }
-  }, [visible]);
+  }, [visible, handleOnlineCapabilitiesCheck]);
 
-  // Monitor network connectivity changes and recheck when internet resumes
-  useEffect(() => {
-    if (visible && isConnected && isInternetReachable && !isOnline) {
-      // Internet just became available, recheck capabilities and search
-      console.log('Internet connection resumed, rechecking capabilities...');
-      checkOnlineCapabilities();
+  // Handle retry internet check
+  const handleRetryInternetCheck = useCallback(async () => {
+    const isOnlineCapable = await retryInternetCheck();
+    if (isOnlineCapable) {
+      await searchMediaFiles(chapterId, versionId);
     }
-  }, [visible, isConnected, isInternetReachable, isOnline]);
-
-  const handleRefresh = () => {
-    checkOnlineCapabilities();
-  };
-
-  // Calculate total file size and format it
-  const getTotalFileSize = () => {
-    if (!searchResults || searchResults.length === 0) return 0;
-
-    return searchResults.reduce((total, file) => {
-      return total + (file.file_size || 0);
-    }, 0);
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const handleDownload = () => {
-    // TODO: Implement download functionality
-    console.log('Download requested for', searchResults.length, 'files');
-    setIsDownloading(true);
-
-    // Simulate download process (remove this when implementing actual download)
-    setTimeout(() => {
-      setIsDownloading(false);
-      console.log('Download simulation completed');
-    }, 2000);
-  };
-
-  const getNetworkStatusText = () => {
-    if (!isConnected) {
-      return 'No network connection';
-    }
-
-    if (isInternetReachable === false) {
-      return 'No internet access';
-    }
-
-    switch (connectionType) {
-      case 'wifi':
-        return 'WiFi connected';
-      case 'cellular':
-        return 'Mobile data connected';
-      case 'bluetooth':
-        return 'Bluetooth connected';
-      case 'ethernet':
-        return 'Ethernet connected';
-      default:
-        return 'Network connected';
-    }
-  };
-
-  const getNetworkIcon = (): keyof typeof MaterialIcons.glyphMap => {
-    if (!isConnected) return 'cloud-off';
-    if (isInternetReachable === false) return 'wifi-off';
-
-    switch (connectionType) {
-      case 'wifi':
-        return 'wifi';
-      case 'cellular':
-        return 'signal-cellular-4-bar';
-      case 'bluetooth':
-        return 'bluetooth';
-      case 'ethernet':
-        return 'cable';
-      default:
-        return 'language';
-    }
-  };
-
-  const getNetworkStatusColor = () => {
-    if (!isConnected || isInternetReachable === false) {
-      return theme.colors.error;
-    }
-    return theme.colors.success;
-  };
+  }, [retryInternetCheck, searchMediaFiles, chapterId, versionId]);
 
   return (
     <Modal
@@ -274,170 +231,42 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
             Download to listen offline at your convenience.
           </Text>
 
-          {/* Online Status Check */}
-          <View
-            style={[
-              styles.statusContainer,
-              { backgroundColor: theme.colors.surfaceVariant },
-            ]}>
-            {isCheckingOnline ? (
-              <View style={styles.statusRow}>
-                <ActivityIndicator size='small' color={theme.colors.primary} />
-                <Text style={[styles.statusText, { color: theme.colors.text }]}>
-                  Checking online capabilities...
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.statusRow}>
-                <MaterialIcons
-                  name={isOnline ? 'check-circle' : 'error'}
-                  size={20}
-                  color={isOnline ? theme.colors.success : theme.colors.error}
-                />
-                <Text style={[styles.statusText, { color: theme.colors.text }]}>
-                  {isOnline
-                    ? 'Online - Searching for media files...'
-                    : 'Offline'}
-                </Text>
-              </View>
-            )}
-          </View>
+          {/* Search Results Display */}
+          <SearchResultsDisplay
+            isOnline={isOnline}
+            isCheckingOnline={isCheckingOnline}
+            isSearching={isSearching}
+            searchResults={searchResults}
+            searchError={searchError}
+            onFormatFileSize={formatFileSize}
+          />
 
-          {/* Search Results */}
-          {isOnline && !isCheckingOnline && (
-            <View
-              style={[
-                styles.resultsContainer,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}>
-              {isSearching ? (
-                <View style={styles.statusRow}>
-                  <ActivityIndicator
-                    size='small'
-                    color={theme.colors.primary}
-                  />
-                  <Text
-                    style={[styles.statusText, { color: theme.colors.text }]}>
-                    Searching for media files...
-                  </Text>
-                </View>
-              ) : searchError ? (
-                <View style={styles.statusRow}>
-                  <MaterialIcons
-                    name='error'
-                    size={16}
-                    color={theme.colors.error}
-                  />
-                  <Text
-                    style={[styles.statusText, { color: theme.colors.error }]}>
-                    {searchError}
-                  </Text>
-                </View>
-              ) : searchResults.length > 0 ? (
-                <View style={styles.resultsDetails}>
-                  <View style={styles.statusRow}>
-                    <MaterialIcons
-                      name='cloud-download'
-                      size={16}
-                      color={theme.colors.success}
-                    />
-                    <Text
-                      style={[styles.statusText, { color: theme.colors.text }]}>
-                      Found {searchResults.length} media files
-                    </Text>
-                  </View>
+          {/* Download Progress Display */}
+          <DownloadProgressDisplay
+            isDownloading={isDownloading}
+            downloadProgress={downloadProgress}
+            searchResults={searchResults}
+            overallProgress={overallProgress}
+            completedFiles={completedFiles}
+            failedFiles={failedFiles}
+            downloadError={downloadError}
+          />
 
-                  {/* File details */}
-                  <View style={styles.fileDetails}>
-                    <Text
-                      style={[
-                        styles.fileDetailText,
-                        { color: theme.colors.textSecondary },
-                      ]}>
-                      Total size: {formatFileSize(getTotalFileSize())}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.fileDetailText,
-                        { color: theme.colors.textSecondary },
-                      ]}>
-                      Files: {searchResults.length} audio files
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.statusRow}>
-                  <MaterialIcons
-                    name='cloud-off'
-                    size={16}
-                    color={theme.colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: theme.colors.textSecondary },
-                    ]}>
-                    No media files found for this chapter
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Network Status with Refresh Button - Only show when no connection */}
-          {(!isConnected || isInternetReachable === false) && (
-            <View
-              style={[
-                styles.networkStatusContainer,
-                { backgroundColor: theme.colors.surfaceVariant },
-              ]}>
-              <View style={styles.networkStatusRow}>
-                <MaterialIcons
-                  name={getNetworkIcon()}
-                  size={20}
-                  color={getNetworkStatusColor()}
-                />
-                <Text
-                  style={[
-                    styles.networkStatusText,
-                    { color: theme.colors.text },
-                  ]}>
-                  {getNetworkStatusText()}
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.networkExplanationText,
-                  { color: theme.colors.textSecondary },
-                ]}>
-                Network connection is required to download media files
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.refreshButton,
-                  { borderColor: theme.colors.border },
-                ]}
-                onPress={handleRefresh}
-                disabled={isCheckingOnline || isSearching || isDownloading}>
-                <MaterialIcons
-                  name='refresh'
-                  size={16}
-                  color={theme.colors.primary}
-                />
-                <Text
-                  style={[
-                    styles.refreshButtonText,
-                    { color: theme.colors.primary },
-                  ]}>
-                  Refresh
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          {/* Network Status Display */}
+          <NetworkStatusDisplay
+            isOnline={isOnline}
+            isCheckingOnline={isCheckingOnline}
+            hasCheckedOnline={hasCheckedOnline}
+            isConnected={isConnected}
+            connectionType={connectionType}
+            isInternetReachable={isInternetReachable}
+            onRetry={handleRetryInternetCheck}
+            disabled={isDownloading}
+          />
 
           <View style={styles.buttonContainer}>
             {/* Download button - only show when files are found */}
-            {searchResults.length > 0 && !isSearching && (
+            {canDownload && (
               <TouchableOpacity
                 style={[
                   styles.downloadButton,
@@ -445,24 +274,17 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
                 ]}
                 onPress={handleDownload}
                 disabled={isDownloading}>
-                {isDownloading ? (
-                  <ActivityIndicator
-                    size='small'
-                    color={theme.colors.textInverse}
-                  />
-                ) : (
-                  <MaterialIcons
-                    name='cloud-download'
-                    size={20}
-                    color={theme.colors.textInverse}
-                  />
-                )}
+                <MaterialIcons
+                  name='cloud-download'
+                  size={20}
+                  color={theme.colors.textInverse}
+                />
                 <Text
                   style={[
                     styles.downloadButtonText,
                     { color: theme.colors.textInverse },
                   ]}>
-                  {isDownloading ? 'Downloading...' : 'Download Files'}
+                  Download Files
                 </Text>
               </TouchableOpacity>
             )}
@@ -499,6 +321,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     maxWidth: 320,
+    maxHeight: '80%',
     borderRadius: 16,
     padding: 24,
     shadowOffset: {
@@ -537,90 +360,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
   },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-    gap: 8,
-  },
-  resultsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-    gap: 8,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  resultsDetails: {
-    width: '100%',
-  },
-  fileDetails: {
-    marginTop: 8,
-    gap: 4,
-  },
-  fileDetailText: {
-    fontSize: 12,
-    fontWeight: '400',
-  },
-  networkStatusContainer: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 32,
-    gap: 12,
-  },
-  networkStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  networkStatusText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  networkExplanationText: {
-    fontSize: 12,
-    fontWeight: '400',
-    textAlign: 'center',
-    lineHeight: 16,
-  },
   buttonContainer: {
     width: '100%',
     gap: 12,
-  },
-
-  refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    gap: 4,
-  },
-  refreshButtonText: {
-    fontSize: 12,
-    fontWeight: '500',
   },
   downloadButton: {
     flexDirection: 'row',

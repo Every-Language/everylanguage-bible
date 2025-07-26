@@ -6,6 +6,7 @@ import type {
   VerseSort,
 } from '../../../shared/services/database/LocalDataService';
 import { useCurrentVersions } from '../../languages/hooks';
+import { logger } from '../../../shared/utils/logger';
 
 export const useVerses = (
   chapterId: string,
@@ -40,7 +41,7 @@ export const useVerses = (
         error: null,
       }));
     } catch (error) {
-      console.error('Failed to load verses:', error);
+      logger.error('Failed to load verses:', error);
       setState(prev => ({
         ...prev,
         loading: false,
@@ -73,7 +74,7 @@ export const useVerses = (
         error: null,
       }));
     } catch (error) {
-      console.error('Failed to load verse range:', error);
+      logger.error('Failed to load verse range:', error);
       setState(prev => ({
         ...prev,
         loading: false,
@@ -95,7 +96,7 @@ export const useVerses = (
       );
       return verse ? localDataService.transformVerseToUIFormat(verse) : null;
     } catch (error) {
-      console.error('Failed to get adjacent verse:', error);
+      logger.error('Failed to get adjacent verse:', error);
       return null;
     }
   };
@@ -152,7 +153,7 @@ export const useVersesWithTexts = (chapterId: string) => {
         currentTextVersion,
       }));
     } catch (error) {
-      console.error('Failed to load verses with texts:', error);
+      logger.error('Failed to load verses with texts:', error);
       setState(prev => ({
         ...prev,
         loading: false,

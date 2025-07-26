@@ -12,6 +12,7 @@ import { useTheme } from '@/shared/context/ThemeContext';
 import { useTranslations } from '@/shared/context/LocalizationContext';
 import { useDownloads } from '../hooks';
 import { downloadService } from '../services';
+import { logger } from '@/shared/utils/logger';
 
 interface UrlDownloadFormProps {
   onDownloadStart?: () => void;
@@ -70,13 +71,13 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
 
     try {
       // Step 1: Get signed URLs from the API
-      console.log('📱 [UI] Starting URL signing process for URLs:', urlList);
-      console.log('📱 [UI] Number of URLs to sign:', urlList.length);
+      logger.info('Starting URL signing process for URLs:', urlList);
+      logger.info('Number of URLs to sign:', urlList.length);
 
       const signedUrlsResult =
         await downloadService.getSignedUrlsForExternalUrls(urlList, 24);
 
-      console.log('📱 [UI] Signing result received:', {
+      logger.info('Signing result received:', {
         success: signedUrlsResult.success,
         totalFiles: signedUrlsResult.totalFiles,
         successfulUrls: signedUrlsResult.successfulUrls,
@@ -84,14 +85,12 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
       });
 
       if (!signedUrlsResult.success) {
-        console.error('📱 [UI] Signing failed - success is false');
+        logger.error('Signing failed - success is false');
         throw new Error('Failed to get signed URLs');
       }
 
       if (signedUrlsResult.fallback) {
-        console.warn(
-          '📱 [UI] Using fallback URLs - signing API may be unavailable'
-        );
+        logger.warn('Using fallback URLs - signing API may be unavailable');
       }
 
       setStep('downloading');
@@ -103,7 +102,7 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
         const signedUrl = signedUrlsResult.urls?.[url];
 
         if (!signedUrl) {
-          console.error(`No signed URL found for: ${url}`);
+          logger.error(`No signed URL found for: ${url}`);
           continue;
         }
 
@@ -117,7 +116,7 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
           // Use the signed URL for download
           const filePath = `direct://${signedUrl}`;
 
-          console.log('📱 [UI] Starting download for:', {
+          logger.info('Starting download for:', {
             originalUrl: url,
             signedUrl: signedUrl,
             fileName: individualFileName,
@@ -126,12 +125,12 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
 
           await downloadFile(filePath, individualFileName, {
             onProgress: progress => {
-              console.log(
+              logger.debug(
                 `Download progress for ${individualFileName}: ${progress.progress * 100}%`
               );
             },
             onComplete: item => {
-              console.log('Download completed:', item.fileName);
+              logger.info('Download completed:', item.fileName);
               if (i === urlList.length - 1) {
                 // Last file completed
                 Alert.alert(
@@ -146,12 +145,12 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
               }
             },
             onError: error => {
-              console.error('Download failed:', error);
+              logger.error('Download failed:', error);
               Alert.alert('Download Failed', `${individualFileName}: ${error}`);
             },
           });
         } catch (error) {
-          console.error(`Download error for ${individualFileName}:`, error);
+          logger.error(`Download error for ${individualFileName}:`, error);
           Alert.alert(
             'Error',
             `Failed to download ${individualFileName}: ${(error as Error).message}`
@@ -299,11 +298,7 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
       <TouchableOpacity
         style={[
           styles.downloadButton,
-          {
-            backgroundColor: isFormValid
-              ? theme.colors.primary
-              : theme.colors.border,
-          },
+          getDownloadButtonStyle(theme, isFormValid),
         ]}
         onPress={handleGetSignedUrls}
         disabled={!isFormValid || isProcessing || isLoading}>
@@ -333,13 +328,16 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
   );
 };
 
+const getDownloadButtonStyle = (theme: any, isFormValid: boolean) => ({
+  backgroundColor: isFormValid ? theme.colors.primary : theme.colors.border,
+});
+
 const styles = StyleSheet.create({
   container: {
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
     elevation: 2,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

@@ -6,17 +6,28 @@ import type { Database } from '@everylanguage/shared-types';
 import Constants from 'expo-constants';
 
 import { env, getRequiredEnvVar } from '@/app/config/env';
+import { logger } from '@/shared/utils/logger';
+
+// Define proper types for global and process
+interface GlobalWithProcess {
+  process?: {
+    env?: {
+      [key: string]: string | undefined;
+    };
+  };
+}
 
 // Debug utility to check Supabase configuration
 export function debugSupabaseConfig() {
-  console.log('Supabase Configuration Debug:');
-  console.log('- URL available:', !!env.supabase.url);
-  console.log('- URL length:', env.supabase.url.length);
-  console.log('- Anon key available:', !!env.supabase.anonKey);
-  console.log('- Anon key length:', env.supabase.anonKey.length);
-  console.log('- Environment source:', {
-    hasExpoConfig: !!Constants.expoConfig?.extra,
-    hasProcessEnv: !!(global as any).process?.env,
+  logger.debug('Supabase Configuration Debug:', {
+    urlAvailable: !!env.supabase.url,
+    urlLength: env.supabase.url.length,
+    anonKeyAvailable: !!env.supabase.anonKey,
+    anonKeyLength: env.supabase.anonKey.length,
+    environmentSource: {
+      hasExpoConfig: !!Constants.expoConfig?.extra,
+      hasProcessEnv: !!(global as GlobalWithProcess).process?.env,
+    },
   });
 }
 
@@ -31,7 +42,7 @@ try {
     env.supabase.anonKey
   );
 } catch (error) {
-  console.error('Failed to load Supabase environment variables:', error);
+  logger.error('Failed to load Supabase environment variables:', error);
   debugSupabaseConfig();
   throw new Error(
     'Supabase configuration is missing. Please check your environment variables: EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY'

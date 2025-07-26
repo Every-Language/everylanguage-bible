@@ -1,5 +1,6 @@
 import DatabaseManager from './DatabaseManager';
 import type { LocalMediaFileVerse } from './schema';
+import { logger } from '../../utils/logger';
 
 const databaseManager = DatabaseManager.getInstance();
 
@@ -25,7 +26,7 @@ export class MediaFilesVersesService {
       );
       return result || [];
     } catch (error) {
-      console.error('Error getting all media files verses:', error);
+      logger.error('Error getting all media files verses:', error);
       throw new Error('Failed to get media files verses');
     }
   }
@@ -43,10 +44,7 @@ export class MediaFilesVersesService {
       );
       return result || [];
     } catch (error) {
-      console.error(
-        'Error getting media files verses by media file ID:',
-        error
-      );
+      logger.error('Error getting media files verses by media file ID:', error);
       throw new Error('Failed to get media files verses by media file ID');
     }
   }
@@ -64,7 +62,7 @@ export class MediaFilesVersesService {
       );
       return result || [];
     } catch (error) {
-      console.error('Error getting media files verses by verse ID:', error);
+      logger.error('Error getting media files verses by verse ID:', error);
       throw new Error('Failed to get media files verses by verse ID');
     }
   }
@@ -80,7 +78,7 @@ export class MediaFilesVersesService {
       );
       return result && result.length > 0 ? result[0] : null;
     } catch (error) {
-      console.error('Error getting media file verse:', error);
+      logger.error('Error getting media file verse:', error);
       throw new Error('Failed to get media file verse');
     }
   }
@@ -114,7 +112,7 @@ export class MediaFilesVersesService {
         ]
       );
     } catch (error) {
-      console.error('Error saving media file verse:', error);
+      logger.error('Error saving media file verse:', error);
       throw new Error('Failed to save media file verse');
     }
   }
@@ -148,7 +146,7 @@ export class MediaFilesVersesService {
         values
       );
     } catch (error) {
-      console.error('Error updating media file verse:', error);
+      logger.error('Error updating media file verse:', error);
       throw new Error('Failed to update media file verse');
     }
   }
@@ -163,7 +161,7 @@ export class MediaFilesVersesService {
         [id]
       );
     } catch (error) {
-      console.error('Error deleting media file verse:', error);
+      logger.error('Error deleting media file verse:', error);
       throw new Error('Failed to delete media file verse');
     }
   }
@@ -180,7 +178,7 @@ export class MediaFilesVersesService {
         [mediaFileId]
       );
     } catch (error) {
-      console.error(
+      logger.error(
         'Error deleting media files verses by media file ID:',
         error
       );
@@ -198,7 +196,7 @@ export class MediaFilesVersesService {
         [verseId]
       );
     } catch (error) {
-      console.error('Error deleting media files verses by verse ID:', error);
+      logger.error('Error deleting media files verses by verse ID:', error);
       throw new Error('Failed to delete media files verses by verse ID');
     }
   }
@@ -241,7 +239,7 @@ export class MediaFilesVersesService {
       const result = await databaseManager.executeQuery(query, params);
       return result || [];
     } catch (error) {
-      console.error(
+      logger.error(
         'Error getting media files verses with related data:',
         error
       );
@@ -262,7 +260,7 @@ export class MediaFilesVersesService {
       );
       return result && result.length > 0 ? result[0].count : 0;
     } catch (error) {
-      console.error(
+      logger.error(
         'Error counting media files verses by media file ID:',
         error
       );
@@ -281,7 +279,7 @@ export class MediaFilesVersesService {
       );
       return result && result.length > 0 ? result[0].count : 0;
     } catch (error) {
-      console.error('Error counting media files verses by verse ID:', error);
+      logger.error('Error counting media files verses by verse ID:', error);
       throw new Error('Failed to count media files verses by verse ID');
     }
   }
@@ -319,7 +317,7 @@ export class MediaFilesVersesService {
     try {
       await databaseManager.executeQuery('DELETE FROM media_files_verses');
     } catch (error) {
-      console.error('Error clearing all media files verses data:', error);
+      logger.error('Error clearing all media files verses data:', error);
       throw new Error('Failed to clear all media files verses data');
     }
   }

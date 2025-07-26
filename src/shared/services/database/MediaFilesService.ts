@@ -1,5 +1,6 @@
 import DatabaseManager from './DatabaseManager';
-import { LocalMediaFile } from './schema';
+import type { LocalMediaFile } from './schema';
+import { logger } from '../../utils/logger';
 
 export interface MediaFileFilters {
   language_entity_id?: string;
@@ -146,7 +147,7 @@ export class MediaFilesService {
 
       return await db.getAllAsync(query, params);
     } catch (error) {
-      console.error('Error getting media files:', error);
+      logger.error('Error getting media files:', error);
       throw new Error('Failed to retrieve media files');
     }
   }
@@ -166,7 +167,7 @@ export class MediaFilesService {
       );
       return result[0] || null;
     } catch (error) {
-      console.error('Error getting media file by ID:', error);
+      logger.error('Error getting media file by ID:', error);
       throw new Error('Failed to retrieve media file');
     }
   }
@@ -187,7 +188,7 @@ export class MediaFilesService {
         [sequenceId]
       );
     } catch (error) {
-      console.error('Error getting media files by sequence ID:', error);
+      logger.error('Error getting media files by sequence ID:', error);
       throw new Error('Failed to retrieve media files by sequence ID');
     }
   }
@@ -206,7 +207,7 @@ export class MediaFilesService {
         [chapterId]
       );
     } catch (error) {
-      console.error('Error getting media files by chapter ID:', error);
+      logger.error('Error getting media files by chapter ID:', error);
       throw new Error('Failed to retrieve media files by chapter ID');
     }
   }
@@ -227,7 +228,7 @@ export class MediaFilesService {
         [languageEntityId]
       );
     } catch (error) {
-      console.error('Error getting media files by language entity ID:', error);
+      logger.error('Error getting media files by language entity ID:', error);
       throw new Error('Failed to retrieve media files by language entity ID');
     }
   }
@@ -270,7 +271,7 @@ export class MediaFilesService {
         ]
       );
     } catch (error) {
-      console.error('Error saving media file:', error);
+      logger.error('Error saving media file:', error);
       throw new Error('Failed to save media file');
     }
   }
@@ -320,7 +321,7 @@ export class MediaFilesService {
         values
       );
     } catch (error) {
-      console.error('Error updating media file:', error);
+      logger.error('Error updating media file:', error);
       throw new Error('Failed to update media file');
     }
   }
@@ -339,7 +340,7 @@ export class MediaFilesService {
         [new Date().toISOString(), new Date().toISOString(), id]
       );
     } catch (error) {
-      console.error('Error deleting media file:', error);
+      logger.error('Error deleting media file:', error);
       throw new Error('Failed to delete media file');
     }
   }
@@ -358,7 +359,7 @@ export class MediaFilesService {
         [id]
       );
     } catch (error) {
-      console.error('Error hard deleting media file:', error);
+      logger.error('Error hard deleting media file:', error);
       throw new Error('Failed to hard delete media file');
     }
   }
@@ -377,7 +378,7 @@ export class MediaFilesService {
         [new Date().toISOString(), id]
       );
     } catch (error) {
-      console.error('Error restoring media file:', error);
+      logger.error('Error restoring media file:', error);
       throw new Error('Failed to restore media file');
     }
   }
@@ -429,7 +430,7 @@ export class MediaFilesService {
       const result = await db.getFirstAsync(query, params);
       return (result as { count: number })?.count || 0;
     } catch (error) {
-      console.error('Error getting media files count:', error);
+      logger.error('Error getting media files count:', error);
       throw new Error('Failed to get media files count');
     }
   }
@@ -481,7 +482,7 @@ export class MediaFilesService {
       const result = await db.getFirstAsync(query, params);
       return (result as { total_size: number })?.total_size || 0;
     } catch (error) {
-      console.error('Error getting total file size:', error);
+      logger.error('Error getting total file size:', error);
       throw new Error('Failed to get total file size');
     }
   }
@@ -502,7 +503,7 @@ export class MediaFilesService {
         [uploadStatus]
       );
     } catch (error) {
-      console.error('Error getting media files by upload status:', error);
+      logger.error('Error getting media files by upload status:', error);
       throw new Error('Failed to retrieve media files by upload status');
     }
   }
@@ -523,7 +524,7 @@ export class MediaFilesService {
         [publishStatus]
       );
     } catch (error) {
-      console.error('Error getting media files by publish status:', error);
+      logger.error('Error getting media files by publish status:', error);
       throw new Error('Failed to retrieve media files by publish status');
     }
   }
@@ -622,7 +623,7 @@ export class MediaFilesService {
         [new Date().toISOString(), id]
       );
     } catch (error) {
-      console.error('Error incrementing version:', error);
+      logger.error('Error incrementing version:', error);
       throw new Error('Failed to increment version');
     }
   }

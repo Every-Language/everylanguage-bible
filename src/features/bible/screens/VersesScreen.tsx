@@ -22,6 +22,7 @@ import { localDataService } from '../../../shared/services/database/LocalDataSer
 import type { LocalVerseText } from '../../../shared/services/database/schema';
 import type { Chapter, Verse } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
+import { logger } from '../../../shared/utils/logger';
 
 type VersesScreenProps = NativeStackScreenProps<
   BibleStackParamList,
@@ -46,17 +47,14 @@ export const VersesScreen: React.FC = () => {
   // Load verse texts when currentTextVersion changes
   React.useEffect(() => {
     const loadVerseTexts = async () => {
-      console.log(
+      logger.log(
         '📖 VersesScreen - Loading verse texts for chapterId:',
         chapter.id
       );
-      console.log(
-        '📖 VersesScreen - Current text version:',
-        currentTextVersion
-      );
+      logger.log('📖 VersesScreen - Current text version:', currentTextVersion);
 
       if (!currentTextVersion) {
-        console.log(
+        logger.log(
           '📖 VersesScreen - No textVersion, setting verse texts to empty'
         );
         setVerseTexts(new Map());
@@ -69,19 +67,19 @@ export const VersesScreen: React.FC = () => {
           chapter.id,
           currentTextVersion.id
         );
-        console.log(
+        logger.log(
           '📖 VersesScreen - Loaded verse texts:',
           textsMap.size,
           'texts for version:',
           currentTextVersion.name
         );
-        console.log(
+        logger.log(
           '📖 VersesScreen - First few verse text IDs:',
           Array.from(textsMap.keys()).slice(0, 3)
         );
         setVerseTexts(textsMap);
       } catch (error) {
-        console.error('📖 VersesScreen - Error loading verse texts:', error);
+        logger.error('📖 VersesScreen - Error loading verse texts:', error);
         setVerseTexts(new Map());
       } finally {
         setLoadingTexts(false);
@@ -240,8 +238,8 @@ export const VersesScreen: React.FC = () => {
     // Create mock track data and load it into the media player
     const mockTrack = createMockTrackForChapter();
 
-    console.log('Playing chapter:', chapter);
-    console.log('Mock track data:', mockTrack);
+    logger.log('Playing chapter:', chapter);
+    logger.log('Mock track data:', mockTrack);
 
     // Set the track and start playback
     mediaActions.setCurrentTrack(mockTrack);
@@ -250,20 +248,20 @@ export const VersesScreen: React.FC = () => {
 
   const handleQueueChapter = () => {
     // TODO: Implement queue chapter functionality
-    console.log('Queue chapter:', chapter);
+    logger.log('Queue chapter:', chapter);
   };
 
   const handleShareChapter = () => {
     // TODO: Implement share chapter functionality
-    console.log('Share chapter:', chapter);
+    logger.log('Share chapter:', chapter);
   };
 
   const handlePlayVerse = (verse: Verse) => {
     // Create mock track data and load it into the media player
     const mockTrack = createMockTrackForVerse(verse);
 
-    console.log('Playing verse:', verse);
-    console.log('Mock track data:', mockTrack);
+    logger.log('Playing verse:', verse);
+    logger.log('Mock track data:', mockTrack);
 
     // Set the track and start playback
     mediaActions.setCurrentTrack(mockTrack);
@@ -272,7 +270,7 @@ export const VersesScreen: React.FC = () => {
 
   const handleShareVerse = (verse: Verse) => {
     // TODO: Implement share verse functionality
-    console.log('Share verse:', verse);
+    logger.log('Share verse:', verse);
   };
 
   const renderVerseCard = (verse: Verse) => {
