@@ -313,8 +313,9 @@ export class DownloadManager {
       options.onComplete?.(download);
     } catch (error: unknown) {
       download.status = 'failed';
-      download.error = (error as any)?.message || 'Download failed';
-      options.onError?.(download.error);
+      const errorMessage = (error as any)?.message || 'Download failed';
+      download.error = errorMessage;
+      options.onError?.(errorMessage);
       throw error;
     } finally {
       this.activeDownloads.delete(download.id);
