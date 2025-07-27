@@ -49,7 +49,7 @@ export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
     if (renderCount.current % 10 === 0) {
       // AudioPlayerExample render count: renderCount.current
     }
-  });
+  }, []); // Added dependency array to prevent infinite loops
 
   const handlePlayTrack = async (audioFile: (typeof audioFiles)[0]) => {
     const track: MediaTrack = {

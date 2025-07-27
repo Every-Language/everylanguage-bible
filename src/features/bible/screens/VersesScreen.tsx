@@ -14,12 +14,13 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTheme } from '../../../shared/context/ThemeContext';
-import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
 import { useVerses } from '../hooks/useVerses';
 import { VerseCard } from '@/features/bible/components/VerseCard';
 import { useCurrentVersions } from '../../languages/hooks';
 import { localDataService } from '../../../shared/services/database/LocalDataService';
 import type { LocalVerseText } from '../../../shared/services/database/schema';
+import { useAudioService } from '../../media/hooks/useAudioService';
+import type { MediaTrack } from '../../../shared/context/MediaPlayerContext';
 import type { Chapter, Verse } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 import { logger } from '../../../shared/utils/logger';
@@ -31,13 +32,14 @@ type VersesScreenProps = NativeStackScreenProps<
 
 export const VersesScreen: React.FC = () => {
   const { theme } = useTheme();
-  const { actions: mediaActions } = useMediaPlayer();
+  const { actions: mediaActions } = useAudioService();
   const navigation =
     useNavigation<NativeStackNavigationProp<BibleStackParamList>>();
   const route = useRoute<VersesScreenProps['route']>();
 
   const { book, chapter } = route.params;
   const { verses, loading, error } = useVerses(chapter.id);
+
   const { currentTextVersion } = useCurrentVersions();
   const [verseTexts, setVerseTexts] = React.useState<
     Map<string, LocalVerseText>
@@ -198,26 +200,23 @@ export const VersesScreen: React.FC = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const createMockTrackForChapter =
-    (): import('../../../shared/context/MediaPlayerContext').MediaTrack => {
-      // Estimate duration based on verse count (rough calculation)
-      const estimatedDuration = chapter.total_verses * 20; // ~20 seconds per verse
+  const createMockTrackForChapter = (): MediaTrack => {
+    // Estimate duration based on verse count (rough calculation)
+    const estimatedDuration = chapter.total_verses * 20; // ~20 seconds per verse
 
-      return {
-        id: `${book.id}-${chapter.id}`,
-        title: `${book.name} - Chapter ${chapter.chapter_number}`,
-        subtitle: `${chapter.total_verses} verses • ${Math.floor(estimatedDuration / 60)}:${(estimatedDuration % 60).toString().padStart(2, '0')}`,
-        duration: estimatedDuration,
-        currentTime: 0,
-        book: book.name,
-        chapter: `Chapter ${chapter.chapter_number}`,
-        url: `mock://audio/${book.id}/${chapter.id}`, // Mock URL for testing
-      };
+    return {
+      id: `${book.id}-${chapter.id}`,
+      title: `${book.name} - Chapter ${chapter.chapter_number}`,
+      subtitle: `${chapter.total_verses} verses • ${Math.floor(estimatedDuration / 60)}:${(estimatedDuration % 60).toString().padStart(2, '0')}`,
+      duration: estimatedDuration,
+      currentTime: 0,
+      book: book.name,
+      chapter: `Chapter ${chapter.chapter_number}`,
+      url: `mock://audio/${book.id}/${chapter.id}`, // Mock URL for testing
     };
+  };
 
-  const createMockTrackForVerse = (
-    verse: Verse
-  ): import('../../../shared/context/MediaPlayerContext').MediaTrack => {
+  const createMockTrackForVerse = (verse: Verse): MediaTrack => {
     // Estimate duration for a single verse (rough calculation)
     const estimatedDuration = 20; // ~20 seconds per verse
 

@@ -136,11 +136,11 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
     // Initial sync
     syncWithAudioService();
 
-    // Set up periodic sync (every 1000ms to reduce frequency)
-    const syncInterval = setInterval(syncWithAudioService, 1000);
+    // Temporarily disabled periodic sync to prevent loops
+    // const syncInterval = setInterval(syncWithAudioService, 2000);
 
     return () => {
-      clearInterval(syncInterval);
+      // clearInterval(syncInterval);
     };
   }, []);
 

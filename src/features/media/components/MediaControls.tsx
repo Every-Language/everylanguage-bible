@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/shared/context/ThemeContext';
-import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useAudioService } from '@/features/media/hooks/useAudioService';
 
 interface MediaControlsProps {
   showAlbumArt?: boolean;
@@ -15,24 +15,26 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
   compact = false,
 }) => {
   const { theme } = useTheme();
-  const { state, actions } = useMediaPlayer();
+  const { state, actions } = useAudioService();
   const insets = useSafeAreaInsets();
 
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
     if (state.isPlaying) {
-      actions.pause();
+      await actions.pause();
     } else {
-      actions.play();
+      await actions.play();
     }
   };
 
-  const handleSkipBack = () => {
-    actions.seekTo(Math.max(0, (state.currentTrack?.currentTime || 0) - 10));
+  const handleSkipBack = async () => {
+    await actions.seekTo(
+      Math.max(0, (state.currentTrack?.currentTime || 0) - 10)
+    );
   };
 
-  const handleSkipForward = () => {
+  const handleSkipForward = async () => {
     if (state.currentTrack) {
-      actions.seekTo(
+      await actions.seekTo(
         Math.min(
           state.currentTrack.duration,
           state.currentTrack.currentTime + 10
@@ -41,12 +43,12 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
     }
   };
 
-  const handleNextTrack = () => {
-    actions.nextTrack();
+  const handleNextTrack = async () => {
+    await actions.nextTrack();
   };
 
-  const handlePreviousTrack = () => {
-    actions.previousTrack();
+  const handlePreviousTrack = async () => {
+    await actions.previousTrack();
   };
 
   const formatTime = (seconds: number): string => {

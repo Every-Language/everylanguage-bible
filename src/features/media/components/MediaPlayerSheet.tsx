@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/shared/context/ThemeContext';
-import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useAudioService } from '@/features/media/hooks/useAudioService';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { MediaControls } from './MediaControls';
 import { TextAndQueueTabs } from './TextAndQueueTabs';
@@ -85,7 +85,7 @@ const BlurredBackground: React.FC<BottomSheetBackgroundProps> = ({
 // Inner content component that has access to useBottomSheet
 const MediaPlayerContent: React.FC = () => {
   const { theme } = useTheme();
-  const { state } = useMediaPlayer();
+  const { state } = useAudioService();
   const insets = useSafeAreaInsets();
 
   // Get the animated index from the bottom sheet context
@@ -252,7 +252,7 @@ const MediaPlayerContent: React.FC = () => {
 
 export const MediaPlayerSheet: React.FC = () => {
   const { theme } = useTheme();
-  const { state, actions } = useMediaPlayer();
+  const { state, actions } = useAudioService();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
 

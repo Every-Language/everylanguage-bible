@@ -8,16 +8,16 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+// import { useNavigation, useRoute } from '@react-navigation/native';
 import type {
-  NativeStackNavigationProp,
+  // NativeStackNavigationProp,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import { useTheme } from '../../../shared/context/ThemeContext';
-import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
-import type { MediaTrack } from '../../../shared/context/MediaPlayerContext';
 import { useChapters } from '../hooks/useChapters';
 import { ChapterCard } from '../components/ChapterCard';
+import { useAudioService } from '../../media/hooks/useAudioService';
+import type { MediaTrack } from '../../../shared/context/MediaPlayerContext';
 import type { Book, ChapterWithMetadata } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 import { ChapterDownloadModal } from '@/features/downloads/components/ChapterDownloadModal';
@@ -28,15 +28,14 @@ type ChapterScreenProps = NativeStackScreenProps<
   'BibleChapters'
 >;
 
-export const ChapterScreen: React.FC = () => {
+export const ChapterScreen: React.FC<ChapterScreenProps> = ({
+  route,
+  navigation,
+}) => {
   const { theme } = useTheme();
-  const { actions: mediaActions } = useMediaPlayer();
-  const navigation =
-    useNavigation<NativeStackNavigationProp<BibleStackParamList>>();
-  const route = useRoute<ChapterScreenProps['route']>();
-
   const { book } = route.params;
   const { chapters, loading, error } = useChapters(book.id);
+  const { actions: mediaActions } = useAudioService();
 
   // Modal state for unavailable chapters
   const [showUnavailableModal, setShowUnavailableModal] = useState(false);
@@ -151,9 +150,7 @@ export const ChapterScreen: React.FC = () => {
     return count === 1 ? '1 chapter' : `${count} chapters`;
   };
 
-  const createMockTrackForChapter = (
-    chapter: ChapterWithMetadata
-  ): MediaTrack => {
+  const createTrackFromChapter = (chapter: ChapterWithMetadata): MediaTrack => {
     // Estimate duration based on verse count (rough calculation)
     const estimatedDuration = chapter.total_verses * 20; // ~20 seconds per verse
 
@@ -180,34 +177,30 @@ export const ChapterScreen: React.FC = () => {
     }
 
     // Navigate to verses screen using React Navigation
-    navigation.navigate('BibleVerses', { book, chapter });
+    navigation.navigate('BibleVerses', { book: book, chapter });
   };
 
   // handleBackFromVerses no longer needed with React Navigation
 
   const handlePlayFromFirstChapter = () => {
     // Play from the first chapter
-    if (chapters.length > 0) {
-      const firstChapter = chapters[0];
-      if (firstChapter) {
-        const mockTrack = createMockTrackForChapter(firstChapter);
+    const firstChapter = chapters[0];
+    if (!firstChapter) return;
 
-        logger.info('Playing from first chapter:', firstChapter);
-        mediaActions.setCurrentTrack(mockTrack);
-        mediaActions.play();
-      }
-    }
+    logger.info('Playing from first chapter:', firstChapter);
+
+    // Set the track and start playback
+    mediaActions.setCurrentTrack(createTrackFromChapter(firstChapter));
+    mediaActions.play();
   };
 
   const handlePlayChapter = (chapter: ChapterWithMetadata) => {
     // Create mock track data and load it into the media player
-    const mockTrack = createMockTrackForChapter(chapter);
-
+    const track = createTrackFromChapter(chapter);
     logger.info('Playing chapter:', chapter);
-    logger.debug('Mock track data:', mockTrack);
 
     // Set the track and start playback
-    mediaActions.setCurrentTrack(mockTrack);
+    mediaActions.setCurrentTrack(track);
     mediaActions.play();
   };
 
