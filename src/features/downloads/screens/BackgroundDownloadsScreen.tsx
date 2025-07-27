@@ -10,12 +10,15 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import { useBackgroundDownloads } from '../hooks/useBackgroundDownloads';
 import { logger } from '@/shared/utils/logger';
-import { formatFileSize } from '../utils/fileUtils';
+import { formatFileSize, isAudioFile } from '../utils/fileUtils';
+import { audioService } from '@/features/media/services/AudioService';
 
 export const BackgroundDownloadsScreen: React.FC = () => {
   const { theme } = useTheme();
+  const { state: mediaState, actions: mediaActions } = useMediaPlayer();
   const {
     downloads,
     stats,
@@ -109,6 +112,61 @@ export const BackgroundDownloadsScreen: React.FC = () => {
   const hasPendingDownloads = pendingDownloads.length > 0;
   const hasFailedDownloads = failedDownloads.length > 0;
   const canContinueDownloads = hasPendingDownloads || hasFailedDownloads;
+
+  // Handle playing/pausing audio file
+  const handlePlayAudio = async (download: any) => {
+    try {
+      // If this is the current track and it's playing, pause it
+      if (mediaState.currentTrack?.id === download.id && mediaState.isPlaying) {
+        await audioService.pause();
+        mediaActions.pause();
+        logger.info('Paused audio file:', download.fileName);
+        return;
+      }
+
+      // If this is the current track and it's paused, resume it
+      if (
+        mediaState.currentTrack?.id === download.id &&
+        !mediaState.isPlaying
+      ) {
+        await audioService.play();
+        mediaActions.play();
+        logger.info('Resumed audio file:', download.fileName);
+        return;
+      }
+
+      if (!download.localPath) {
+        Alert.alert('Error', 'Audio file not found locally');
+        return;
+      }
+
+      // Create a media track for the audio file
+      const track = {
+        id: download.id,
+        title: download.fileName,
+        subtitle: 'Downloaded Audio',
+        duration: 0, // Will be set by the audio service
+        currentTime: 0,
+        isPlaying: false,
+        url: download.localPath,
+      };
+
+      // Set the current track in the media player first
+      mediaActions.setCurrentTrack(track);
+
+      // Load and play the audio - this will automatically stop any currently playing audio
+      await audioService.loadAudio(track);
+      await audioService.play();
+
+      // Expand the media player
+      mediaActions.expand();
+
+      logger.info('Started playing audio file:', download.fileName);
+    } catch (error) {
+      logger.error('Failed to play audio file:', error);
+      Alert.alert('Error', 'Failed to play audio file');
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -369,7 +427,19 @@ export const BackgroundDownloadsScreen: React.FC = () => {
               key={download.id}
               style={[
                 styles.downloadItem,
-                { backgroundColor: theme.colors.surface },
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor:
+                    mediaState.currentTrack?.id === download.id &&
+                    mediaState.isPlaying
+                      ? theme.colors.success
+                      : 'rgba(0, 0, 0, 0.1)',
+                  borderWidth:
+                    mediaState.currentTrack?.id === download.id &&
+                    mediaState.isPlaying
+                      ? 2
+                      : 1,
+                },
               ]}>
               <View style={styles.downloadHeader}>
                 <MaterialIcons
@@ -378,10 +448,23 @@ export const BackgroundDownloadsScreen: React.FC = () => {
                   color={getStatusColor(download.status)}
                 />
                 <View style={styles.downloadInfo}>
-                  <Text
-                    style={[styles.downloadName, { color: theme.colors.text }]}>
-                    {download.fileName}
-                  </Text>
+                  <View style={styles.downloadNameContainer}>
+                    <Text
+                      style={[
+                        styles.downloadName,
+                        { color: theme.colors.text },
+                      ]}>
+                      {download.fileName}
+                    </Text>
+                    {isAudioFile(download.fileName) && (
+                      <MaterialIcons
+                        name='audiotrack'
+                        size={16}
+                        color={theme.colors.textSecondary}
+                        style={styles.audioIcon}
+                      />
+                    )}
+                  </View>
                   <Text
                     style={[
                       styles.downloadStatus,
@@ -413,6 +496,28 @@ export const BackgroundDownloadsScreen: React.FC = () => {
                       />
                     </TouchableOpacity>
                   )}
+                  {download.status === 'completed' &&
+                    isAudioFile(download.fileName) && (
+                      <TouchableOpacity
+                        style={styles.actionIcon}
+                        onPress={() => handlePlayAudio(download)}>
+                        <MaterialIcons
+                          name={
+                            mediaState.currentTrack?.id === download.id &&
+                            mediaState.isPlaying
+                              ? 'pause'
+                              : 'play-arrow'
+                          }
+                          size={20}
+                          color={
+                            mediaState.currentTrack?.id === download.id &&
+                            mediaState.isPlaying
+                              ? theme.colors.success
+                              : theme.colors.primary
+                          }
+                        />
+                      </TouchableOpacity>
+                    )}
                   {download.status !== 'completed' && (
                     <TouchableOpacity
                       style={styles.actionIcon}
@@ -593,9 +698,18 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
   },
+  downloadNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   downloadName: {
     fontSize: 14,
     fontWeight: '500',
+    flex: 1,
+  },
+  audioIcon: {
+    marginLeft: 4,
   },
   downloadStatus: {
     fontSize: 12,

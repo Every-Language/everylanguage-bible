@@ -56,7 +56,9 @@ export const useAudioService = (options: UseAudioServiceOptions = {}) => {
         logger.info('Audio service: Stop callback triggered');
       },
       onLoad: (duration: number) => {
-        if (state.currentTrack) {
+        // Get current track from state at the time of callback
+        const currentTrack = state.currentTrack;
+        if (currentTrack) {
           actions.updateProgress(0);
           onLoad?.(duration);
           logger.info('Audio service: Load callback triggered', { duration });
@@ -76,7 +78,7 @@ export const useAudioService = (options: UseAudioServiceOptions = {}) => {
     };
 
     audioService.setCallbacks(callbacks);
-  }, [actions, state.currentTrack, onError, onLoad]);
+  }, [actions, onError, onLoad]); // Removed state.currentTrack from dependencies
 
   // Initialize audio service
   useEffect(() => {

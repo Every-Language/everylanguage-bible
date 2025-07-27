@@ -1,24 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   Alert,
   ScrollView,
+  StyleSheet,
 } from 'react-native';
-import { useAudioService } from '../hooks/useAudioService';
 import { useTheme } from '@/shared/context/ThemeContext';
-import { MediaTrack } from '@/shared/context/MediaPlayerContext';
+import { useAudioService } from '../hooks/useAudioService';
+import { MediaTrack } from '../types';
+
+interface AudioFile {
+  id: string;
+  title: string;
+  subtitle: string;
+  duration: number;
+  filePath: string;
+}
 
 interface AudioPlayerExampleProps {
-  audioFiles?: Array<{
-    id: string;
-    title: string;
-    subtitle: string;
-    filePath: string;
-    duration: number;
-  }>;
+  audioFiles?: AudioFile[];
 }
 
 export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
@@ -26,6 +28,10 @@ export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
 }) => {
   const { theme } = useTheme();
   const [selectedTrack, setSelectedTrack] = useState<MediaTrack | null>(null);
+  const renderCount = useRef(0);
+
+  // Increment render count for debugging
+  renderCount.current += 1;
 
   const { state, actions, audioServiceState, isAudioServiceReady } =
     useAudioService({
@@ -33,10 +39,17 @@ export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
       onError: error => {
         Alert.alert('Audio Error', error);
       },
-      onLoad: duration => {
-        console.log('Audio loaded with duration:', duration);
+      onLoad: _duration => {
+        // Audio loaded with duration: _duration
       },
     });
+
+  // Log render count every 10 renders to monitor for infinite loops
+  useEffect(() => {
+    if (renderCount.current % 10 === 0) {
+      // AudioPlayerExample render count: renderCount.current
+    }
+  });
 
   const handlePlayTrack = async (audioFile: (typeof audioFiles)[0]) => {
     const track: MediaTrack = {
@@ -45,11 +58,17 @@ export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
       subtitle: audioFile.subtitle,
       duration: audioFile.duration,
       currentTime: 0,
+      isPlaying: false,
       url: audioFile.filePath,
     };
 
     setSelectedTrack(track);
-    await actions.setCurrentTrack(track);
+    // Convert to MediaPlayerTrack format for the context
+    const contextTrack = {
+      ...track,
+      subtitle: track.subtitle || '', // Ensure subtitle is always a string
+    };
+    await actions.setCurrentTrack(contextTrack);
   };
 
   const handlePlayPause = async () => {
@@ -70,184 +89,189 @@ export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-      padding: 16,
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: theme.colors.text,
-      marginBottom: 20,
-    },
-    trackItem: {
-      backgroundColor: theme.colors.surface,
-      padding: 16,
-      marginBottom: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    trackTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 4,
-    },
-    trackSubtitle: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
-      marginBottom: 8,
-    },
-    trackPath: {
-      fontSize: 12,
-      color: theme.colors.textSecondary,
-      fontFamily: 'monospace',
-    },
-    playButton: {
-      backgroundColor: theme.colors.primary,
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 6,
-      alignSelf: 'flex-start',
-    },
-    playButtonText: {
-      color: theme.colors.textInverse,
-      fontWeight: '600',
-    },
-    controlsContainer: {
-      backgroundColor: theme.colors.surface,
-      padding: 16,
-      borderRadius: 8,
-      marginTop: 20,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    controlsTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.colors.text,
-      marginBottom: 16,
-    },
-    controlRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    controlButton: {
-      backgroundColor: theme.colors.secondary,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 4,
-      marginRight: 8,
-    },
-    controlButtonText: {
-      color: theme.colors.textInverse,
-      fontSize: 12,
-    },
-    statusText: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
-      marginBottom: 8,
-    },
-    progressText: {
-      fontSize: 12,
-      color: theme.colors.textSecondary,
-    },
-    noFilesText: {
-      fontSize: 16,
-      color: theme.colors.textSecondary,
-      textAlign: 'center',
-      marginTop: 40,
-    },
-  });
-
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Audio Player Example</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Text style={[styles.title, { color: theme.colors.text }]}>
+        Audio Player Example (Renders: {renderCount.current})
+      </Text>
 
-      {audioFiles.length === 0 ? (
-        <Text style={styles.noFilesText}>
-          No audio files available. Add some audio files to test the player.
+      <View style={styles.statusContainer}>
+        <Text style={[styles.statusText, { color: theme.colors.text }]}>
+          Audio Service Ready: {isAudioServiceReady ? 'Yes' : 'No'}
         </Text>
-      ) : (
-        <>
-          {/* Audio File List */}
-          {audioFiles.map(audioFile => (
-            <View key={audioFile.id} style={styles.trackItem}>
-              <Text style={styles.trackTitle}>{audioFile.title}</Text>
-              <Text style={styles.trackSubtitle}>{audioFile.subtitle}</Text>
-              <Text style={styles.trackPath}>{audioFile.filePath}</Text>
-              <TouchableOpacity
-                style={styles.playButton}
-                onPress={() => handlePlayTrack(audioFile)}>
-                <Text style={styles.playButtonText}>Load & Play</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+        <Text style={[styles.statusText, { color: theme.colors.text }]}>
+          Is Playing: {state.isPlaying ? 'Yes' : 'No'}
+        </Text>
+        <Text style={[styles.statusText, { color: theme.colors.text }]}>
+          Is Loading: {state.isLoading ? 'Yes' : 'No'}
+        </Text>
+        <Text style={[styles.statusText, { color: theme.colors.text }]}>
+          Current Track: {state.currentTrack?.title || 'None'}
+        </Text>
+        <Text style={[styles.statusText, { color: theme.colors.text }]}>
+          Progress: {formatTime(state.currentTrack?.currentTime || 0)} /{' '}
+          {formatTime(state.currentTrack?.duration || 0)}
+        </Text>
+      </View>
 
-          {/* Audio Controls */}
-          {selectedTrack && (
-            <View style={styles.controlsContainer}>
-              <Text style={styles.controlsTitle}>Now Playing</Text>
-              <Text style={styles.trackTitle}>{selectedTrack.title}</Text>
-              <Text style={styles.trackSubtitle}>{selectedTrack.subtitle}</Text>
+      <View style={styles.controlsContainer}>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.colors.primary }]}
+          onPress={handlePlayPause}
+          disabled={!state.currentTrack}>
+          <Text
+            style={[styles.buttonText, { color: theme.colors.textInverse }]}>
+            {state.isPlaying ? 'Pause' : 'Play'}
+          </Text>
+        </TouchableOpacity>
 
-              <View style={styles.controlRow}>
-                <TouchableOpacity
-                  style={styles.controlButton}
-                  onPress={handlePlayPause}>
-                  <Text style={styles.controlButtonText}>
-                    {state.isPlaying ? 'Pause' : 'Play'}
-                  </Text>
-                </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.colors.secondary }]}
+          onPress={() => actions.stop()}
+          disabled={!state.currentTrack}>
+          <Text style={[styles.buttonText, { color: theme.colors.text }]}>
+            Stop
+          </Text>
+        </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.controlButton}
-                  onPress={() => actions.stop()}>
-                  <Text style={styles.controlButtonText}>Stop</Text>
-                </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.colors.secondary }]}
+          onPress={() => handleSeek(30)}
+          disabled={!state.currentTrack}>
+          <Text style={[styles.buttonText, { color: theme.colors.text }]}>
+            Seek to 30s
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-                <TouchableOpacity
-                  style={styles.controlButton}
-                  onPress={() =>
-                    handleSeek(
-                      Math.max(0, state.currentTrack?.currentTime || 0) - 10
-                    )
-                  }>
-                  <Text style={styles.controlButtonText}>-10s</Text>
-                </TouchableOpacity>
+      <View style={styles.tracksContainer}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+          Available Tracks:
+        </Text>
+        {audioFiles.map(audioFile => (
+          <TouchableOpacity
+            key={audioFile.id}
+            style={[
+              styles.trackItem,
+              {
+                backgroundColor:
+                  selectedTrack?.id === audioFile.id
+                    ? theme.colors.primary
+                    : theme.colors.surface,
+                borderColor: theme.colors.border,
+              },
+            ]}
+            onPress={() => handlePlayTrack(audioFile)}>
+            <Text
+              style={[
+                styles.trackTitle,
+                {
+                  color:
+                    selectedTrack?.id === audioFile.id
+                      ? theme.colors.textInverse
+                      : theme.colors.text,
+                },
+              ]}>
+              {audioFile.title}
+            </Text>
+            <Text
+              style={[
+                styles.trackSubtitle,
+                {
+                  color:
+                    selectedTrack?.id === audioFile.id
+                      ? theme.colors.textInverse
+                      : theme.colors.textSecondary,
+                },
+              ]}>
+              {audioFile.subtitle} - {formatTime(audioFile.duration)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-                <TouchableOpacity
-                  style={styles.controlButton}
-                  onPress={() =>
-                    handleSeek((state.currentTrack?.currentTime || 0) + 10)
-                  }>
-                  <Text style={styles.controlButtonText}>+10s</Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.statusText}>
-                Status: {isAudioServiceReady ? 'Ready' : 'Loading...'}
-              </Text>
-              <Text style={styles.statusText}>
-                Audio Service:{' '}
-                {audioServiceState.isLoaded ? 'Loaded' : 'Not Loaded'}
-              </Text>
-              <Text style={styles.progressText}>
-                Progress: {formatTime(state.currentTrack?.currentTime || 0)} /{' '}
-                {formatTime(state.currentTrack?.duration || 0)}
-              </Text>
-              <Text style={styles.progressText}>
-                Volume: {Math.round(state.volume * 100)}% | Speed:{' '}
-                {state.playbackRate}x
-              </Text>
-            </View>
-          )}
-        </>
-      )}
+      <View style={styles.debugContainer}>
+        <Text style={[styles.debugTitle, { color: theme.colors.text }]}>
+          Debug Info:
+        </Text>
+        <Text style={[styles.debugText, { color: theme.colors.textSecondary }]}>
+          Audio Service State: {JSON.stringify(audioServiceState, null, 2)}
+        </Text>
+      </View>
     </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  statusContainer: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  statusText: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  controlsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  button: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  tracksContainer: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  trackItem: {
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  trackTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  trackSubtitle: {
+    fontSize: 14,
+  },
+  debugContainer: {
+    marginTop: 16,
+  },
+  debugTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  debugText: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+  },
+});

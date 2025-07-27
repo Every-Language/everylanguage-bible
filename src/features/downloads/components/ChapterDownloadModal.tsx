@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { useDownloads } from '../hooks/useDownloads';
 import { NetworkStatusDisplay } from './NetworkStatusDisplay';
 import { SearchResultsDisplay } from './SearchResultsDisplay';
@@ -668,7 +669,7 @@ const styles = StyleSheet.create({
   backgroundStatusContainer: {
     padding: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    backgroundColor: COLOR_VARIATIONS.GREEN_10,
     marginBottom: 16,
   },
   backgroundStatusTitle: {

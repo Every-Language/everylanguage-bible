@@ -16,3 +16,12 @@ export const getTotalFileSize = (files: unknown[]): number => {
     return total + (fileObj.file_size || 0);
   }, 0);
 };
+
+/**
+ * Check if a file is an audio file based on its extension
+ */
+export const isAudioFile = (fileName: string): boolean => {
+  const audioExtensions = ['.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac'];
+  const lowerFileName = fileName.toLowerCase();
+  return audioExtensions.some(ext => lowerFileName.endsWith(ext));
+};

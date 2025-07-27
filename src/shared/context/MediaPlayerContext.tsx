@@ -5,7 +5,9 @@ import React, {
   useCallback,
   useMemo,
   ReactNode,
+  useEffect,
 } from 'react';
+import { audioService } from '@/features/media/services/AudioService';
 
 interface MediaTrack {
   id: string;
@@ -79,6 +81,68 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
     repeatMode: 'none',
     shuffleMode: false,
   });
+
+  // Sync with audio service state
+  useEffect(() => {
+    const syncWithAudioService = () => {
+      const audioState = audioService.getState();
+      const currentAudioTrack = audioService.getCurrentTrack();
+
+      setState(prev => {
+        // Only update if values have actually changed
+        const hasPlayingChanged = prev.isPlaying !== audioState.isPlaying;
+        const hasLoadingChanged = prev.isLoading !== audioState.isLoading;
+
+        // Check if current track has changed
+        const prevTrackId = prev.currentTrack?.id;
+        const newTrackId = currentAudioTrack?.id;
+        const hasTrackChanged = prevTrackId !== newTrackId;
+
+        // Check if track properties have changed
+        const hasTrackPropertiesChanged =
+          prev.currentTrack &&
+          currentAudioTrack &&
+          (prev.currentTrack.currentTime !== currentAudioTrack.currentTime ||
+            prev.currentTrack.duration !== currentAudioTrack.duration);
+
+        // Only update if something has actually changed
+        if (
+          !hasPlayingChanged &&
+          !hasLoadingChanged &&
+          !hasTrackChanged &&
+          !hasTrackPropertiesChanged
+        ) {
+          return prev; // Return same state to prevent re-render
+        }
+
+        return {
+          ...prev,
+          isPlaying: audioState.isPlaying,
+          isLoading: audioState.isLoading,
+          currentTrack: currentAudioTrack
+            ? {
+                id: currentAudioTrack.id,
+                title: currentAudioTrack.title,
+                subtitle: currentAudioTrack.subtitle || '',
+                duration: currentAudioTrack.duration,
+                currentTime: currentAudioTrack.currentTime,
+                ...(currentAudioTrack.url && { url: currentAudioTrack.url }),
+              }
+            : null,
+        };
+      });
+    };
+
+    // Initial sync
+    syncWithAudioService();
+
+    // Set up periodic sync (every 1000ms to reduce frequency)
+    const syncInterval = setInterval(syncWithAudioService, 1000);
+
+    return () => {
+      clearInterval(syncInterval);
+    };
+  }, []);
 
   const setCurrentTrack = useCallback((track: MediaTrack) => {
     setState(prev => ({
@@ -217,12 +281,19 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
   }, []);
 
   const updateProgress = useCallback((currentTime: number) => {
-    setState(prev => ({
-      ...prev,
-      currentTrack: prev.currentTrack
-        ? { ...prev.currentTrack, currentTime }
-        : null,
-    }));
+    setState(prev => {
+      // Only update if the time has actually changed
+      if (prev.currentTrack?.currentTime === currentTime) {
+        return prev; // Return same state to prevent re-render
+      }
+
+      return {
+        ...prev,
+        currentTrack: prev.currentTrack
+          ? { ...prev.currentTrack, currentTime }
+          : null,
+      };
+    });
   }, []);
 
   // ✅ PERFORMANCE FIX: Memoize context value to prevent unnecessary re-renders

@@ -46,6 +46,8 @@ export class AudioService {
   private callbacks: AudioServiceCallbacks = {};
   private progressInterval: ReturnType<typeof setTimeout> | null = null;
   private currentTrack: MediaTrack | null = null;
+  private loadingPromise: Promise<void> | null = null; // Prevent race conditions
+  private isDisposed = false;
 
   constructor() {
     this.setupAudioMode();
@@ -92,17 +94,45 @@ export class AudioService {
       throw new Error('Track URL is required');
     }
 
+    // Prevent race conditions - if already loading, wait for current operation
+    if (this.loadingPromise) {
+      await this.loadingPromise;
+    }
+
+    // If this is the same track and already loaded, just return
+    if (this.currentTrack?.id === track.id && this.state.isLoaded) {
+      logger.info('Track already loaded:', track.id);
+      return;
+    }
+
+    this.loadingPromise = this._loadAudioInternal(track);
+    try {
+      await this.loadingPromise;
+    } finally {
+      this.loadingPromise = null;
+    }
+  }
+
+  /**
+   * Internal load audio implementation
+   */
+  private async _loadAudioInternal(track: MediaTrack): Promise<void> {
+    if (this.isDisposed) {
+      throw new Error('Audio service has been disposed');
+    }
+
     this.setState({ isLoading: true, error: null });
     this.currentTrack = track;
 
     try {
       // Validate the audio file first
-      const fileInfo = await validateAudioFile(track.url);
+      const fileInfo = await validateAudioFile(track.url || '');
       if (!fileInfo.isValid) {
         throw new Error(fileInfo.error || 'Invalid audio file');
       }
 
-      // Unload previous audio if exists
+      // Stop any currently playing audio and unload previous audio
+      await this.stop();
       await this.unloadAudio();
 
       // Create audio source
@@ -150,6 +180,7 @@ export class AudioService {
         error: errorMessage,
         isLoaded: false,
       });
+      this.currentTrack = null; // Clear current track on error
       this.callbacks.onError?.(errorMessage);
       logger.error('Failed to load audio:', { trackId: track.id, error });
       throw error;
@@ -192,6 +223,10 @@ export class AudioService {
       throw new Error('No audio loaded');
     }
 
+    if (this.isDisposed) {
+      throw new Error('Audio service has been disposed');
+    }
+
     try {
       this.player.play();
       this.setState({ isPlaying: true, error: null });
@@ -216,6 +251,10 @@ export class AudioService {
       return;
     }
 
+    if (this.isDisposed) {
+      return;
+    }
+
     try {
       this.player.pause();
       this.setState({ isPlaying: false });
@@ -233,6 +272,10 @@ export class AudioService {
    */
   async stop(): Promise<void> {
     if (!this.player || !this.state.isLoaded) {
+      return;
+    }
+
+    if (this.isDisposed) {
       return;
     }
 
@@ -342,14 +385,25 @@ export class AudioService {
    * Check if audio is loaded
    */
   isLoaded(): boolean {
-    return this.state.isLoaded && this.player?.isLoaded === true;
+    return (
+      this.state.isLoaded && this.player?.isLoaded === true && !this.isDisposed
+    );
   }
 
   /**
    * Check if audio is playing
    */
   isPlaying(): boolean {
-    return this.state.isPlaying && this.player?.playing === true;
+    return (
+      this.state.isPlaying && this.player?.playing === true && !this.isDisposed
+    );
+  }
+
+  /**
+   * Check if audio is currently loading
+   */
+  isLoading(): boolean {
+    return this.state.isLoading || this.loadingPromise !== null;
   }
 
   /**
@@ -398,10 +452,14 @@ export class AudioService {
     this.progressInterval = setInterval(() => {
       if (this.player && this.state.isPlaying) {
         const position = this.player.currentTime;
-        this.setState({ position });
-        this.callbacks.onProgress?.(position);
+        // Only update if position has actually changed
+        if (Math.abs(position - this.state.position) >= 0.1) {
+          // Update every 100ms or when position changes by 0.1s
+          this.setState({ position });
+          this.callbacks.onProgress?.(position);
+        }
       }
-    }, 100);
+    }, 250); // Reduced frequency from 100ms to 250ms
   }
 
   /**
@@ -449,8 +507,26 @@ export class AudioService {
    * Dispose of the audio service
    */
   async dispose(): Promise<void> {
+    this.isDisposed = true;
     await this.unloadAudio();
+    this.currentTrack = null;
+    this.loadingPromise = null;
     logger.info('Audio service disposed');
+  }
+
+  /**
+   * Force stop all audio and reset state
+   */
+  async forceStop(): Promise<void> {
+    try {
+      await this.stop();
+      await this.unloadAudio();
+      this.currentTrack = null;
+      this.loadingPromise = null;
+      logger.info('Audio service force stopped');
+    } catch (error) {
+      logger.error('Error force stopping audio service:', error);
+    }
   }
 }
 

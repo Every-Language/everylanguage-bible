@@ -1,4 +1,5 @@
 import * as TaskManager from 'expo-task-manager';
+import * as FileSystem from 'expo-file-system';
 import { logger } from '@/shared/utils/logger';
 import {
   persistentDownloadStore,
@@ -36,7 +37,7 @@ export class BackgroundDownloadService {
   private static instance: BackgroundDownloadService;
   private isInitialized = false;
   private isProcessing = false;
-  private processingQueue: string[] = [];
+  private downloadResumables = new Map<string, FileSystem.DownloadResumable>();
 
   private constructor() {}
 
@@ -361,8 +362,20 @@ export class BackgroundDownloadService {
         });
       }
 
-      // Start the actual download
-      const result = await this.performDownload(download);
+      // Get the updated download object with the signed URL
+      const updatedDownload = persistentDownloadStore.getDownload(download.id);
+      if (!updatedDownload) {
+        throw new Error('Download not found after update');
+      }
+
+      logger.info('Download prepared with signed URL:', {
+        downloadId: updatedDownload.id,
+        hasSignedUrl: !!updatedDownload.signedUrl,
+        signedUrlLength: updatedDownload.signedUrl?.length || 0,
+      });
+
+      // Start the actual download with the updated download object
+      const result = await this.performDownload(updatedDownload);
 
       if (result.success) {
         // Add to media files if configured
@@ -441,28 +454,73 @@ export class BackgroundDownloadService {
   private async performDownload(
     download: PersistentDownloadItem
   ): Promise<BackgroundDownloadResult> {
-    // This would integrate with the existing download manager
-    // For now, we'll simulate the download process
-    // In a real implementation, you'd use FileSystem.createDownloadResumable
+    let resumable: FileSystem.DownloadResumable | null = null;
 
     try {
-      // Simulate download progress
-      for (let progress = 0; progress <= 1; progress += 0.1) {
-        await persistentDownloadStore.updateProgress(download.id, {
-          bytesWritten: Math.floor(progress * (download.fileSize || 1000000)),
-          contentLength: download.fileSize || 1000000,
-          progress,
-        });
+      logger.info('Starting real download for:', download.id, {
+        hasSignedUrl: !!download.signedUrl,
+        signedUrlLength: download.signedUrl?.length || 0,
+        localPath: download.localPath,
+      });
 
-        // Simulate download time
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // Ensure downloads directory exists
+      await this.ensureDownloadsDirectory();
+
+      // Validate signed URL exists
+      if (!download.signedUrl) {
+        throw new Error(
+          'Signed URL is required for download but not available'
+        );
       }
 
-      // Mark as completed
+      // Create the download resumable
+      resumable = FileSystem.createDownloadResumable(
+        download.signedUrl,
+        download.localPath,
+        {},
+        downloadProgress => {
+          const progress = {
+            bytesWritten: downloadProgress.totalBytesWritten,
+            contentLength: downloadProgress.totalBytesExpectedToWrite,
+            progress:
+              downloadProgress.totalBytesExpectedToWrite > 0
+                ? downloadProgress.totalBytesWritten /
+                  downloadProgress.totalBytesExpectedToWrite
+                : 0,
+          };
+
+          // Update progress in persistent store
+          persistentDownloadStore
+            .updateProgress(download.id, progress)
+            .catch(error => {
+              logger.error('Failed to update progress:', error);
+            });
+
+          logger.debug('Download progress:', {
+            downloadId: download.id,
+            progress: progress.progress,
+            bytesWritten: progress.bytesWritten,
+            contentLength: progress.contentLength,
+          });
+        }
+      );
+
+      // Store the resumable for potential pause/resume operations
+      this.downloadResumables.set(download.id, resumable);
+
+      // Start the download
+      await resumable.downloadAsync();
+
+      // Download completed successfully
       await persistentDownloadStore.updateDownload(download.id, {
         status: 'completed',
         progress: 1,
         completedAt: new Date(),
+      });
+
+      logger.info('Download completed successfully:', {
+        downloadId: download.id,
+        fileName: download.fileName,
       });
 
       return {
@@ -470,6 +528,13 @@ export class BackgroundDownloadService {
         downloadId: download.id,
       };
     } catch (error) {
+      logger.error('Download failed:', {
+        downloadId: download.id,
+        fileName: download.fileName,
+        error: (error as Error).message,
+      });
+
+      // Update status to failed
       await persistentDownloadStore.updateDownload(download.id, {
         status: 'failed',
         error: (error as Error).message,
@@ -480,6 +545,33 @@ export class BackgroundDownloadService {
         downloadId: download.id,
         error: (error as Error).message,
       };
+    } finally {
+      // Clean up resumable
+      this.downloadResumables.delete(download.id);
+      if (resumable) {
+        try {
+          await resumable.cancelAsync();
+        } catch (error) {
+          logger.warn('Failed to cancel resumable:', error);
+        }
+      }
+    }
+  }
+
+  /**
+   * Ensure downloads directory exists
+   */
+  private async ensureDownloadsDirectory(): Promise<void> {
+    const downloadsDir = downloadServiceConfig.downloadsDirectory;
+    if (!downloadsDir) {
+      throw new Error('Downloads directory not configured');
+    }
+
+    const dirInfo = await FileSystem.getInfoAsync(downloadsDir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(downloadsDir, {
+        intermediates: true,
+      });
     }
   }
 
@@ -529,6 +621,17 @@ export class BackgroundDownloadService {
    * Cancel a download
    */
   async cancelDownload(downloadId: string): Promise<void> {
+    const resumable = this.downloadResumables.get(downloadId);
+    if (resumable) {
+      try {
+        await resumable.cancelAsync();
+        this.downloadResumables.delete(downloadId);
+        logger.info('Download resumable cancelled:', downloadId);
+      } catch (error) {
+        logger.error('Failed to cancel download resumable:', downloadId, error);
+      }
+    }
+
     await persistentDownloadStore.updateDownload(downloadId, {
       status: 'cancelled',
     });
@@ -540,6 +643,17 @@ export class BackgroundDownloadService {
    * Pause a download
    */
   async pauseDownload(downloadId: string): Promise<void> {
+    const resumable = this.downloadResumables.get(downloadId);
+    if (resumable) {
+      try {
+        await resumable.cancelAsync();
+        this.downloadResumables.delete(downloadId);
+        logger.info('Download cancelled for pause:', downloadId);
+      } catch (error) {
+        logger.error('Failed to cancel download for pause:', downloadId, error);
+      }
+    }
+
     await persistentDownloadStore.updateDownload(downloadId, {
       status: 'paused',
     });
@@ -552,6 +666,8 @@ export class BackgroundDownloadService {
   async resumeDownload(downloadId: string): Promise<void> {
     const download = persistentDownloadStore.getDownload(downloadId);
     if (download && download.status === 'paused') {
+      // For background downloads, we'll re-queue the download to be processed
+      // The resumable will be recreated during processing if needed
       await persistentDownloadStore.updateDownload(downloadId, {
         status: 'pending',
       });
@@ -564,7 +680,7 @@ export class BackgroundDownloadService {
       };
       await persistentDownloadStore.addToQueue(queueItem);
 
-      logger.info('Download resumed:', downloadId);
+      logger.info('Download re-queued for resume:', downloadId);
     }
   }
 

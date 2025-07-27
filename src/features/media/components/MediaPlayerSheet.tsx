@@ -16,6 +16,7 @@ import Animated, {
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { MediaControls } from './MediaControls';
 import { TextAndQueueTabs } from './TextAndQueueTabs';
 import { TrackDetailsCollapsed } from './TrackDetailsCollapsed';
@@ -70,7 +71,10 @@ const BlurredBackground: React.FC<BottomSheetBackgroundProps> = ({
         style={[
           StyleSheet.absoluteFillObject,
           {
-            backgroundColor: theme.colors.overlay,
+            backgroundColor:
+              theme.mode === 'dark'
+                ? COLOR_VARIATIONS.BLACK_90
+                : COLOR_VARIATIONS.WHITE_90,
           },
         ]}
       />

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useTranslations } from '@/shared/context/LocalizationContext';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { DownloadItem as DownloadItemType, DownloadStatus } from '../types';
 
 interface DownloadItemProps {
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: COLOR_VARIATIONS.BLACK_50,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

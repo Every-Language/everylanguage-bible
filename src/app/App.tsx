@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar, StyleSheet } from 'react-native';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -38,11 +38,7 @@ const MainContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    initializeApp();
-  }, []);
-
-  const initializeApp = async () => {
+  const initializeApp = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -57,7 +53,11 @@ const MainContent: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [checkOnboardingStatus]);
+
+  useEffect(() => {
+    initializeApp();
+  }, [initializeApp]);
 
   const handleOnboardingComplete = async () => {
     await completeOnboarding();

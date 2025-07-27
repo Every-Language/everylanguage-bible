@@ -52,6 +52,17 @@ export const COLOR_VARIATIONS = {
   OVERLAY_DARK: 'rgba(0, 0, 0, 0.6)',
   SHADOW_LIGHT: 'rgba(0, 0, 0, 0.08)',
   SHADOW_DARK: 'rgba(0, 0, 0, 0.25)',
+
+  // Additional rgba colors
+  BLACK_05: 'rgba(0, 0, 0, 0.05)',
+  BLACK_10: 'rgba(0, 0, 0, 0.1)',
+  BLACK_50: 'rgba(0, 0, 0, 0.5)',
+  BLACK_90: 'rgba(0, 0, 0, 0.9)',
+  WHITE_08: 'rgba(255, 255, 255, 0.08)',
+  WHITE_10: 'rgba(255, 255, 255, 0.1)',
+  WHITE_90: 'rgba(255, 255, 255, 0.9)',
+  BLUE_10: 'rgba(0, 122, 255, 0.1)',
+  GREEN_10: 'rgba(76, 175, 80, 0.1)',
 };
 
 // Light Theme Colors
