@@ -22,6 +22,7 @@ export interface BackgroundDownloadOptions {
   addToMediaFiles?: boolean;
   originalSearchResults?: any[];
   mediaFileOptions?: any;
+  fileSize?: number; // Add file size option
 }
 
 export interface BackgroundDownloadResult {
@@ -167,6 +168,7 @@ export class BackgroundDownloadService {
       localPath: `${downloadServiceConfig.downloadsDirectory}${fileName}`,
       status: 'pending',
       progress: 0,
+      ...(options.fileSize !== undefined && { fileSize: options.fileSize }), // Set file size if provided
       createdAt: new Date(),
       retryCount: 0,
       priority,
@@ -207,7 +209,7 @@ export class BackgroundDownloadService {
    * Add multiple downloads to background queue
    */
   async addBatchToBackgroundQueue(
-    files: Array<{ filePath: string; fileName: string }>,
+    files: Array<{ filePath: string; fileName: string; fileSize?: number }>,
     options: BackgroundDownloadOptions = {}
   ): Promise<string[]> {
     const batchId = this.generateId();
@@ -219,6 +221,7 @@ export class BackgroundDownloadService {
         file.fileName,
         {
           ...options,
+          ...(file.fileSize !== undefined && { fileSize: file.fileSize }), // Pass file size if defined
           batchId,
         }
       );

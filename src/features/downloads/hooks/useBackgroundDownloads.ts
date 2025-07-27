@@ -27,7 +27,7 @@ export interface UseBackgroundDownloadsReturn {
     options?: BackgroundDownloadOptions
   ) => Promise<string>;
   addBatchToBackgroundQueue: (
-    files: Array<{ filePath: string; fileName: string }>,
+    files: Array<{ filePath: string; fileName: string; fileSize?: number }>,
     options?: BackgroundDownloadOptions
   ) => Promise<string[]>;
   cancelDownload: (downloadId: string) => Promise<void>;
@@ -150,7 +150,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   // Add batch of downloads to background queue
   const addBatchToBackgroundQueue = useCallback(
     async (
-      files: Array<{ filePath: string; fileName: string }>,
+      files: Array<{ filePath: string; fileName: string; fileSize?: number }>,
       options: BackgroundDownloadOptions = {}
     ): Promise<string[]> => {
       try {

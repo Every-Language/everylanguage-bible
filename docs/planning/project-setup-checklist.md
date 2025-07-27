@@ -89,7 +89,7 @@ npm install @tamagui/core @tamagui/animations-react-native @tamagui/config
 npm install react-native-reanimated react-native-gesture-handler
 
 # Audio and media
-npx expo install expo-audio expo-av
+npx expo install expo-audio
 
 # Internationalization
 npm install react-native-localize i18next react-i18next

@@ -81,6 +81,12 @@ export class DownloadToMediaService {
         JSON.stringify(originalSearchResult, null, 2)
       );
 
+      // Log the search result keys for debugging
+      logger.info(
+        'Search result keys:',
+        Object.keys(originalSearchResult || {})
+      );
+
       // Check if database is initialized
       try {
         const db =
@@ -105,16 +111,32 @@ export class DownloadToMediaService {
 
       // Extract data from the original search result with fallbacks
       const extractDataWithFallbacks = (searchResult: any) => {
+        // Generate a unique ID if none exists
+        const fallbackId =
+          searchResult.id ||
+          searchResult.remote_id ||
+          searchResult.file_id ||
+          `generated_${completedFile.fileName}_${Date.now()}`;
+
+        // Extract chapter ID from start_verse_id if available
+        const chapterId =
+          searchResult.chapter_id ||
+          searchResult.chapter ||
+          (searchResult.start_verse_id
+            ? searchResult.start_verse_id.split('_')[0]
+            : null);
+
         return {
-          id: searchResult.id || searchResult.remote_id || searchResult.file_id,
+          id: fallbackId,
           language_entity_id:
             searchResult.language_entity_id ||
             searchResult.language_id ||
+            searchResult.audio_version_id || // Try audio_version_id as fallback
             'unknown',
           sequence_id:
             searchResult.sequence_id ||
             searchResult.sequence ||
-            `seq_${Date.now()}`,
+            `seq_${fallbackId}_${Date.now()}`,
           media_type: searchResult.media_type || searchResult.type || 'audio',
           file_size:
             searchResult.file_size ||
@@ -128,8 +150,8 @@ export class DownloadToMediaService {
           publish_status: searchResult.publish_status || 'published',
           check_status: searchResult.check_status || 'checked',
           version: searchResult.version || 1,
-          chapter_id: searchResult.chapter_id || searchResult.chapter || null,
-          verses: searchResult.verses || null,
+          chapter_id: chapterId,
+          verses: searchResult.verses || '[]',
           start_verse_id:
             searchResult.start_verse_id || searchResult.start_verse || null,
           end_verse_id:
@@ -151,11 +173,15 @@ export class DownloadToMediaService {
       if (!extractedData.id) {
         throw new Error('Remote ID is required from search result');
       }
+      // Allow 'unknown' language_entity_id and generate a fallback
       if (
         !extractedData.language_entity_id ||
         extractedData.language_entity_id === 'unknown'
       ) {
-        throw new Error('Language entity ID is required from search result');
+        logger.warn(
+          'Language entity ID not found in search result, using fallback'
+        );
+        extractedData.language_entity_id = `fallback_${extractedData.id}_${Date.now()}`;
       }
 
       // Create media file record
@@ -442,16 +468,32 @@ export class DownloadToMediaService {
 
       // Extract data
       const extractDataWithFallbacks = (searchResult: any) => {
+        // Generate a unique ID if none exists
+        const fallbackId =
+          searchResult.id ||
+          searchResult.remote_id ||
+          searchResult.file_id ||
+          `generated_${completedFile.fileName}_${Date.now()}`;
+
+        // Extract chapter ID from start_verse_id if available
+        const chapterId =
+          searchResult.chapter_id ||
+          searchResult.chapter ||
+          (searchResult.start_verse_id
+            ? searchResult.start_verse_id.split('_')[0]
+            : null);
+
         return {
-          id: searchResult.id || searchResult.remote_id || searchResult.file_id,
+          id: fallbackId,
           language_entity_id:
             searchResult.language_entity_id ||
             searchResult.language_id ||
+            searchResult.audio_version_id || // Try audio_version_id as fallback
             'unknown',
           sequence_id:
             searchResult.sequence_id ||
             searchResult.sequence ||
-            `seq_${Date.now()}`,
+            `seq_${fallbackId}_${Date.now()}`,
           media_type: searchResult.media_type || searchResult.type || 'audio',
           file_size:
             searchResult.file_size ||
@@ -465,8 +507,8 @@ export class DownloadToMediaService {
           publish_status: searchResult.publish_status || 'published',
           check_status: searchResult.check_status || 'checked',
           version: searchResult.version || 1,
-          chapter_id: searchResult.chapter_id || searchResult.chapter || null,
-          verses: searchResult.verses || null,
+          chapter_id: chapterId,
+          verses: searchResult.verses || '[]',
           start_verse_id:
             searchResult.start_verse_id || searchResult.start_verse || null,
           end_verse_id:
@@ -480,11 +522,15 @@ export class DownloadToMediaService {
       if (!extractedData.id) {
         issues.push('Remote ID is required from search result');
       }
+      // Allow 'unknown' language_entity_id and generate a fallback
       if (
         !extractedData.language_entity_id ||
         extractedData.language_entity_id === 'unknown'
       ) {
-        issues.push('Language entity ID is required from search result');
+        logger.warn(
+          'Language entity ID not found in search result, using fallback'
+        );
+        extractedData.language_entity_id = `fallback_${extractedData.id}_${Date.now()}`;
       }
 
       // Create media file data

@@ -49,7 +49,7 @@ const BlurredBackground: React.FC<BottomSheetBackgroundProps> = ({
     opacity: interpolate(
       animatedIndex.value,
       [0, 1],
-      [0.95, 1],
+      [0.8, 1], // Increased minimum opacity from 0.95 to 0.8 to ensure it's not fully transparent
       Extrapolation.CLAMP
     ),
   }));

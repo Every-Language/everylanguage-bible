@@ -36,10 +36,10 @@ interface ChapterDownloadModalProps {
 }
 
 // Type adapter to convert MediaFile to SearchResult
-interface SearchResult {
-  remote_path: string;
-  file_size: number;
-}
+// interface SearchResult {
+//   remote_path: string;
+//   file_size: number;
+// }
 
 export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   visible,
@@ -96,15 +96,20 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     useState(true);
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
 
-  // Filter and convert MediaFile to SearchResult, excluding null values
-  const searchResults: SearchResult[] = useMemo(() => {
-    return mediaFiles
-      .filter(file => file.remote_path !== null && file.file_size !== null)
-      .map(file => ({
-        remote_path: file.remote_path!,
-        file_size: file.file_size!,
-      }));
+  // Filter MediaFiles, excluding null values
+  const validMediaFiles = useMemo(() => {
+    return mediaFiles.filter(
+      file => file.remote_path !== null && file.file_size !== null
+    );
   }, [mediaFiles]);
+
+  // Convert MediaFiles to SearchResult format for download progress
+  const searchResults = useMemo(() => {
+    return validMediaFiles.map(file => ({
+      remote_path: file.remote_path!,
+      file_size: file.file_size!,
+    }));
+  }, [validMediaFiles]);
 
   // Download completion callback using utility function
   const handleDownloadCompletion = useCallback(
@@ -115,7 +120,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
       refreshDownloads: true,
       // Media file integration
       addToMediaFiles: true,
-      originalSearchResults: searchResults,
+      originalSearchResults: validMediaFiles,
       mediaFileOptions: {
         chapterId: chapterId,
         mediaType: 'audio',
@@ -161,7 +166,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
         // Add any media file error logic here
       },
     }),
-    [searchResults, chapterId]
+    [validMediaFiles, chapterId]
   );
 
   // Set completion callback when component mounts
@@ -220,6 +225,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
         const files = searchResults.map((file, index) => ({
           filePath: file.remote_path,
           fileName: `${chapterId}_${index + 1}.mp3`,
+          fileSize: file.file_size, // Pass the file size from search results
         }));
 
         const downloadIds = await addBatchToBackgroundQueue(files, {
@@ -230,7 +236,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
             bookName: book.name,
             chapterTitle,
             addToMediaFiles: true,
-            originalSearchResults: searchResults,
+            originalSearchResults: validMediaFiles,
             mediaFileOptions: {
               chapterId: chapterId,
               mediaType: 'audio',
