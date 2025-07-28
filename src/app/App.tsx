@@ -3,6 +3,7 @@ import { StatusBar, StyleSheet } from 'react-native';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ThemeProvider, useTheme } from '@/shared/context/ThemeContext';
 import { LocalizationProvider } from '@/shared/context/LocalizationContext';
 import { SyncProvider, useSync } from '@/shared/context/SyncContext';
@@ -139,8 +140,10 @@ const AppContent: React.FC = () => {
           styles.gestureHandlerRoot,
           { backgroundColor: theme.colors.background },
         ]}>
-        <StatusBarWrapper />
-        <MainContent />
+        <BottomSheetModalProvider>
+          <StatusBarWrapper />
+          <MainContent />
+        </BottomSheetModalProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

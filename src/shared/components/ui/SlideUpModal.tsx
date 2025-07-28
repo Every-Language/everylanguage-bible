@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BottomSheetModal,
   BottomSheetView,
   BottomSheetBackdrop,
-  BottomSheetModalProvider,
   BottomSheetBackdropProps,
   BottomSheetScrollView,
   BottomSheetBackgroundProps,
@@ -87,6 +87,7 @@ export const SlideUpModal: React.FC<SlideUpModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const insets = useSafeAreaInsets();
 
   // Memoize snap points for better performance
   const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
@@ -127,61 +128,72 @@ export const SlideUpModal: React.FC<SlideUpModalProps> = ({
   );
 
   return (
-    <BottomSheetModalProvider>
-      <BottomSheetModal
-        ref={bottomSheetModalRef}
-        index={0} // Always start at first (and typically only) snap point
-        snapPoints={memoizedSnapPoints}
-        onChange={handleSheetChanges}
-        onDismiss={onClose}
-        enableDismissOnClose={enableDismissOnClose}
-        enablePanDownToClose={enablePanDownToClose}
-        backdropComponent={backdropComponent || renderBackdrop}
-        backgroundComponent={SolidBackground}
-        backgroundStyle={undefined}
-        handleIndicatorStyle={[
-          styles.handle,
-          {
-            backgroundColor:
-              theme.mode === 'dark'
-                ? COLOR_VARIATIONS.CHARCOAL_LIGHT // Use solid color for better visibility
-                : COLOR_VARIATIONS.CREAM_DARK, // Use solid color for better visibility
-          },
-        ]}
-        keyboardBehavior='fillParent'
-        keyboardBlurBehavior='restore'
-        android_keyboardInputMode='adjustResize'>
-        <BottomSheetView style={styles.container}>
-          {/* Fixed Header */}
-          {header && (
-            <View
-              style={[
-                styles.header,
-                {
-                  borderBottomColor:
-                    theme.mode === 'dark'
-                      ? COLOR_VARIATIONS.CHARCOAL_LIGHT // Use solid color for better visibility
-                      : COLOR_VARIATIONS.CREAM_DARK, // Use solid color for better visibility
-                },
-              ]}>
-              {header}
-            </View>
-          )}
+    <BottomSheetModal
+      ref={bottomSheetModalRef}
+      index={0} // Always start at first (and typically only) snap point
+      snapPoints={memoizedSnapPoints}
+      onChange={handleSheetChanges}
+      onDismiss={onClose}
+      enableDismissOnClose={enableDismissOnClose}
+      enablePanDownToClose={enablePanDownToClose}
+      backdropComponent={backdropComponent || renderBackdrop}
+      backgroundComponent={SolidBackground}
+      backgroundStyle={undefined}
+      handleIndicatorStyle={[
+        styles.handle,
+        {
+          backgroundColor:
+            theme.mode === 'dark'
+              ? COLOR_VARIATIONS.CHARCOAL_LIGHT // Use solid color for better visibility
+              : COLOR_VARIATIONS.CREAM_DARK, // Use solid color for better visibility
+        },
+      ]}
+      keyboardBehavior='fillParent'
+      keyboardBlurBehavior='restore'
+      android_keyboardInputMode='adjustResize'>
+      <BottomSheetView style={styles.container}>
+        {/* Fixed Header */}
+        {header && (
+          <View
+            style={[
+              styles.header,
+              {
+                borderBottomColor:
+                  theme.mode === 'dark'
+                    ? COLOR_VARIATIONS.CHARCOAL_LIGHT // Use solid color for better visibility
+                    : COLOR_VARIATIONS.CREAM_DARK, // Use solid color for better visibility
+              },
+            ]}>
+            {header}
+          </View>
+        )}
 
-          {/* Scrollable Content */}
-          {scrollable ? (
-            <BottomSheetScrollView
-              style={styles.scrollContent}
-              contentContainerStyle={styles.scrollContentContainer}
-              showsVerticalScrollIndicator={false}>
-              {children}
-            </BottomSheetScrollView>
-          ) : (
-            <BottomSheetView style={styles.content}>{children}</BottomSheetView>
-          )}
-        </BottomSheetView>
-      </BottomSheetModal>
-    </BottomSheetModalProvider>
+        {/* Scrollable Content */}
+        {scrollable ? (
+          <BottomSheetScrollView
+            style={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContentContainer,
+              {
+                paddingBottom: Platform.OS === 'ios' ? 16 : insets.bottom + 16,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}>
+            {children}
+          </BottomSheetScrollView>
+        ) : (
+          <BottomSheetView
+            style={[
+              styles.content,
+              {
+                paddingBottom: Platform.OS === 'ios' ? 16 : insets.bottom + 16,
+              },
+            ]}>
+            {children}
+          </BottomSheetView>
+        )}
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 };
 
