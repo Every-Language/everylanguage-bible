@@ -184,9 +184,13 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     [networkError, mediaSearchError]
   );
   const canDownload = useMemo(
-    () =>
-      searchResults.length > 0 && !isSearching && !isDownloading && isOnline,
-    [searchResults.length, isSearching, isDownloading, isOnline]
+    () => searchResults.length > 0 && !isSearching && isOnline,
+    [searchResults.length, isSearching, isOnline]
+  );
+
+  const isDownloadDisabled = useMemo(
+    () => isDownloading || backgroundProcessing,
+    [isDownloading, backgroundProcessing]
   );
 
   // Check online capabilities and search for media files
@@ -319,7 +323,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
             <TouchableOpacity
               style={styles.closeButton}
               onPress={onClose}
-              disabled={isDownloading}>
+              disabled={isDownloadDisabled}>
               <MaterialIcons
                 name='close'
                 size={24}
@@ -414,7 +418,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
               connectionType={connectionType}
               isInternetReachable={isInternetReachable}
               onRetry={handleRetryInternetCheck}
-              disabled={isDownloading}
+              disabled={isDownloadDisabled}
             />
           )}
 
@@ -425,15 +429,15 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
                 style={[
                   styles.downloadButton,
                   {
-                    backgroundColor: isDownloading
+                    backgroundColor: isDownloadDisabled
                       ? theme.colors.border
                       : theme.colors.success,
-                    opacity: isDownloading ? 0.6 : 1,
+                    opacity: isDownloadDisabled ? 0.6 : 1,
                   },
                 ]}
                 onPress={handleDownload}
-                disabled={isDownloading}>
-                {isDownloading ? (
+                disabled={isDownloadDisabled}>
+                {isDownloadDisabled ? (
                   <ActivityIndicator
                     size='small'
                     color={theme.colors.textInverse}
@@ -450,7 +454,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
                     styles.downloadButtonText,
                     { color: theme.colors.textInverse },
                   ]}>
-                  {isDownloading ? 'Downloading...' : 'Download Files'}
+                  {isDownloadDisabled ? 'Downloading...' : 'Download Files'}
                 </Text>
               </TouchableOpacity>
             )}
