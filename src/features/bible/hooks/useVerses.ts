@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { localDataService } from '../../../shared/services/database/LocalDataService';
 import type { Verse, VersesState, VersesWithTextState } from '../types';
 import type {
@@ -20,7 +20,7 @@ export const useVerses = (
     selectedVerse: null,
   });
 
-  const loadVerses = async () => {
+  const loadVerses = useCallback(async () => {
     if (!chapterId) {
       setState(prev => ({ ...prev, verses: [], loading: false }));
       return;
@@ -48,7 +48,7 @@ export const useVerses = (
         error: error instanceof Error ? error.message : 'Failed to load verses',
       }));
     }
-  };
+  }, [chapterId, filters, sort]);
 
   const selectVerse = (verse: Verse | null) => {
     setState(prev => ({ ...prev, selectedVerse: verse }));
@@ -108,7 +108,7 @@ export const useVerses = (
   // Load verses when chapterId, filters, or sort changes
   useEffect(() => {
     loadVerses();
-  }, [chapterId, JSON.stringify(filters), JSON.stringify(sort)]);
+  }, [chapterId, filters, sort, loadVerses]);
 
   return {
     ...state,
@@ -131,7 +131,7 @@ export const useVersesWithTexts = (chapterId: string) => {
 
   const { currentTextVersion } = useCurrentVersions();
 
-  const loadVersesWithTexts = async () => {
+  const loadVersesWithTexts = useCallback(async () => {
     if (!chapterId) {
       setState(prev => ({ ...prev, versesWithTexts: [], loading: false }));
       return;
@@ -163,7 +163,7 @@ export const useVersesWithTexts = (chapterId: string) => {
             : 'Failed to load verses with texts',
       }));
     }
-  };
+  }, [chapterId, currentTextVersion]);
 
   const selectVerse = (verse: Verse | null) => {
     setState(prev => ({ ...prev, selectedVerse: verse }));
@@ -176,7 +176,7 @@ export const useVersesWithTexts = (chapterId: string) => {
   // Load verses when chapterId or currentTextVersion changes
   useEffect(() => {
     loadVersesWithTexts();
-  }, [chapterId, currentTextVersion?.id]);
+  }, [chapterId, currentTextVersion?.id, loadVersesWithTexts]);
 
   return {
     ...state,
