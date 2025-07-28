@@ -14,3 +14,20 @@ export type { AudioServiceState, AudioServiceCallbacks } from './services';
 export { useAudioService } from './hooks';
 export type { UseAudioServiceOptions } from './hooks';
 export { AudioPlayerExample } from './components/AudioPlayerExample';
+export { ChapterQueueExample } from './components/ChapterQueueExample';
+
+// Chapter Queue Service exports
+export {
+  chapterQueueService,
+  ChapterQueueService,
+} from './services/ChapterQueueService';
+export type {
+  ChapterAudioInfo,
+  ChapterQueueOptions,
+} from './services/ChapterQueueService';
+export {
+  useChapterQueue,
+  useChapterAudioInfo,
+  useAudioAvailabilityStats,
+} from './hooks/useChapterQueue';
+export type { UseChapterQueueReturn } from './hooks/useChapterQueue';

@@ -48,7 +48,8 @@ const validateMediaFileVerseData = (mediaFileVerse: any): any => {
 
   return {
     ...mediaFileVerse,
-    start_time_seconds: mediaFileVerse.start_time_seconds || 0,
+    // Ensure start_time_seconds is a valid number (can be decimal for precise timing)
+    start_time_seconds: Number(mediaFileVerse.start_time_seconds) || 0,
   };
 };
 
@@ -328,21 +329,40 @@ class MediaFilesVersesSyncService implements BaseSyncService {
     const now = new Date().toISOString();
 
     for (const mediaFileVerse of mediaFilesVerses) {
-      await databaseManager.executeQuery(
-        `INSERT OR REPLACE INTO media_files_verses (
-          id, media_file_id, verse_id, start_time_seconds,
-          created_at, updated_at, synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          mediaFileVerse.id,
-          mediaFileVerse.media_file_id,
-          mediaFileVerse.verse_id,
-          mediaFileVerse.start_time_seconds,
-          mediaFileVerse.created_at,
-          mediaFileVerse.updated_at,
-          now,
-        ]
-      );
+      try {
+        await databaseManager.executeQuery(
+          `INSERT OR REPLACE INTO media_files_verses (
+            id, media_file_id, verse_id, start_time_seconds,
+            created_at, updated_at, synced_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            mediaFileVerse.id,
+            mediaFileVerse.media_file_id,
+            mediaFileVerse.verse_id,
+            mediaFileVerse.start_time_seconds,
+            mediaFileVerse.created_at,
+            mediaFileVerse.updated_at,
+            now,
+          ]
+        );
+      } catch (error) {
+        logger.error('Error upserting media file verse:', {
+          error: (error as Error).message,
+          mediaFileVerse: {
+            id: mediaFileVerse.id,
+            media_file_id: mediaFileVerse.media_file_id,
+            verse_id: mediaFileVerse.verse_id,
+            start_time_seconds: mediaFileVerse.start_time_seconds,
+          },
+        });
+
+        // Re-throw the error to be handled by the calling method
+        throw new MediaFilesVersesSyncError(
+          `Failed to upsert media file verse ${mediaFileVerse.id}: ${(error as Error).message}`,
+          'UPSERT_ERROR',
+          { error, mediaFileVerse }
+        );
+      }
     }
   }
 

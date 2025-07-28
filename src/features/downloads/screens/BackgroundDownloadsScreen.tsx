@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,9 +31,19 @@ export const BackgroundDownloadsScreen: React.FC = () => {
     clearFailedDownloads,
     continueDownloads,
     refreshDownloads,
+    initialize,
   } = useBackgroundDownloads();
 
   const [refreshing, setRefreshing] = useState(false);
+
+  // Initialize background downloads when component mounts
+  useEffect(() => {
+    if (!isInitialized) {
+      initialize().catch((error: Error) => {
+        logger.error('Failed to initialize background downloads:', error);
+      });
+    }
+  }, [isInitialized, initialize]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -120,7 +130,7 @@ export const BackgroundDownloadsScreen: React.FC = () => {
       if (mediaState.currentTrack?.id === download.id && mediaState.isPlaying) {
         await audioService.pause();
         mediaActions.pause();
-        logger.info('Paused audio file:', download.fileName);
+        // logger.info('Paused audio file:', download.fileName);
         return;
       }
 
@@ -131,7 +141,7 @@ export const BackgroundDownloadsScreen: React.FC = () => {
       ) {
         await audioService.play();
         mediaActions.play();
-        logger.info('Resumed audio file:', download.fileName);
+        // logger.info('Resumed audio file:', download.fileName);
         return;
       }
 
@@ -161,9 +171,9 @@ export const BackgroundDownloadsScreen: React.FC = () => {
       // Expand the media player
       mediaActions.expand();
 
-      logger.info('Started playing audio file:', download.fileName);
-    } catch (error) {
-      logger.error('Failed to play audio file:', error);
+      // logger.info('Started playing audio file:', download.fileName);
+    } catch {
+      // logger.error('Failed to play audio file:', _error);
       Alert.alert('Error', 'Failed to play audio file');
     }
   };

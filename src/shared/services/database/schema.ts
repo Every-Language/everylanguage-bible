@@ -128,7 +128,7 @@ export interface LocalMediaFileVerse {
   id: string;
   media_file_id: string;
   verse_id: string;
-  start_time_seconds: number;
+  start_time_seconds: number; // Can be decimal for precise audio timing
   created_at: string;
   updated_at: string;
   synced_at: string;
@@ -301,12 +301,11 @@ export const createTables = async (
       id TEXT PRIMARY KEY,
       media_file_id TEXT NOT NULL,
       verse_id TEXT NOT NULL,
-      start_time_seconds INTEGER NOT NULL,
+      start_time_seconds REAL NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (media_file_id) REFERENCES media_files (id) ON DELETE CASCADE,
-      FOREIGN KEY (verse_id) REFERENCES verses (id) ON DELETE CASCADE
+      FOREIGN KEY (media_file_id) REFERENCES media_files (id) ON DELETE CASCADE
     )
   `);
 
@@ -568,8 +567,31 @@ export const migrateMediaFilesTable = async (
   db: SQLite.SQLiteDatabase
 ): Promise<void> => {
   try {
+    logger.info('Starting media_files table migration check...');
+
+    // Check if media_files table exists first
+    const tableExists = await db.getFirstAsync<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='media_files'"
+    );
+
+    if (!tableExists) {
+      logger.info('media_files table does not exist, skipping migration');
+      return;
+    }
+
+    logger.info('media_files table exists, checking schema...');
+
     // Check if foreign key constraints exist
     const tableInfo = await db.getAllAsync('PRAGMA table_info(media_files)');
+    logger.info('Current media_files table schema:', {
+      columns: tableInfo.map((col: any) => ({
+        name: col.name,
+        type: col.type,
+        notnull: col.notnull,
+        pk: col.pk,
+      })),
+    });
+
     const hasForeignKeys = tableInfo.some(
       (column: any) =>
         column.name === 'language_entity_id' || column.name === 'chapter_id'
@@ -580,7 +602,14 @@ export const migrateMediaFilesTable = async (
         'Migrating media_files table to remove foreign key constraints...'
       );
 
+      // Check current table data before migration
+      const rowCount = await db.getFirstAsync<{ count: number }>(
+        'SELECT COUNT(*) as count FROM media_files'
+      );
+      logger.info(`Current media_files table has ${rowCount?.count || 0} rows`);
+
       // Create new table without foreign keys
+      logger.info('Creating new media_files table without foreign keys...');
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS media_files_new (
           id TEXT PRIMARY KEY,
@@ -604,19 +633,64 @@ export const migrateMediaFilesTable = async (
       `);
 
       // Copy data from old table to new table
+      logger.info('Copying data from old table to new table...');
       await db.execAsync(`
         INSERT INTO media_files_new 
         SELECT * FROM media_files
       `);
 
+      // Verify data was copied correctly
+      const newRowCount = await db.getFirstAsync<{ count: number }>(
+        'SELECT COUNT(*) as count FROM media_files_new'
+      );
+      logger.info(`New media_files table has ${newRowCount?.count || 0} rows`);
+
       // Drop old table and rename new table
+      logger.info('Dropping old table and renaming new table...');
       await db.execAsync('DROP TABLE media_files');
       await db.execAsync('ALTER TABLE media_files_new RENAME TO media_files');
 
+      // Verify final table structure
+      const finalTableInfo = await db.getAllAsync(
+        'PRAGMA table_info(media_files)'
+      );
+      logger.info('Final media_files table schema:', {
+        columns: finalTableInfo.map((col: any) => ({
+          name: col.name,
+          type: col.type,
+          notnull: col.notnull,
+          pk: col.pk,
+        })),
+      });
+
       logger.info('Successfully migrated media_files table');
+    } else {
+      logger.info('No foreign key constraints found, migration not needed');
     }
   } catch (error) {
-    logger.error('Error migrating media_files table:', error);
+    logger.error('Error migrating media_files table:', {
+      error: error,
+      errorType: typeof error,
+      errorConstructor: (error as any)?.constructor?.name,
+      errorMessage: (error as any)?.message || 'No message',
+      errorStack: (error as any)?.stack || 'No stack',
+      errorCode: (error as any)?.code || 'No code',
+      errorStringified: JSON.stringify(
+        error,
+        Object.getOwnPropertyNames(error || {})
+      ),
+    });
+
+    // Try to get more SQLite-specific error information
+    try {
+      if (db) {
+        const pragmaResult = await db.getAllAsync('PRAGMA integrity_check');
+        logger.error('Database integrity check result:', pragmaResult);
+      }
+    } catch (integrityError) {
+      logger.error('Failed to run integrity check:', integrityError);
+    }
+
     // Don't throw error to avoid breaking the app
   }
 };

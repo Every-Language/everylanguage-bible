@@ -56,8 +56,8 @@ export const createCurrentSelectionsSlice: StateCreator<
     // Auto-persist when version changes
     get()
       .persistCurrentSelections()
-      .catch(error => {
-        logger.error('Error auto-persisting audio version:', error);
+      .catch(_error => {
+        // logger.error('Error auto-persisting audio version:', _error);
         set({ persistError: 'Failed to save audio version selection' });
       });
   },

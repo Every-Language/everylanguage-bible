@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import { downloadService } from '../services';
+import { useState, useCallback, useEffect } from 'react';
+import { downloadService } from '../services/downloadService';
 import {
   DownloadItem,
   DownloadStatus,
-  DownloadProgress,
   DownloadOptions,
   DownloadStats,
 } from '../services/types';
+import { DownloadToMediaOptions } from '../services/downloadToMediaService';
+import { logger } from '@/shared/utils/logger';
 
 export interface UseDownloadsReturn {
   // State
@@ -19,16 +20,23 @@ export interface UseDownloadsReturn {
   downloadFile: (
     filePath: string,
     fileName: string,
-    options?: DownloadOptions
+    options?: DownloadOptions & {
+      addToMediaFiles?: boolean;
+      originalSearchResult?: any;
+      mediaFileOptions?: DownloadToMediaOptions;
+    }
   ) => Promise<DownloadItem>;
   downloadBatch: (
     files: Array<{ filePath: string; fileName: string }>,
-    options?: DownloadOptions
+    options?: DownloadOptions & {
+      addToMediaFiles?: boolean;
+      originalSearchResults?: any[];
+      mediaFileOptions?: DownloadToMediaOptions;
+    }
   ) => Promise<void>;
   pauseDownload: (id: string) => Promise<void>;
-  resumeDownload: (id: string) => Promise<DownloadItem>;
+  resumeDownload: (id: string) => Promise<void>;
   cancelDownload: (id: string) => Promise<void>;
-  deleteDownload: (id: string) => Promise<void>;
   clearCompletedDownloads: () => Promise<void>;
 
   // Queries
@@ -49,6 +57,10 @@ export interface UseDownloadsReturn {
   clearError: () => void;
 }
 
+/**
+ * Hook for managing downloads - ALWAYS uses background download system
+ * All downloads go through the background queue for consistency and reliability.
+ */
 export const useDownloads = (): UseDownloadsReturn => {
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,66 +73,129 @@ export const useDownloads = (): UseDownloadsReturn => {
     downloadedSize: 0,
   });
 
-  // Load downloads and stats on mount
+  // Refresh downloads data
+  const refreshDownloads = useCallback(() => {
+    try {
+      const allDownloads = downloadService.getAllDownloads();
+      const downloadStats = downloadService.getStats();
+
+      // Convert PersistentDownloadItem to DownloadItem for compatibility
+      const convertedDownloads: DownloadItem[] = allDownloads.map(download => {
+        const item: DownloadItem = {
+          id: download.id,
+          filePath: download.filePath,
+          fileName: download.fileName,
+          localPath: download.localPath,
+          status: download.status,
+          progress: download.progress,
+          createdAt: download.createdAt,
+        };
+
+        // Add optional properties only if they exist
+        if (download.fileSize !== undefined) {
+          item.fileSize = download.fileSize;
+        }
+        if (download.completedAt !== undefined) {
+          item.completedAt = download.completedAt;
+        }
+        if (download.error !== undefined) {
+          item.error = download.error;
+        }
+        if (download.signedUrl !== undefined) {
+          item.signedUrl = download.signedUrl;
+        }
+        if (download.expiresAt !== undefined) {
+          item.expiresAt = download.expiresAt;
+        }
+
+        return item;
+      });
+
+      setDownloads(convertedDownloads);
+      setStats(downloadStats);
+    } catch (error) {
+      logger.error('Error refreshing downloads:', error);
+    }
+  }, []);
+
+  // Initialize downloads on mount
   useEffect(() => {
     refreshDownloads();
-  }, []);
+  }, [refreshDownloads]);
 
-  const refreshDownloads = useCallback(() => {
-    const allDownloads = downloadService.getAllDownloads();
-    const downloadStats = downloadService.getDownloadStats();
-
-    setDownloads(allDownloads);
-    setStats(downloadStats);
-  }, []);
-
+  /**
+   * Download a single file (ALWAYS uses background queue)
+   */
   const downloadFile = useCallback(
     async (
       filePath: string,
       fileName: string,
-      options: DownloadOptions = {}
+      options: DownloadOptions & {
+        addToMediaFiles?: boolean;
+        originalSearchResult?: any;
+        mediaFileOptions?: DownloadToMediaOptions;
+      } = {}
     ): Promise<DownloadItem> => {
       setIsLoading(true);
       setError(null);
 
+      const {
+        addToMediaFiles = false,
+        originalSearchResult,
+        mediaFileOptions = {},
+        ...downloadOptions
+      } = options;
+
       try {
-        const downloadItem = await downloadService.downloadFile(
+        // ALWAYS use background queue - never perform direct downloads
+        const downloadId = await downloadService.addToQueue(
           filePath,
           fileName,
           {
-            ...options,
-            onProgress: (progress: DownloadProgress) => {
-              // Update the download progress in state
-              setDownloads(prev =>
-                prev.map(d =>
-                  d.filePath === filePath
-                    ? {
-                        ...d,
-                        progress: progress.progress,
-                        fileSize: progress.contentLength,
-                      }
-                    : d
-                )
-              );
-              options.onProgress?.(progress);
-            },
-            onComplete: (item: DownloadItem) => {
-              setDownloads(prev =>
-                prev.map(d => (d.id === item.id ? item : d))
-              );
-              refreshDownloads(); // Refresh stats
-              options.onComplete?.(item);
-            },
-            onError: (errorMsg: string) => {
-              setError(errorMsg);
-              refreshDownloads(); // Refresh stats
-              options.onError?.(errorMsg);
-            },
+            ...downloadOptions,
+            addToMediaFiles,
+            ...(originalSearchResult && {
+              originalSearchResults: [originalSearchResult],
+            }),
+            mediaFileOptions,
           }
         );
 
-        setDownloads(prev => [...prev, downloadItem]);
-        return downloadItem;
+        const downloadItem = downloadService.getDownloadStatus(downloadId);
+        if (!downloadItem) {
+          throw new Error('Failed to create download item');
+        }
+
+        // Convert PersistentDownloadItem to DownloadItem for compatibility
+        const item: DownloadItem = {
+          id: downloadItem.id,
+          filePath: downloadItem.filePath,
+          fileName: downloadItem.fileName,
+          localPath: downloadItem.localPath,
+          status: downloadItem.status,
+          progress: downloadItem.progress,
+          createdAt: downloadItem.createdAt,
+        };
+
+        // Add optional properties only if they exist
+        if (downloadItem.fileSize !== undefined) {
+          item.fileSize = downloadItem.fileSize;
+        }
+        if (downloadItem.completedAt !== undefined) {
+          item.completedAt = downloadItem.completedAt;
+        }
+        if (downloadItem.error !== undefined) {
+          item.error = downloadItem.error;
+        }
+        if (downloadItem.signedUrl !== undefined) {
+          item.signedUrl = downloadItem.signedUrl;
+        }
+        if (downloadItem.expiresAt !== undefined) {
+          item.expiresAt = downloadItem.expiresAt;
+        }
+
+        refreshDownloads();
+        return item;
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : 'Download failed';
         setError(errorMsg);
@@ -132,17 +207,43 @@ export const useDownloads = (): UseDownloadsReturn => {
     [refreshDownloads]
   );
 
+  /**
+   * Download multiple files (ALWAYS uses background queue)
+   */
   const downloadBatch = useCallback(
     async (
       files: Array<{ filePath: string; fileName: string }>,
-      options: DownloadOptions = {}
+      options: DownloadOptions & {
+        addToMediaFiles?: boolean;
+        originalSearchResults?: any[];
+        mediaFileOptions?: DownloadToMediaOptions;
+      } = {}
     ): Promise<void> => {
       setIsLoading(true);
       setError(null);
 
+      const {
+        addToMediaFiles = false,
+        originalSearchResults = [],
+        mediaFileOptions = {},
+        ...downloadOptions
+      } = options;
+
       try {
-        await downloadService.downloadBatch(files, options);
-        refreshDownloads(); // Reload all downloads after batch operation
+        // ALWAYS use background queue - never perform direct downloads
+        const downloadIds = await downloadService.addBatchToQueue(files, {
+          ...downloadOptions,
+          addToMediaFiles,
+          originalSearchResults,
+          mediaFileOptions,
+        });
+
+        logger.info('Added batch downloads to background queue:', {
+          count: downloadIds.length,
+          addToMediaFiles,
+        });
+
+        refreshDownloads();
       } catch (err: unknown) {
         const errorMsg =
           err instanceof Error ? err.message : 'Batch download failed';
@@ -160,27 +261,22 @@ export const useDownloads = (): UseDownloadsReturn => {
       try {
         await downloadService.pauseDownload(id);
         refreshDownloads();
-      } catch (err: unknown) {
-        const errorMsg =
-          err instanceof Error ? err.message : 'Failed to pause download';
-        setError(errorMsg);
-        throw err;
+      } catch (error) {
+        logger.error('Failed to pause download:', error);
+        throw error;
       }
     },
     [refreshDownloads]
   );
 
   const resumeDownload = useCallback(
-    async (id: string): Promise<DownloadItem> => {
+    async (id: string): Promise<void> => {
       try {
-        const download = await downloadService.resumeDownload(id);
+        await downloadService.resumeDownload(id);
         refreshDownloads();
-        return download;
-      } catch (err: unknown) {
-        const errorMsg =
-          err instanceof Error ? err.message : 'Failed to resume download';
-        setError(errorMsg);
-        throw err;
+      } catch (error) {
+        logger.error('Failed to resume download:', error);
+        throw error;
       }
     },
     [refreshDownloads]
@@ -191,26 +287,9 @@ export const useDownloads = (): UseDownloadsReturn => {
       try {
         await downloadService.cancelDownload(id);
         refreshDownloads();
-      } catch (err: unknown) {
-        const errorMsg =
-          err instanceof Error ? err.message : 'Failed to cancel download';
-        setError(errorMsg);
-        throw err;
-      }
-    },
-    [refreshDownloads]
-  );
-
-  const deleteDownload = useCallback(
-    async (id: string): Promise<void> => {
-      try {
-        await downloadService.deleteDownload(id);
-        refreshDownloads();
-      } catch (err: unknown) {
-        const errorMsg =
-          err instanceof Error ? err.message : 'Failed to delete download';
-        setError(errorMsg);
-        throw err;
+      } catch (error) {
+        logger.error('Failed to cancel download:', error);
+        throw error;
       }
     },
     [refreshDownloads]
@@ -220,56 +299,116 @@ export const useDownloads = (): UseDownloadsReturn => {
     try {
       await downloadService.clearCompletedDownloads();
       refreshDownloads();
-    } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error
-          ? err.message
-          : 'Failed to clear completed downloads';
-      setError(errorMsg);
-      throw err;
+    } catch (error) {
+      logger.error('Failed to clear completed downloads:', error);
+      throw error;
     }
   }, [refreshDownloads]);
 
   const getDownload = useCallback((id: string): DownloadItem | undefined => {
-    return downloadService.getDownload(id);
+    const download = downloadService.getDownloadStatus(id);
+    if (!download) return undefined;
+
+    const item: DownloadItem = {
+      id: download.id,
+      filePath: download.filePath,
+      fileName: download.fileName,
+      localPath: download.localPath,
+      status: download.status,
+      progress: download.progress,
+      createdAt: download.createdAt,
+    };
+
+    // Add optional properties only if they exist
+    if (download.fileSize !== undefined) {
+      item.fileSize = download.fileSize;
+    }
+    if (download.completedAt !== undefined) {
+      item.completedAt = download.completedAt;
+    }
+    if (download.error !== undefined) {
+      item.error = download.error;
+    }
+    if (download.signedUrl !== undefined) {
+      item.signedUrl = download.signedUrl;
+    }
+    if (download.expiresAt !== undefined) {
+      item.expiresAt = download.expiresAt;
+    }
+
+    return item;
   }, []);
 
   const getDownloadsByStatus = useCallback(
     (status: DownloadStatus): DownloadItem[] => {
-      return downloadService.getDownloadsByStatus(status);
+      const downloads = downloadService.getDownloadsByStatus(status);
+      return downloads.map(download => {
+        const item: DownloadItem = {
+          id: download.id,
+          filePath: download.filePath,
+          fileName: download.fileName,
+          localPath: download.localPath,
+          status: download.status,
+          progress: download.progress,
+          createdAt: download.createdAt,
+        };
+
+        // Add optional properties only if they exist
+        if (download.fileSize !== undefined) {
+          item.fileSize = download.fileSize;
+        }
+        if (download.completedAt !== undefined) {
+          item.completedAt = download.completedAt;
+        }
+        if (download.error !== undefined) {
+          item.error = download.error;
+        }
+        if (download.signedUrl !== undefined) {
+          item.signedUrl = download.signedUrl;
+        }
+        if (download.expiresAt !== undefined) {
+          item.expiresAt = download.expiresAt;
+        }
+
+        return item;
+      });
     },
     []
   );
 
   const isDownloadActive = useCallback((id: string): boolean => {
-    return downloadService.isDownloadActive(id);
+    const download = downloadService.getDownloadStatus(id);
+    return download?.status === 'downloading';
   }, []);
 
   const getActiveDownloadsCount = useCallback((): number => {
-    return downloadService.getActiveDownloadsCount();
+    return downloadService.getDownloadsByStatus('downloading').length;
   }, []);
 
   const getPendingDownloadsCount = useCallback((): number => {
-    return downloadService.getPendingDownloadsCount();
+    return downloadService.getDownloadsByStatus('pending').length;
   }, []);
 
   const getCompletedDownloadsCount = useCallback((): number => {
-    return downloadService.getCompletedDownloadsCount();
+    return downloadService.getDownloadsByStatus('completed').length;
   }, []);
 
   const getFailedDownloadsCount = useCallback((): number => {
-    return downloadService.getFailedDownloadsCount();
+    return downloadService.getDownloadsByStatus('failed').length;
   }, []);
 
   const getTotalDownloadedSize = useCallback((): number => {
-    return downloadService.getTotalDownloadedSize();
+    const completedDownloads =
+      downloadService.getDownloadsByStatus('completed');
+    return completedDownloads.reduce((sum, d) => sum + (d.fileSize || 0), 0);
   }, []);
 
   const getTotalDownloadSize = useCallback((): number => {
-    return downloadService.getTotalDownloadSize();
+    const allDownloads = downloadService.getAllDownloads();
+    return allDownloads.reduce((sum, d) => sum + (d.fileSize || 0), 0);
   }, []);
 
-  const clearError = useCallback((): void => {
+  const clearError = useCallback(() => {
     setError(null);
   }, []);
 
@@ -286,7 +425,6 @@ export const useDownloads = (): UseDownloadsReturn => {
     pauseDownload,
     resumeDownload,
     cancelDownload,
-    deleteDownload,
     clearCompletedDownloads,
 
     // Queries

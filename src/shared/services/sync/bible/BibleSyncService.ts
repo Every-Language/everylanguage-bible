@@ -179,7 +179,32 @@ class BibleSyncService implements BaseSyncService {
       // Update last successful sync time
       await this.updateLastFullSync();
     } catch (error) {
-      logger.error('Bible sync failed:', error);
+      // Enhanced error logging with detailed information
+      const errorDetails = {
+        error: error,
+        errorType: typeof error,
+        errorConstructor: (error as any)?.constructor?.name,
+        errorMessage: (error as any)?.message || 'No message',
+        errorStack: (error as any)?.stack || 'No stack',
+        errorStringified: JSON.stringify(
+          error,
+          Object.getOwnPropertyNames(error || {})
+        ),
+      };
+
+      logger.error('Bible sync failed:', errorDetails);
+
+      // Add a general error result if no specific error results exist
+      if (results.length === 0) {
+        const errorResult: SyncResult = {
+          success: false,
+          tableName: 'general',
+          recordsSynced: 0,
+          error: error instanceof Error ? error.message : 'Unknown sync error',
+        };
+        results.push(errorResult);
+        this.notifyListeners(errorResult);
+      }
     } finally {
       this.isSyncing = false;
     }
@@ -188,22 +213,22 @@ class BibleSyncService implements BaseSyncService {
   }
 
   private async syncBooks(options: BibleSyncOptions = {}): Promise<SyncResult> {
-    const { batchSize = 1000 } = options;
+    const { batchSize = 2000 } = options; // Increased from 1000 to 2000
 
     try {
       await this.updateSyncStatus('books', 'syncing');
 
       // For bible content, we often want full sync to ensure consistency
       const lastSync = options.forceFullSync
-        ? '1970-01-01T00:00:00.000Z'
+        ? '1970-01-01T00:00:000Z'
         : await this.getLastSync('books');
 
       let allBooks: Tables<'books'>[] = [];
       let hasMoreData = true;
       let lastFetchedId: string | null = null;
 
-      // Use smaller batches for mobile to reduce memory usage
-      const mobileBatchSize = Math.min(batchSize, 500);
+      // Use larger batches for faster syncing during onboarding
+      const optimizedBatchSize = Math.min(batchSize, 2000); // Increased from 500
 
       while (hasMoreData) {
         let query = supabase
@@ -212,7 +237,7 @@ class BibleSyncService implements BaseSyncService {
           .gte('updated_at', lastSync)
           .order('updated_at', { ascending: true })
           .order('id', { ascending: true })
-          .limit(mobileBatchSize);
+          .limit(optimizedBatchSize);
 
         if (lastFetchedId) {
           query = query.gt('id', lastFetchedId);
@@ -236,7 +261,7 @@ class BibleSyncService implements BaseSyncService {
           lastFetchedId = lastBook.id;
         }
 
-        if (remoteBooks.length < mobileBatchSize) {
+        if (remoteBooks.length < optimizedBatchSize) {
           hasMoreData = false;
         }
       }
@@ -250,36 +275,27 @@ class BibleSyncService implements BaseSyncService {
         };
       }
 
-      // Batch insert for better performance
-      await this.upsertBooks(allBooks);
+      // Validate and upsert books
+      const validatedBooks = allBooks.map(validateBookData);
+      await this.upsertBooks(validatedBooks);
 
-      // Update sync metadata
-      const latestBook = allBooks[allBooks.length - 1];
-      if (latestBook?.updated_at) {
-        await this.updateLastSync('books', latestBook.updated_at);
-      }
       await this.updateSyncStatus('books', 'idle');
-
-      logger.info(`Synced ${allBooks.length} books`);
+      await this.updateLastSync('books', new Date().toISOString());
 
       return {
         success: true,
         tableName: 'books',
-        recordsSynced: allBooks.length,
+        recordsSynced: validatedBooks.length,
       };
     } catch (error) {
-      logger.error('Books sync failed:', error);
-      await this.updateSyncStatus(
-        'books',
-        'error',
-        error instanceof Error ? error.message : 'Unknown error'
-      );
-
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.updateSyncStatus('books', 'error', errorMessage);
       return {
         success: false,
         tableName: 'books',
         recordsSynced: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       };
     }
   }
@@ -287,19 +303,19 @@ class BibleSyncService implements BaseSyncService {
   private async syncChapters(
     options: BibleSyncOptions = {}
   ): Promise<SyncResult> {
-    const { batchSize = 1000 } = options;
+    const { batchSize = 2000 } = options; // Increased from 1000 to 2000
 
     try {
       await this.updateSyncStatus('chapters', 'syncing');
 
       const lastSync = options.forceFullSync
-        ? '1970-01-01T00:00:00.000Z'
+        ? '1970-01-01T00:00:000Z'
         : await this.getLastSync('chapters');
 
       let allChapters: Tables<'chapters'>[] = [];
       let hasMoreData = true;
       let lastFetchedId: string | null = null;
-      const mobileBatchSize = Math.min(batchSize, 500);
+      const optimizedBatchSize = Math.min(batchSize, 2000); // Increased from 500
 
       while (hasMoreData) {
         let query = supabase
@@ -308,7 +324,7 @@ class BibleSyncService implements BaseSyncService {
           .gte('updated_at', lastSync)
           .order('updated_at', { ascending: true })
           .order('id', { ascending: true })
-          .limit(mobileBatchSize);
+          .limit(optimizedBatchSize);
 
         if (lastFetchedId) {
           query = query.gt('id', lastFetchedId);
@@ -332,7 +348,7 @@ class BibleSyncService implements BaseSyncService {
           lastFetchedId = lastChapter.id;
         }
 
-        if (remoteChapters.length < mobileBatchSize) {
+        if (remoteChapters.length < optimizedBatchSize) {
           hasMoreData = false;
         }
       }
@@ -347,14 +363,8 @@ class BibleSyncService implements BaseSyncService {
       }
 
       await this.upsertChapters(allChapters);
-
-      const latestChapter = allChapters[allChapters.length - 1];
-      if (latestChapter?.updated_at) {
-        await this.updateLastSync('chapters', latestChapter.updated_at);
-      }
       await this.updateSyncStatus('chapters', 'idle');
-
-      logger.info(`Synced ${allChapters.length} chapters`);
+      await this.updateLastSync('chapters', new Date().toISOString());
 
       return {
         success: true,
@@ -362,18 +372,15 @@ class BibleSyncService implements BaseSyncService {
         recordsSynced: allChapters.length,
       };
     } catch (error) {
-      logger.error('Chapters sync failed:', error);
-      await this.updateSyncStatus(
-        'chapters',
-        'error',
-        error instanceof Error ? error.message : 'Unknown error'
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.updateSyncStatus('chapters', 'error', errorMessage);
 
       return {
         success: false,
         tableName: 'chapters',
         recordsSynced: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       };
     }
   }
@@ -381,19 +388,19 @@ class BibleSyncService implements BaseSyncService {
   private async syncVerses(
     options: BibleSyncOptions = {}
   ): Promise<SyncResult> {
-    const { batchSize = 1000 } = options;
+    const { batchSize = 2000 } = options; // Increased from 1000 to 2000
 
     try {
       await this.updateSyncStatus('verses', 'syncing');
 
       const lastSync = options.forceFullSync
-        ? '1970-01-01T00:00:00.000Z'
+        ? '1970-01-01T00:00:000Z'
         : await this.getLastSync('verses');
 
       let allVerses: Tables<'verses'>[] = [];
       let hasMoreData = true;
       let lastFetchedId: string | null = null;
-      const mobileBatchSize = Math.min(batchSize, 500);
+      const optimizedBatchSize = Math.min(batchSize, 2000); // Increased from 500
 
       while (hasMoreData) {
         let query = supabase
@@ -402,7 +409,7 @@ class BibleSyncService implements BaseSyncService {
           .gte('updated_at', lastSync)
           .order('updated_at', { ascending: true })
           .order('id', { ascending: true })
-          .limit(mobileBatchSize);
+          .limit(optimizedBatchSize);
 
         if (lastFetchedId) {
           query = query.gt('id', lastFetchedId);
@@ -426,7 +433,7 @@ class BibleSyncService implements BaseSyncService {
           lastFetchedId = lastVerse.id;
         }
 
-        if (remoteVerses.length < mobileBatchSize) {
+        if (remoteVerses.length < optimizedBatchSize) {
           hasMoreData = false;
         }
       }
@@ -441,14 +448,8 @@ class BibleSyncService implements BaseSyncService {
       }
 
       await this.upsertVerses(allVerses);
-
-      const latestVerse = allVerses[allVerses.length - 1];
-      if (latestVerse?.updated_at) {
-        await this.updateLastSync('verses', latestVerse.updated_at);
-      }
       await this.updateSyncStatus('verses', 'idle');
-
-      logger.info(`Synced ${allVerses.length} verses`);
+      await this.updateLastSync('verses', new Date().toISOString());
 
       return {
         success: true,
@@ -456,18 +457,15 @@ class BibleSyncService implements BaseSyncService {
         recordsSynced: allVerses.length,
       };
     } catch (error) {
-      logger.error('Verses sync failed:', error);
-      await this.updateSyncStatus(
-        'verses',
-        'error',
-        error instanceof Error ? error.message : 'Unknown error'
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.updateSyncStatus('verses', 'error', errorMessage);
 
       return {
         success: false,
         tableName: 'verses',
         recordsSynced: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       };
     }
   }

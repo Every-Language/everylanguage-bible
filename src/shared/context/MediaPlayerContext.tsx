@@ -24,7 +24,6 @@ interface MediaTrack {
 interface MediaPlayerState {
   currentTrack: MediaTrack | null;
   isPlaying: boolean;
-  isLoading: boolean;
   volume: number;
   playbackRate: number;
   isExpanded: boolean;
@@ -72,7 +71,6 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
   const [state, setState] = useState<MediaPlayerState>({
     currentTrack: null,
     isPlaying: false,
-    isLoading: false,
     volume: 1.0,
     playbackRate: 1.0,
     isExpanded: false,
@@ -91,7 +89,6 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
       setState(prev => {
         // Only update if values have actually changed
         const hasPlayingChanged = prev.isPlaying !== audioState.isPlaying;
-        const hasLoadingChanged = prev.isLoading !== audioState.isLoading;
 
         // Check if current track has changed
         const prevTrackId = prev.currentTrack?.id;
@@ -108,7 +105,6 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
         // Only update if something has actually changed
         if (
           !hasPlayingChanged &&
-          !hasLoadingChanged &&
           !hasTrackChanged &&
           !hasTrackPropertiesChanged
         ) {
@@ -118,7 +114,6 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
         return {
           ...prev,
           isPlaying: audioState.isPlaying,
-          isLoading: audioState.isLoading,
           currentTrack: currentAudioTrack
             ? {
                 id: currentAudioTrack.id,
@@ -149,7 +144,6 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
       ...prev,
       currentTrack: track,
       isPlaying: false,
-      isLoading: false,
     }));
   }, []);
 

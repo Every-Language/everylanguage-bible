@@ -2,7 +2,6 @@ import { useCallback, useRef } from 'react';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import { audioService } from '../services/AudioService';
 import { MediaTrack as MediaFeatureTrack } from '../types';
-import { logger } from '@/shared/utils/logger';
 
 // Type adapter to convert between MediaTrack types
 type MediaPlayerTrack = {
@@ -42,29 +41,49 @@ export const useAudioService = (options: UseAudioServiceOptions = {}) => {
 
   // Initialize audio service only once
   if (!isInitialized.current) {
-    // Set up minimal callbacks that don't update context state
+    // Set up callbacks to sync state with audio service
     const callbacks = {
-      onPlay: () => logger.info('Audio service: Play callback triggered'),
-      onPause: () => logger.info('Audio service: Pause callback triggered'),
-      onStop: () => logger.info('Audio service: Stop callback triggered'),
+      onPlay: () => {
+        // Ensure context state matches audio service state
+        if (!state.isPlaying) {
+          actions.play();
+        }
+        // logger.info('Audio service: Play callback triggered');
+      },
+      onPause: () => {
+        // Ensure context state matches audio service state
+        if (state.isPlaying) {
+          actions.pause();
+        }
+        // logger.info('Audio service: Pause callback triggered');
+      },
+      onStop: () => {
+        // Ensure context state matches audio service state
+        if (state.isPlaying || state.currentTrack) {
+          actions.stop();
+        }
+        // logger.info('Audio service: Stop callback triggered');
+      },
       onLoad: (duration: number) => {
         options.onLoad?.(duration);
-        logger.info('Audio service: Load callback triggered', { duration });
+        // logger.info('Audio service: Load callback triggered', { duration });
       },
       onError: (error: string) => {
         options.onError?.(error);
-        logger.error('Audio service: Error callback triggered', { error });
+        // logger.error('Audio service: Error callback triggered', { error });
       },
       onProgress: (position: number) => {
         // Only update progress, not play/pause state
         actions.updateProgress(position);
       },
-      onEnd: () => logger.info('Audio service: Track ended'),
+      onEnd: () => {
+        // logger.info('Audio service: Track ended');
+      },
     };
 
     audioService.setCallbacks(callbacks);
     isInitialized.current = true;
-    logger.info('Audio service hook initialized');
+    // logger.info('Audio service hook initialized');
   }
 
   // Handle seek changes
@@ -72,8 +91,8 @@ export const useAudioService = (options: UseAudioServiceOptions = {}) => {
     if (audioService.isLoaded()) {
       try {
         await audioService.seekTo(time);
-      } catch (error) {
-        logger.error('Failed to seek audio:', error);
+      } catch {
+        // logger.error('Failed to seek audio:', _error);
       }
     }
   }, []);
@@ -98,48 +117,56 @@ export const useAudioService = (options: UseAudioServiceOptions = {}) => {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Failed to load track';
-          logger.error('Failed to load track in audio service:', {
-            trackId: track.id,
-            error,
-          });
+          // logger.error('Failed to load track in audio service:', {
+          //   trackId: track.id,
+          //   error: error,
+          // });
           onError?.(errorMessage);
         }
       }
     },
     play: async () => {
+      // Optimistic UI update - update state immediately
+      actions.play();
+
       if (audioService.isLoaded()) {
         try {
           await audioService.play();
-          actions.play();
+          // Audio service callbacks will handle state sync
         } catch (error) {
-          logger.error('Failed to play audio:', error);
+          // logger.error('Failed to play audio:', error);
+          // Revert optimistic update on error
+          actions.pause();
           onError?.(
             error instanceof Error ? error.message : 'Failed to play audio'
           );
         }
-      } else {
-        actions.play(); // Fallback to context-only action
       }
+      // If audio not loaded, the optimistic update is sufficient
     },
     pause: async () => {
+      // Optimistic UI update - update state immediately
+      actions.pause();
+
       if (audioService.isLoaded()) {
         try {
           await audioService.pause();
-          actions.pause();
-        } catch (error) {
-          logger.error('Failed to pause audio:', error);
+          // Audio service callbacks will handle state sync
+        } catch {
+          // logger.error('Failed to pause audio:', error);
+          // Revert optimistic update on error
+          actions.play();
         }
-      } else {
-        actions.pause(); // Fallback to context-only action
       }
+      // If audio not loaded, the optimistic update is sufficient
     },
     stop: async () => {
       if (audioService.isLoaded()) {
         try {
           await audioService.stop();
           actions.stop();
-        } catch (error) {
-          logger.error('Failed to stop audio:', error);
+        } catch {
+          // logger.error('Failed to stop audio:', error);
         }
       } else {
         actions.stop(); // Fallback to context-only action

@@ -103,9 +103,7 @@ export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
         <Text style={[styles.statusText, { color: theme.colors.text }]}>
           Is Playing: {state.isPlaying ? 'Yes' : 'No'}
         </Text>
-        <Text style={[styles.statusText, { color: theme.colors.text }]}>
-          Is Loading: {state.isLoading ? 'Yes' : 'No'}
-        </Text>
+
         <Text style={[styles.statusText, { color: theme.colors.text }]}>
           Current Track: {state.currentTrack?.title || 'None'}
         </Text>

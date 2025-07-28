@@ -65,7 +65,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleAudioVersionSelect = (version: AudioVersion | TextVersion) => {
-    logger.log('Selected audio version:', version);
+    // logger.log('Selected audio version:', version);
     setAudioVersion(version as AudioVersion);
     setShowAudioVersionModal(false);
   };

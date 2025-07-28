@@ -5,6 +5,7 @@ import { logger } from '@/shared/utils/logger';
 interface MediaFile {
   id: string;
   start_verse_id: string | null;
+  chapter_id: string | null;
   version: number | null;
   remote_path: string | null;
   file_size: number | null;
@@ -37,7 +38,7 @@ export const useMediaSearch = () => {
       }));
 
       logger.info(
-        `Searching for media files with chapterId: ${chapterId}, version: ${targetVersion}`
+        `Searching for media files with chapter_id: ${chapterId}, version: ${targetVersion}`
       );
 
       try {
@@ -45,7 +46,7 @@ export const useMediaSearch = () => {
         const { data: firstSearchData, error: firstError } = await supabase
           .from('media_files')
           .select('*')
-          .ilike('start_verse_id', `${chapterId}%`)
+          .eq('chapter_id', chapterId)
           .eq('version', targetVersion)
           .is('deleted_at', null);
 
@@ -74,7 +75,7 @@ export const useMediaSearch = () => {
         const { data: secondSearchData, error: secondError } = await supabase
           .from('media_files')
           .select('*')
-          .ilike('start_verse_id', `${chapterId}%`)
+          .eq('chapter_id', chapterId)
           .eq('version', targetVersion)
           .is('deleted_at', null);
 

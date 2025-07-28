@@ -80,7 +80,7 @@ export async function validateAudioFile(
       isValid: true,
     };
   } catch (error) {
-    logger.error('Error validating audio file:', { fileUri, error });
+    // logger.error('Error validating audio file:', { fileUri, error });
     return {
       exists: false,
       size: 0,

@@ -5,7 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '@/shared/context/ThemeContext';
 import { LocalizationProvider } from '@/shared/context/LocalizationContext';
-import { SyncProvider } from '@/shared/context/SyncContext';
+import { SyncProvider, useSync } from '@/shared/context/SyncContext';
 import { MediaPlayerProvider } from '@/shared/context/MediaPlayerContext';
 import {
   OnboardingProvider,
@@ -35,6 +35,7 @@ const MainContent: React.FC = () => {
     completeOnboarding,
     resetOnboarding,
   } = useOnboarding();
+  const { setOnboardingMode } = useSync();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +61,8 @@ const MainContent: React.FC = () => {
   }, [initializeApp]);
 
   const handleOnboardingComplete = async () => {
+    // Disable onboarding mode to allow normal sync behavior
+    setOnboardingMode(false);
     await completeOnboarding();
   };
 
@@ -67,6 +70,13 @@ const MainContent: React.FC = () => {
     setError(null);
     initializeApp();
   };
+
+  // Set onboarding mode when showing onboarding
+  useEffect(() => {
+    if (showOnboarding !== null) {
+      setOnboardingMode(showOnboarding);
+    }
+  }, [showOnboarding, setOnboardingMode]);
 
   // Loading state
   if (isLoading) {

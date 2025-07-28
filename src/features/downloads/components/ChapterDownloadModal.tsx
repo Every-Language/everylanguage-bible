@@ -93,8 +93,6 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   } = useBackgroundDownloads();
 
   const [isDownloading, setIsDownloading] = useState(false);
-  const [enableBackgroundDownloads, setEnableBackgroundDownloads] =
-    useState(true);
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
 
   // Filter MediaFiles, excluding null values
@@ -214,125 +212,49 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     try {
       logger.info('Starting download of files:', {
         count: searchResults.length,
-        useBackground: enableBackgroundDownloads,
+        useBackground: true,
         files: searchResults.map(f => ({
           remote_path: f.remote_path,
           file_size: f.file_size,
         })),
       });
 
-      if (enableBackgroundDownloads && backgroundInitialized) {
-        // Use background downloads
-        const files = searchResults.map((file, index) => ({
-          filePath: file.remote_path,
-          fileName: `${chapterId}_${index + 1}.mp3`,
-          fileSize: file.file_size, // Pass the file size from search results
-        }));
+      // Always use background downloads
+      const files = searchResults.map((file, index) => ({
+        filePath: file.remote_path,
+        fileName: `${chapterId}_${index + 1}.mp3`,
+        fileSize: file.file_size, // Pass the file size from search results
+      }));
 
-        const downloadIds = await addBatchToBackgroundQueue(files, {
-          priority: 1,
-          batchId: `chapter_${chapterId}_${Date.now()}`,
-          metadata: {
-            chapterId,
-            bookName: book.name,
-            chapterTitle,
-            addToMediaFiles: true,
-            originalSearchResults: validMediaFiles,
-            mediaFileOptions: {
-              chapterId: chapterId,
-              mediaType: 'audio',
-              uploadStatus: 'completed',
-              publishStatus: 'published',
-              checkStatus: 'checked',
-              version: 1,
-            },
-            maxRetries: 3,
+      const downloadIds = await addBatchToBackgroundQueue(files, {
+        priority: 1,
+        batchId: `chapter_${chapterId}_${Date.now()}`,
+        metadata: {
+          chapterId,
+          bookName: book.name,
+          chapterTitle,
+          addToMediaFiles: true,
+          originalSearchResults: validMediaFiles,
+          mediaFileOptions: {
+            chapterId: chapterId,
+            mediaType: 'audio',
+            uploadStatus: 'completed',
+            publishStatus: 'published',
+            checkStatus: 'checked',
+            // Don't override version - let it come from the search results
+            syncVersesData: true, // Automatically sync verses data after download
           },
-        });
+          maxRetries: 3,
+        },
+      });
 
-        setCurrentBatchId(`chapter_${chapterId}_${Date.now()}`);
-        logger.info('Added files to background download queue:', downloadIds);
+      setCurrentBatchId(`chapter_${chapterId}_${Date.now()}`);
+      logger.info('Added files to background download queue:', downloadIds);
 
-        // Show success message and close modal
-        setTimeout(() => {
-          onClose();
-        }, 2000);
-      } else {
-        // Fallback to original download method
-        logger.info('Using fallback download method');
-
-        // Initialize progress tracking for all files
-        handleInitializeDownloadProgress();
-
-        // Wait a bit for state to update
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Download files sequentially to avoid overwhelming the system
-        for (let i = 0; i < searchResults.length; i++) {
-          const file = searchResults[i];
-          if (!file) continue; // Skip if file is undefined
-
-          const filePath = file.remote_path;
-          const fileName = `${chapterId}_${i + 1}.mp3`;
-
-          logger.info(`Starting download ${i + 1}/${searchResults.length}:`, {
-            filePath,
-            fileName,
-          });
-
-          try {
-            // Update status to downloading
-            updateFileProgress(
-              filePath,
-              { bytesWritten: 0, contentLength: 0, progress: 0 },
-              'downloading'
-            );
-
-            await downloadFile(filePath, fileName, {
-              onProgress: (progress: {
-                bytesWritten: number;
-                contentLength: number;
-                progress: number;
-              }) => {
-                logger.debug(`Download progress for ${fileName}:`, progress);
-                updateFileProgress(filePath, progress, 'downloading');
-              },
-              onComplete: (item: { fileSize?: number }) => {
-                logger.info(`Download completed for ${fileName}:`, item);
-                updateFileProgress(
-                  filePath,
-                  {
-                    bytesWritten: item.fileSize || 0,
-                    contentLength: item.fileSize || 0,
-                    progress: 1,
-                  },
-                  'completed'
-                );
-              },
-              onError: (error: string) => {
-                logger.error(`Download failed for ${fileName}:`, error);
-                updateFileProgress(
-                  filePath,
-                  { bytesWritten: 0, contentLength: 0, progress: 0 },
-                  'failed',
-                  error
-                );
-              },
-            });
-          } catch (error) {
-            const errorMsg = (error as Error).message;
-            logger.error(`Download error for ${fileName}:`, errorMsg);
-            updateFileProgress(
-              filePath,
-              { bytesWritten: 0, contentLength: 0, progress: 0 },
-              'failed',
-              errorMsg
-            );
-          }
-        }
-
-        logger.info('All download requests completed');
-      }
+      // Show success message and close modal
+      setTimeout(() => {
+        onClose();
+      }, 2000);
     } catch (error) {
       const errorMsg = (error as Error).message;
       logger.error('Download batch error:', errorMsg);
@@ -342,7 +264,6 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     }
   }, [
     searchResults,
-    enableBackgroundDownloads,
     backgroundInitialized,
     addBatchToBackgroundQueue,
     downloadFile,
@@ -426,49 +347,8 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
             Download to listen offline at your convenience.
           </Text>
 
-          {/* Background Download Toggle */}
-          <View style={styles.backgroundToggleContainer}>
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                {
-                  backgroundColor: enableBackgroundDownloads
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                },
-              ]}
-              onPress={() =>
-                setEnableBackgroundDownloads(!enableBackgroundDownloads)
-              }>
-              <MaterialIcons
-                name={
-                  enableBackgroundDownloads ? 'cloud-download' : 'cloud-off'
-                }
-                size={16}
-                color={
-                  enableBackgroundDownloads
-                    ? theme.colors.textInverse
-                    : theme.colors.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  styles.toggleText,
-                  {
-                    color: enableBackgroundDownloads
-                      ? theme.colors.textInverse
-                      : theme.colors.textSecondary,
-                  },
-                ]}>
-                {enableBackgroundDownloads
-                  ? 'Background Downloads'
-                  : 'Foreground Downloads'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Background Download Status */}
-          {enableBackgroundDownloads && currentBatchId && (
+          {currentBatchId && (
             <View style={styles.backgroundStatusContainer}>
               <Text
                 style={[
@@ -649,22 +529,6 @@ const styles = StyleSheet.create({
   downloadButtonText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  backgroundToggleContainer: {
-    marginBottom: 16,
-  },
-  toggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 8,
-  },
-  toggleText: {
-    fontSize: 14,
-    fontWeight: '500',
   },
   backgroundStatusContainer: {
     padding: 12,

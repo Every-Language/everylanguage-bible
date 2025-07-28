@@ -66,9 +66,9 @@ export class AudioService {
         interruptionMode: 'duckOthers',
         interruptionModeAndroid: 'duckOthers',
       });
-      logger.info('Audio mode configured successfully');
-    } catch (error) {
-      logger.error('Failed to configure audio mode:', error);
+      // logger.info('Audio mode configured successfully');
+    } catch {
+      // logger.error('Failed to configure audio mode:', _error);
     }
   }
 
@@ -155,8 +155,8 @@ export class AudioService {
         {
           maxRetries: 3,
           baseDelayMs: 1000,
-          onRetry: (attempt, error) => {
-            logger.warn(`Audio load retry ${attempt}:`, error);
+          onRetry: (_attempt, _error) => {
+            // logger.warn(`Audio load retry ${_attempt}:`, _error);
           },
         }
       );
@@ -168,10 +168,10 @@ export class AudioService {
       });
 
       this.callbacks.onLoad?.(this.state.duration);
-      logger.info('Audio loaded successfully:', {
-        trackId: track.id,
-        duration: this.state.duration,
-      });
+      // logger.info('Audio loaded successfully:', {
+      //   trackId: track.id,
+      //   duration: this.state.duration,
+      // });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to load audio';
@@ -182,7 +182,7 @@ export class AudioService {
       });
       this.currentTrack = null; // Clear current track on error
       this.callbacks.onError?.(errorMessage);
-      logger.error('Failed to load audio:', { trackId: track.id, error });
+      // logger.error('Failed to load audio:', { trackId: track.id, error });
       throw error;
     }
   }
@@ -232,13 +232,13 @@ export class AudioService {
       this.setState({ isPlaying: true, error: null });
       this.startProgressTracking();
       this.callbacks.onPlay?.();
-      logger.info('Audio playback started');
+      // logger.info('Audio playback started');
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to play audio';
       this.setState({ error: errorMessage });
       this.callbacks.onError?.(errorMessage);
-      logger.error('Failed to play audio:', error);
+      // logger.error('Failed to play audio:', error);
       throw error;
     }
   }
@@ -255,16 +255,11 @@ export class AudioService {
       return;
     }
 
-    try {
-      this.player.pause();
-      this.setState({ isPlaying: false });
-      this.stopProgressTracking();
-      this.callbacks.onPause?.();
-      logger.info('Audio playback paused');
-    } catch (error) {
-      logger.error('Failed to pause audio:', error);
-      throw error;
-    }
+    this.player.pause();
+    this.setState({ isPlaying: false });
+    this.stopProgressTracking();
+    this.callbacks.onPause?.();
+    // logger.info('Audio playback paused');
   }
 
   /**
@@ -279,21 +274,16 @@ export class AudioService {
       return;
     }
 
-    try {
-      this.player.pause();
-      await this.player.seekTo(0);
-      this.setState({
-        isPlaying: false,
-        position: 0,
-        error: null,
-      });
-      this.stopProgressTracking();
-      this.callbacks.onStop?.();
-      logger.info('Audio playback stopped');
-    } catch (error) {
-      logger.error('Failed to stop audio:', error);
-      throw error;
-    }
+    this.player.pause();
+    await this.player.seekTo(0);
+    this.setState({
+      isPlaying: false,
+      position: 0,
+      error: null,
+    });
+    this.stopProgressTracking();
+    this.callbacks.onStop?.();
+    // logger.info('Audio playback stopped');
   }
 
   /**
@@ -304,18 +294,13 @@ export class AudioService {
       return;
     }
 
-    try {
-      const clampedPosition = Math.max(
-        0,
-        Math.min(position, this.state.duration)
-      );
-      await this.player.seekTo(clampedPosition);
-      this.setState({ position: clampedPosition });
-      logger.info('Audio seeked to position:', clampedPosition);
-    } catch (error) {
-      logger.error('Failed to seek audio:', error);
-      throw error;
-    }
+    const clampedPosition = Math.max(
+      0,
+      Math.min(position, this.state.duration)
+    );
+    await this.player.seekTo(clampedPosition);
+    this.setState({ position: clampedPosition });
+    // logger.info('Audio seeked to position:', clampedPosition);
   }
 
   /**
@@ -330,7 +315,7 @@ export class AudioService {
       const clampedVolume = Math.max(0.0, Math.min(1.0, volume));
       this.player.volume = clampedVolume;
       this.setState({ volume: clampedVolume });
-      logger.info('Audio volume set to:', clampedVolume);
+      // logger.info('Audio volume set to:', clampedVolume);
     } catch (error) {
       logger.error('Failed to set volume:', error);
       throw error;
@@ -349,7 +334,7 @@ export class AudioService {
       const clampedRate = Math.max(0.25, Math.min(4.0, rate));
       this.player.playbackRate = clampedRate;
       this.setState({ playbackRate: clampedRate });
-      logger.info('Audio playback rate set to:', clampedRate);
+      // logger.info('Audio playback rate set to:', clampedRate);
     } catch (error) {
       logger.error('Failed to set playback rate:', error);
       throw error;
@@ -367,7 +352,7 @@ export class AudioService {
     try {
       this.player.muted = muted;
       this.setState({ isMuted: muted });
-      logger.info('Audio muted state set to:', muted);
+      // logger.info('Audio muted state set to:', muted);
     } catch (error) {
       logger.error('Failed to set muted state:', error);
       throw error;
@@ -488,8 +473,8 @@ export class AudioService {
         this.stopProgressTracking();
         this.player.removeAllListeners('playbackStatusUpdate');
         this.player = null;
-      } catch (error) {
-        logger.error('Error unloading audio:', error);
+      } catch {
+        // logger.error('Error unloading audio:', _error);
       }
     }
 
@@ -511,7 +496,7 @@ export class AudioService {
     await this.unloadAudio();
     this.currentTrack = null;
     this.loadingPromise = null;
-    logger.info('Audio service disposed');
+    // logger.info('Audio service disposed');
   }
 
   /**
@@ -523,9 +508,9 @@ export class AudioService {
       await this.unloadAudio();
       this.currentTrack = null;
       this.loadingPromise = null;
-      logger.info('Audio service force stopped');
-    } catch (error) {
-      logger.error('Error force stopping audio service:', error);
+      // logger.info('Audio service force stopped');
+    } catch {
+      // logger.error('Error force stopping audio service:', _error);
     }
   }
 }

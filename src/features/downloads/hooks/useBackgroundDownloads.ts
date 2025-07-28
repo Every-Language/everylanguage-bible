@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  backgroundDownloadService,
-  BackgroundDownloadOptions,
-} from '../services/backgroundDownloadService';
+import { downloadService } from '../services/downloadService';
 import { DownloadStatus } from '../services/types';
 import {
   persistentDownloadStore,
@@ -24,11 +21,11 @@ export interface UseBackgroundDownloadsReturn {
   addToBackgroundQueue: (
     filePath: string,
     fileName: string,
-    options?: BackgroundDownloadOptions
+    options?: any
   ) => Promise<string>;
   addBatchToBackgroundQueue: (
     files: Array<{ filePath: string; fileName: string; fileSize?: number }>,
-    options?: BackgroundDownloadOptions
+    options?: any
   ) => Promise<string[]>;
   cancelDownload: (downloadId: string) => Promise<void>;
   pauseDownload: (downloadId: string) => Promise<void>;
@@ -53,6 +50,11 @@ export interface UseBackgroundDownloadsReturn {
   initialize: () => Promise<void>;
 }
 
+/**
+ * Hook for managing background downloads - ALWAYS uses background download system
+ * This hook provides specialized functionality for background download operations
+ * and ensures all downloads go through the background queue system.
+ */
 export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   const [downloads, setDownloads] = useState<PersistentDownloadItem[]>([]);
   const [queueItems, setQueueItems] = useState<DownloadQueueItem[]>([]);
@@ -73,7 +75,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   // Initialize the background download service
   const initialize = useCallback(async () => {
     try {
-      await backgroundDownloadService.initialize();
+      await downloadService.initialize();
       setIsInitialized(true);
       refreshDownloads();
       startRefreshInterval();
@@ -84,17 +86,22 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
 
   // Refresh downloads data
   const refreshDownloads = useCallback(() => {
-    if (!backgroundDownloadService.initialized) return;
+    if (!downloadService.initialized) return;
 
     try {
-      const allDownloads = backgroundDownloadService.getAllDownloads();
+      const allDownloads = downloadService.getAllDownloads();
       const queueItems = persistentDownloadStore.getQueueItems();
-      const currentStats = backgroundDownloadService.getStats();
-      const processing = backgroundDownloadService.processing;
+      const currentStats = downloadService.getStats();
+      const processing = downloadService.processing;
 
       setDownloads(allDownloads);
       setQueueItems(queueItems);
-      setStats(currentStats);
+      setStats({
+        ...currentStats,
+        lastUpdated: new Date(),
+        totalRetries: 0, // This would need to be calculated from downloads
+        averageDownloadTime: 0, // This would need to be calculated from downloads
+      });
       setIsProcessing(processing);
     } catch (error) {
       logger.error('Error refreshing downloads:', error);
@@ -107,10 +114,9 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
       clearInterval(refreshIntervalRef.current);
     }
 
-    // Refresh every 2 seconds to get real-time updates
     refreshIntervalRef.current = setInterval(() => {
       refreshDownloads();
-    }, 2000);
+    }, 1000); // Refresh every second
   }, [refreshDownloads]);
 
   // Stop refresh interval
@@ -121,48 +127,48 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
     }
   }, []);
 
-  // Add single download to background queue
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopRefreshInterval();
+    };
+  }, [stopRefreshInterval]);
+
+  // Add to background queue
   const addToBackgroundQueue = useCallback(
     async (
       filePath: string,
       fileName: string,
-      options: BackgroundDownloadOptions = {}
+      options: any = {}
     ): Promise<string> => {
       try {
-        const downloadId = await backgroundDownloadService.addToBackgroundQueue(
+        const downloadId = await downloadService.addToQueue(
           filePath,
           fileName,
           options
         );
-
-        // Refresh immediately to show the new download
-        setTimeout(refreshDownloads, 100);
-
+        refreshDownloads();
         return downloadId;
       } catch (error) {
-        logger.error('Failed to add download to background queue:', error);
+        logger.error('Failed to add to background queue:', error);
         throw error;
       }
     },
     [refreshDownloads]
   );
 
-  // Add batch of downloads to background queue
+  // Add batch to background queue
   const addBatchToBackgroundQueue = useCallback(
     async (
       files: Array<{ filePath: string; fileName: string; fileSize?: number }>,
-      options: BackgroundDownloadOptions = {}
+      options: any = {}
     ): Promise<string[]> => {
       try {
-        const downloadIds =
-          await backgroundDownloadService.addBatchToBackgroundQueue(
-            files,
-            options
-          );
-
-        // Refresh immediately to show the new downloads
-        setTimeout(refreshDownloads, 100);
-
+        const downloadIds = await downloadService.addBatchToQueue(
+          files,
+          options
+        );
+        refreshDownloads();
         return downloadIds;
       } catch (error) {
         logger.error('Failed to add batch to background queue:', error);
@@ -172,11 +178,11 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
     [refreshDownloads]
   );
 
-  // Cancel a download
+  // Cancel download
   const cancelDownload = useCallback(
     async (downloadId: string): Promise<void> => {
       try {
-        await backgroundDownloadService.cancelDownload(downloadId);
+        await downloadService.cancelDownload(downloadId);
         refreshDownloads();
       } catch (error) {
         logger.error('Failed to cancel download:', error);
@@ -186,11 +192,11 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
     [refreshDownloads]
   );
 
-  // Pause a download
+  // Pause download
   const pauseDownload = useCallback(
     async (downloadId: string): Promise<void> => {
       try {
-        await backgroundDownloadService.pauseDownload(downloadId);
+        await downloadService.pauseDownload(downloadId);
         refreshDownloads();
       } catch (error) {
         logger.error('Failed to pause download:', error);
@@ -200,11 +206,11 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
     [refreshDownloads]
   );
 
-  // Resume a download
+  // Resume download
   const resumeDownload = useCallback(
     async (downloadId: string): Promise<void> => {
       try {
-        await backgroundDownloadService.resumeDownload(downloadId);
+        await downloadService.resumeDownload(downloadId);
         refreshDownloads();
       } catch (error) {
         logger.error('Failed to resume download:', error);
@@ -217,7 +223,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   // Clear completed downloads
   const clearCompletedDownloads = useCallback(async (): Promise<void> => {
     try {
-      await backgroundDownloadService.clearCompletedDownloads();
+      await downloadService.clearCompletedDownloads();
       refreshDownloads();
     } catch (error) {
       logger.error('Failed to clear completed downloads:', error);
@@ -228,7 +234,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   // Clear failed downloads
   const clearFailedDownloads = useCallback(async (): Promise<void> => {
     try {
-      await backgroundDownloadService.clearFailedDownloads();
+      await downloadService.clearFailedDownloads();
       refreshDownloads();
     } catch (error) {
       logger.error('Failed to clear failed downloads:', error);
@@ -239,7 +245,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   // Continue downloads
   const continueDownloads = useCallback(async (): Promise<void> => {
     try {
-      await backgroundDownloadService.continueDownloads();
+      await downloadService.continueDownloads();
       refreshDownloads();
     } catch (error) {
       logger.error('Failed to continue downloads:', error);
@@ -250,7 +256,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   // Get download by ID
   const getDownload = useCallback(
     (downloadId: string): PersistentDownloadItem | undefined => {
-      return backgroundDownloadService.getDownloadStatus(downloadId);
+      return downloadService.getDownloadStatus(downloadId);
     },
     []
   );
@@ -258,9 +264,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   // Get downloads by status
   const getDownloadsByStatus = useCallback(
     (status: string): PersistentDownloadItem[] => {
-      return backgroundDownloadService.getDownloadsByStatus(
-        status as DownloadStatus
-      );
+      return downloadService.getDownloadsByStatus(status as DownloadStatus);
     },
     []
   );
@@ -275,24 +279,8 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
 
   // Get continue downloads summary
   const getContinueDownloadsSummary = useCallback(() => {
-    return backgroundDownloadService.getContinueDownloadsSummary();
+    return downloadService.getContinueDownloadsSummary();
   }, []);
-
-  // Initialize on mount
-  useEffect(() => {
-    initialize();
-
-    return () => {
-      stopRefreshInterval();
-    };
-  }, [initialize, stopRefreshInterval]);
-
-  // Start refresh interval when initialized
-  useEffect(() => {
-    if (isInitialized) {
-      startRefreshInterval();
-    }
-  }, [isInitialized, startRefreshInterval]);
 
   return {
     // State

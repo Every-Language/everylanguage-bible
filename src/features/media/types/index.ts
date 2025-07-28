@@ -11,7 +11,6 @@ export interface MediaTrack {
 export interface MediaPlayerState {
   currentTrack: MediaTrack | null;
   isPlaying: boolean;
-  loading: boolean;
   error: string | null;
   volume: number;
   playbackRate: number;

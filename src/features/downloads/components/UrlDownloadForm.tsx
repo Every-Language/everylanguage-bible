@@ -12,17 +12,23 @@ import { useTheme } from '@/shared/context/ThemeContext';
 import { useTranslations } from '@/shared/context/LocalizationContext';
 import { Theme } from '@/shared/types/theme';
 import { useDownloads } from '../hooks';
-import { downloadService } from '../services';
+import { urlSigningService } from '../services/urlSigningService';
 import { logger } from '@/shared/utils/logger';
 
 interface UrlDownloadFormProps {
   onDownloadStart?: () => void;
   onDownloadComplete?: () => void;
+  // Add media file integration options
+  addToMediaFiles?: boolean;
+  originalSearchResults?: any[];
+  mediaFileOptions?: any;
 }
 
 export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
-  onDownloadStart,
   onDownloadComplete,
+  addToMediaFiles = false,
+  originalSearchResults = [],
+  mediaFileOptions = {},
 }) => {
   const { theme } = useTheme();
   const t = useTranslations();
@@ -36,65 +42,36 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
   );
 
   const handleGetSignedUrls = async () => {
-    if (!urls.trim()) {
-      Alert.alert('Error', t('downloads.pleaseEnterUrl'));
+    if (!urls.trim() || !fileName.trim()) {
+      Alert.alert('Error', 'Please enter both URLs and file name');
       return;
-    }
-
-    if (!fileName.trim()) {
-      Alert.alert('Error', t('downloads.pleaseEnterFileName'));
-      return;
-    }
-
-    // Parse URLs (support multiple URLs separated by newlines or commas)
-    const urlList = urls
-      .split(/[\n,]/)
-      .map(url => url.trim())
-      .filter((url): url is string => url.length > 0);
-
-    if (urlList.length === 0) {
-      Alert.alert('Error', t('downloads.pleaseEnterValidUrl'));
-      return;
-    }
-
-    // Validate URLs
-    for (const url of urlList) {
-      const urlRegex = /^https?:\/\/.+/;
-      if (!urlRegex.test(url)) {
-        Alert.alert('Error', `Invalid URL: ${url}`);
-        return;
-      }
     }
 
     setIsProcessing(true);
-    setStep('signing');
-    onDownloadStart?.();
+    setStep('downloading');
 
     try {
-      // Step 1: Get signed URLs from the API
-      logger.info('Starting URL signing process for URLs:', urlList);
-      logger.info('Number of URLs to sign:', urlList.length);
+      const urlList = urls
+        .split(/[\n,]/)
+        .map(url => url.trim())
+        .filter((url): url is string => url.length > 0);
 
+      if (urlList.length === 0) {
+        Alert.alert('Error', 'No valid URLs found');
+        return;
+      }
+
+      // Step 1: Get signed URLs
       const signedUrlsResult =
-        await downloadService.getSignedUrlsForExternalUrls(urlList, 24);
+        await urlSigningService.getSignedUrlsForExternalUrls(
+          urlList,
+          24 // 24 hours expiration
+        );
 
-      logger.info('Signing result received:', {
-        success: signedUrlsResult.success,
-        totalFiles: signedUrlsResult.totalFiles,
-        successfulUrls: signedUrlsResult.successfulUrls,
-        fallback: signedUrlsResult.fallback,
-      });
-
-      if (!signedUrlsResult.success) {
-        logger.error('Signing failed - success is false');
-        throw new Error('Failed to get signed URLs');
+      if (!signedUrlsResult.success || !signedUrlsResult.urls) {
+        Alert.alert('Error', 'Failed to get signed URLs');
+        return;
       }
-
-      if (signedUrlsResult.fallback) {
-        logger.warn('Using fallback URLs - signing API may be unavailable');
-      }
-
-      setStep('downloading');
 
       // Step 2: Download each file
       for (let i = 0; i < urlList.length; i++) {
@@ -149,6 +126,11 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
               logger.error('Download failed:', error);
               Alert.alert('Download Failed', `${individualFileName}: ${error}`);
             },
+            // Add media file integration options
+            addToMediaFiles,
+            originalSearchResult:
+              originalSearchResults[i] || originalSearchResults[0],
+            mediaFileOptions,
           });
         } catch (error) {
           logger.error(`Download error for ${individualFileName}:`, error);

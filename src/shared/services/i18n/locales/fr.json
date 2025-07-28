@@ -41,7 +41,8 @@
   },
   "tabs": {
     "bible": "Bible",
-    "playlists": "Listes"
+    "playlists": "Listes",
+    "audio queue": "File d'Attente Audio"
   },
   "bible": {
     "oldTestament": "Ancien Testament",

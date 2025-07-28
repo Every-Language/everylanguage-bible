@@ -240,15 +240,58 @@ class DatabaseManager {
     if (!this.db) throw new Error('Database not opened');
 
     try {
+      logger.info('Starting table creation process...');
+
       // Create tables
       await createTables(this.db);
+      logger.info('Tables created successfully');
 
       // Verify critical tables exist
       await this.verifyCriticalTables();
+      logger.info('Critical tables verified successfully');
 
       logger.info('Tables created and verified successfully');
     } catch (error) {
-      logger.error('Failed to create tables:', error);
+      logger.error('Failed to create tables:', {
+        error: error,
+        errorType: typeof error,
+        errorConstructor: (error as any)?.constructor?.name,
+        errorMessage: (error as any)?.message || 'No message',
+        errorStack: (error as any)?.stack || 'No stack',
+        errorCode: (error as any)?.code || 'No code',
+        errorStringified: JSON.stringify(
+          error,
+          Object.getOwnPropertyNames(error || {})
+        ),
+      });
+
+      // Try to get database state information
+      try {
+        if (this.db) {
+          // Check what tables exist
+          const existingTables = await this.db.getAllAsync<{ name: string }>(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+          );
+          logger.error('Existing tables in database:', {
+            tables: existingTables.map(t => t.name),
+          });
+
+          // Check database integrity
+          const integrityResult = await this.db.getAllAsync(
+            'PRAGMA integrity_check'
+          );
+          logger.error('Database integrity check:', integrityResult);
+
+          // Check foreign key status
+          const foreignKeysResult = await this.db.getFirstAsync<{
+            foreign_keys: number;
+          }>('PRAGMA foreign_keys');
+          logger.error('Foreign keys status:', foreignKeysResult);
+        }
+      } catch (debugError) {
+        logger.error('Failed to get debug information:', debugError);
+      }
+
       throw error;
     }
   }
@@ -275,18 +318,35 @@ class DatabaseManager {
   }
 
   private async finalVerification(): Promise<void> {
-    if (!this.db) throw new Error('Database not opened');
+    this.updateProgress({
+      stage: 'verifying',
+      message: 'Performing final verification...',
+      progress: 95,
+    });
 
-    // Test a simple query to ensure everything is working
-    const result = await this.db.getFirstAsync<{ count: number }>(
-      'SELECT COUNT(*) as count FROM sync_metadata'
-    );
+    try {
+      // Verify critical tables exist and are accessible
+      await this.verifyCriticalTables();
 
-    if (!result || result.count === undefined) {
-      throw new Error('Final database verification failed');
+      // Validate media_files_verses schema specifically
+      await this.validateMediaFilesVersesSchema();
+
+      this.updateProgress({
+        stage: 'complete',
+        message: 'Database initialization complete',
+        progress: 100,
+      });
+
+      logger.info('Database initialization completed successfully');
+    } catch (error) {
+      this.updateProgress({
+        stage: 'error',
+        message: `Final verification failed: ${(error as Error).message}`,
+        progress: 95,
+        error: (error as Error).message,
+      });
+      throw error;
     }
-
-    logger.info('Final verification passed');
   }
 
   private async performMigrations(): Promise<void> {
@@ -547,34 +607,61 @@ class DatabaseManager {
     if (!this.db) return;
 
     logger.info(
-      'Migrating database to version 5: Updating media_files_verses table schema'
+      'Migrating database to version 5: Removing foreign key constraint from media_files_verses table and updating start_time_seconds to REAL'
     );
 
     try {
-      // Check if there's a schema mismatch by trying to access the table
-      try {
-        await this.db.execAsync('SELECT COUNT(*) FROM media_files_verses');
-        logger.info('media_files_verses table exists and is accessible');
-      } catch {
+      // Check if the table exists and has the old foreign key constraint
+      const tableInfo = await this.db.getAllAsync<{ sql: string }>(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='media_files_verses'"
+      );
+
+      if (tableInfo && tableInfo.length > 0 && tableInfo[0]) {
+        const tableSql = tableInfo[0].sql;
+
+        // Check if migration is needed (old foreign key constraint or INTEGER start_time_seconds)
+        const needsMigration =
+          tableSql.includes('FOREIGN KEY (verse_id) REFERENCES verses (id)') ||
+          tableSql.includes('start_time_seconds INTEGER');
+
+        if (needsMigration) {
+          logger.info(
+            'Migrating media_files_verses table to remove foreign key constraint and update start_time_seconds to REAL'
+          );
+
+          // Create new table without the verse_id foreign key constraint and with REAL start_time_seconds
+          await this.db.execAsync(`
+            CREATE TABLE IF NOT EXISTS media_files_verses_new (
+              id TEXT PRIMARY KEY,
+              media_file_id TEXT NOT NULL,
+              verse_id TEXT NOT NULL,
+              start_time_seconds REAL NOT NULL,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (media_file_id) REFERENCES media_files (id) ON DELETE CASCADE
+            )
+          `);
+
+          // Copy data from old table to new table
+          await this.db.execAsync(`
+            INSERT INTO media_files_verses_new 
+            SELECT * FROM media_files_verses
+          `);
+
+          // Drop old table and rename new table
+          await this.db.execAsync('DROP TABLE media_files_verses');
+          await this.db.execAsync(
+            'ALTER TABLE media_files_verses_new RENAME TO media_files_verses'
+          );
+
+          logger.info('Successfully migrated media_files_verses table');
+        } else {
+          logger.info('media_files_verses table already has correct schema');
+        }
+      } else {
         logger.info(
-          'media_files_verses table has schema issues, dropping and recreating'
-        );
-
-        // Drop the table if it exists
-        await this.db.execAsync('DROP TABLE IF EXISTS media_files_verses');
-
-        // Drop any existing indexes
-        await this.db.execAsync(
-          'DROP INDEX IF EXISTS idx_media_files_verses_media_file_id'
-        );
-        await this.db.execAsync(
-          'DROP INDEX IF EXISTS idx_media_files_verses_verse_id'
-        );
-        await this.db.execAsync(
-          'DROP INDEX IF EXISTS idx_media_files_verses_sequence_order'
-        );
-        await this.db.execAsync(
-          'DROP INDEX IF EXISTS idx_media_files_verses_start_time_seconds'
+          'media_files_verses table does not exist, will be created with correct schema'
         );
       }
 
@@ -582,6 +669,42 @@ class DatabaseManager {
     } catch (error) {
       logger.error('Error during migration to version 5:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Validate media_files_verses table schema
+   */
+  private async validateMediaFilesVersesSchema(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      const tableInfo = await this.db.getAllAsync<{ sql: string }>(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='media_files_verses'"
+      );
+
+      if (tableInfo && tableInfo.length > 0 && tableInfo[0]) {
+        const tableSql = tableInfo[0].sql;
+
+        // Check if start_time_seconds is REAL (not INTEGER)
+        if (tableSql.includes('start_time_seconds INTEGER')) {
+          logger.warn(
+            'media_files_verses table has INTEGER start_time_seconds, should be REAL'
+          );
+          // Trigger migration to version 5
+          await this.migrateToVersion5();
+        } else if (tableSql.includes('start_time_seconds REAL')) {
+          logger.info(
+            'media_files_verses table has correct REAL start_time_seconds column'
+          );
+        } else {
+          logger.warn(
+            'Could not determine start_time_seconds column type in media_files_verses table'
+          );
+        }
+      }
+    } catch (error) {
+      logger.error('Error validating media_files_verses schema:', error);
     }
   }
 

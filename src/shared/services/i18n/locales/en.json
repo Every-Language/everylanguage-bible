@@ -42,7 +42,7 @@
   "tabs": {
     "bible": "Bible",
     "playlists": "Playlists",
-    "downloads": "Downloads"
+    "audio queue": "Audio Queue"
   },
   "bible": {
     "oldTestament": "Old Testament",

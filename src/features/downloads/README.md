@@ -1,5 +1,16 @@
 # Downloads Feature
 
+**IMPORTANT: This download system ALWAYS uses background downloads and NEVER performs direct downloads.**
+
+All download operations go through the background queue system for consistency, reliability, and proper state management. This ensures:
+
+- Resumable downloads using `FileSystem.createDownloadResumable`
+- Background processing with Expo TaskManager
+- Persistent storage with AsyncStorage
+- Queue management with priority-based processing
+- Retry logic with exponential backoff
+- Media file integration
+
 This feature provides comprehensive download management for the Bible app, including background downloads, progress tracking, and media file integration.
 
 ## Features
@@ -33,13 +44,13 @@ The "Continue Download" feature has been enhanced to ensure **ALL** pending and 
 
 ```typescript
 // Get summary of what will be processed
-const summary = backgroundDownloadService.getContinueDownloadsSummary();
+const summary = downloadService.getContinueDownloadsSummary();
 console.log(
   `Will process ${summary.totalCount} downloads (${summary.pendingCount} pending, ${summary.failedCount} failed)`
 );
 
 // Continue all downloads
-const result = await backgroundDownloadService.continueDownloads();
+const result = await downloadService.continueDownloads();
 console.log(
   `Processed ${result.processedCount} downloads (${result.successCount} succeeded, ${result.failedCount} failed, ${result.retriedCount} retried)`
 );
@@ -54,9 +65,9 @@ The UI automatically shows:
 - Real-time progress updates
 - Clear indication of what will happen when "Continue Download" is clicked
 
-## Background Download Service
+## Unified Download Service
 
-The `BackgroundDownloadService` manages all background download operations with the following key methods:
+The `DownloadService` manages all download operations with the following key methods:
 
 ### Core Methods
 
@@ -117,64 +128,89 @@ Enhanced to handle retry count resets and status updates.
 
 ## Usage Examples
 
-### Basic Continue Downloads
+### Basic Download
 
 ```typescript
-import { backgroundDownloadService } from './services/backgroundDownloadService';
+import { downloadService } from '@/features/downloads/services';
+
+// Download a single file
+const downloadId = await downloadService.addToQueue(
+  'https://example.com/file.mp3',
+  'chapter_1.mp3',
+  {
+    priority: 1,
+    addToMediaFiles: true,
+    mediaFileOptions: {
+      chapterId: 'genesis_1',
+      mediaType: 'audio',
+    },
+  }
+);
+```
+
+### Batch Download
+
+```typescript
+// Download multiple files
+const files = [
+  { filePath: 'https://example.com/file1.mp3', fileName: 'chapter_1.mp3' },
+  { filePath: 'https://example.com/file2.mp3', fileName: 'chapter_2.mp3' },
+];
+
+const downloadIds = await downloadService.addBatchToQueue(files, {
+  batchId: 'genesis_chapters',
+  addToMediaFiles: true,
+  mediaFileOptions: {
+    chapterId: 'genesis_1',
+    mediaType: 'audio',
+  },
+});
+```
+
+### Continue Downloads
+
+```typescript
+// Get summary of what will be processed
+const summary = downloadService.getContinueDownloadsSummary();
+console.log(
+  `Will process ${summary.totalCount} downloads (${summary.pendingCount} pending, ${summary.failedCount} failed)`
+);
 
 // Continue all downloads
-const result = await backgroundDownloadService.continueDownloads();
-console.log(`Processed ${result.processedCount} downloads`);
+const result = await downloadService.continueDownloads();
+console.log(
+  `Processed ${result.processedCount} downloads (${result.successCount} succeeded, ${result.failedCount} failed, ${result.retriedCount} retried)`
+);
 ```
 
-### Get Summary Before Continuing
+### React Hook Usage
 
 ```typescript
-const summary = backgroundDownloadService.getContinueDownloadsSummary();
-if (summary.canContinue) {
-  console.log(`Will process ${summary.totalCount} downloads`);
-  await backgroundDownloadService.continueDownloads();
-}
+import { useDownloads } from '@/features/downloads/hooks/useDownloads';
+
+const { downloadFile, downloads, stats } = useDownloads();
+
+// Download with media file integration
+await downloadFile('https://example.com/file.mp3', 'chapter_1.mp3', {
+  addToMediaFiles: true,
+  originalSearchResult: mediaFileData,
+  mediaFileOptions: {
+    chapterId: 'genesis_1',
+    mediaType: 'audio',
+  },
+});
 ```
 
-### Hook Usage
+## Architecture
 
-```typescript
-import { useBackgroundDownloads } from './hooks/useBackgroundDownloads';
+The download system has been consolidated into a single, unified service that provides:
 
-const { continueDownloads, getContinueDownloadsSummary, isProcessing } =
-  useBackgroundDownloads();
+- **Resumable downloads** using `FileSystem.createDownloadResumable`
+- **Background processing** with Expo TaskManager
+- **Persistent storage** with AsyncStorage
+- **Queue management** with priority-based processing
+- **Retry logic** with exponential backoff
+- **Media file integration** via `DownloadToMediaService`
+- **Compatibility** with old API methods
 
-const summary = getContinueDownloadsSummary();
-const handleContinue = async () => {
-  if (summary.canContinue && !isProcessing) {
-    await continueDownloads();
-  }
-};
-```
-
-## Error Handling
-
-The system provides comprehensive error handling:
-
-- **Retry limits**: Configurable maximum retry attempts
-- **Exponential backoff**: Increasing delays between retries
-- **Fresh starts**: Reset retry counts for manual retry attempts
-- **Detailed logging**: Complete audit trail of all operations
-
-## Performance Considerations
-
-- **Batch processing**: Downloads are processed in configurable batches
-- **Concurrent limits**: Respects system resource constraints
-- **Memory efficient**: Processes downloads without loading all into memory
-- **Background friendly**: Continues processing even when app is backgrounded
-
-## Testing
-
-The enhanced functionality can be tested by:
-
-1. Creating multiple failed downloads
-2. Creating multiple pending downloads
-3. Clicking "Continue Download"
-4. Verifying all downloads are processed
-5. Checking logs for detailed processing information
+This consolidation eliminates the complexity of managing multiple download systems and provides a single source of truth for all download operations.

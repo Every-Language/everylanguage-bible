@@ -6,11 +6,14 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import NetInfo from '@react-native-community/netinfo';
 import { initializationService } from '../services/initialization/InitializationService';
 import { bibleSync } from '../services/sync/bible/BibleSyncService';
 import { localDataService } from '../services/database/LocalDataService';
 import { backgroundSyncService } from '../services/sync/BackgroundSyncService';
+import {
+  NetworkService,
+  type NetworkState,
+} from '../services/network/NetworkService';
 import type { SyncResult, SyncProgress } from '../services/sync/types';
 import { logger } from '../utils/logger';
 
@@ -29,9 +32,9 @@ export interface SyncContextType {
   clearLocalData: () => Promise<void>;
   getSyncMetadata: () => Promise<unknown[]>;
   checkForUpdates: () => Promise<{ needsUpdate: boolean; tables: string[] }>;
+  // New method to control onboarding sync behavior
+  setOnboardingMode: (isOnboarding: boolean) => void;
 }
-
-const SyncContext = createContext<SyncContextType | undefined>(undefined);
 
 interface SyncProviderProps {
   children: React.ReactNode;
@@ -43,14 +46,27 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [hasLocalData, setHasLocalData] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionType, setConnectionType] = useState<string | null>(null);
+  const [networkState, setNetworkState] = useState<NetworkState>({
+    isConnected: false,
+    connectionType: null,
+    isInternetReachable: null,
+  });
+  // New state to control onboarding sync behavior
+  const [isOnboardingMode, setIsOnboardingMode] = useState(false);
 
-  // Network connectivity monitoring
+  // Network connectivity monitoring using NetworkService
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setIsConnected(state.isConnected ?? false);
-      setConnectionType(state.type);
+    const unsubscribe = NetworkService.subscribeToNetworkChanges(
+      (state: NetworkState) => {
+        logger.info('Network state changed:', state);
+        setNetworkState(state);
+      }
+    );
+
+    // Get initial network state
+    NetworkService.getNetworkState().then((state: NetworkState) => {
+      logger.info('Initial network state:', state);
+      setNetworkState(state);
     });
 
     return unsubscribe;
@@ -76,15 +92,16 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       setIsInitialized(true);
       logger.info('App initialization completed successfully');
 
-      // For bible content, we can be more conservative about auto-syncing
-      // Only auto-sync if no local data exists or if explicitly needed
-      if (!dataAvailable) {
+      // Only auto-sync if not in onboarding mode and no local data exists
+      if (!isOnboardingMode && !dataAvailable) {
         logger.info('No local data found, starting initial sync...');
         await syncNow();
-      } else {
-        // Check for updates in background without forcing sync
+      } else if (!isOnboardingMode) {
+        // Check for updates in background without forcing sync (only if not onboarding)
         logger.info('Checking for bible content updates...');
         await checkForUpdates();
+      } else {
+        logger.info('Onboarding mode: skipping automatic sync');
       }
 
       // Register background sync after successful initialization
@@ -104,7 +121,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       logger.error('Failed to initialize app:', error);
       throw error;
     }
-  }, [isInitialized]);
+  }, [isInitialized, isOnboardingMode]);
 
   const checkForUpdates = useCallback(async (): Promise<{
     needsUpdate: boolean;
@@ -132,6 +149,21 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     if (isSyncing || !isInitialized) return;
 
     try {
+      // Check network connectivity using NetworkService
+      const currentNetworkState = await NetworkService.getNetworkState();
+      if (!NetworkService.isNetworkAvailableForDownloads(currentNetworkState)) {
+        const errorMessage = 'No internet connection available for sync';
+        logger.warn('Sync skipped: No internet connection');
+        setSyncProgress({
+          table: 'Sync failed',
+          recordsSynced: 0,
+          totalRecords: 0,
+          isComplete: false,
+          error: errorMessage,
+        });
+        return;
+      }
+
       setIsSyncing(true);
 
       // Reset progress
@@ -172,13 +204,29 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
 
       logger.info('Bible sync completed:', results);
     } catch (error) {
-      logger.error('Bible sync failed:', error);
+      // Enhanced error logging with detailed information
+      const errorDetails = {
+        error: error,
+        errorType: typeof error,
+        errorConstructor: (error as any)?.constructor?.name,
+        errorMessage: (error as any)?.message || 'No message',
+        errorStack: (error as any)?.stack || 'No stack',
+        errorStringified: JSON.stringify(
+          error,
+          Object.getOwnPropertyNames(error || {})
+        ),
+      };
+
+      logger.error('Bible sync failed:', errorDetails);
+
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown sync error';
       setSyncProgress({
         table: 'Sync failed',
         recordsSynced: 0,
         totalRecords: 0,
         isComplete: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       });
     } finally {
       setIsSyncing(false);
@@ -191,6 +239,20 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     if (isSyncing || !isInitialized) return;
 
     try {
+      // Check network connectivity using NetworkService
+      const currentNetworkState = await NetworkService.getNetworkState();
+      if (!NetworkService.isNetworkAvailableForDownloads(currentNetworkState)) {
+        const errorMessage = 'No internet connection available for sync';
+        logger.warn('Force sync skipped: No internet connection');
+        setSyncProgress({
+          table: 'Force sync failed',
+          recordsSynced: 0,
+          isComplete: false,
+          error: errorMessage,
+        });
+        return;
+      }
+
       setIsSyncing(true);
       setSyncProgress({
         table: 'Force syncing all bible content...',
@@ -227,12 +289,28 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
 
       logger.info('Force sync completed:', results);
     } catch (error) {
-      logger.error('Force sync failed:', error);
+      // Enhanced error logging with detailed information
+      const errorDetails = {
+        error: error,
+        errorType: typeof error,
+        errorConstructor: (error as any)?.constructor?.name,
+        errorMessage: (error as any)?.message || 'No message',
+        errorStack: (error as any)?.stack || 'No stack',
+        errorStringified: JSON.stringify(
+          error,
+          Object.getOwnPropertyNames(error || {})
+        ),
+      };
+
+      logger.error('Force sync failed:', errorDetails);
+
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown force sync error';
       setSyncProgress({
         table: 'Force sync failed',
         recordsSynced: 0,
         isComplete: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       });
     } finally {
       setIsSyncing(false);
@@ -278,6 +356,11 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     }
   }, [isInitialized]);
 
+  const setOnboardingMode = useCallback((isOnboarding: boolean) => {
+    logger.info(`Setting onboarding mode: ${isOnboarding}`);
+    setIsOnboardingMode(isOnboarding);
+  }, []);
+
   // Initialize database on mount
   useEffect(() => {
     initializeDatabase().catch(error => {
@@ -302,7 +385,6 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
     return unsubscribe;
   }, []);
 
-  // ✅ PERFORMANCE FIX: Memoize context value to prevent unnecessary re-renders
   const value: SyncContextType = useMemo(
     () => ({
       isInitialized,
@@ -310,8 +392,8 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       syncProgress,
       lastSyncAt,
       hasLocalData,
-      isConnected,
-      connectionType,
+      isConnected: networkState.isConnected,
+      connectionType: networkState.connectionType,
       initializeDatabase,
       syncNow,
       forceFullSync,
@@ -319,6 +401,7 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       clearLocalData,
       getSyncMetadata,
       checkForUpdates,
+      setOnboardingMode,
     }),
     [
       isInitialized,
@@ -326,8 +409,8 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       syncProgress,
       lastSyncAt,
       hasLocalData,
-      isConnected,
-      connectionType,
+      networkState.isConnected,
+      networkState.connectionType,
       initializeDatabase,
       syncNow,
       forceFullSync,
@@ -335,11 +418,14 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       clearLocalData,
       getSyncMetadata,
       checkForUpdates,
+      setOnboardingMode,
     ]
   );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
 };
+
+const SyncContext = createContext<SyncContextType | undefined>(undefined);
 
 export const useSync = (): SyncContextType => {
   const context = useContext(SyncContext);

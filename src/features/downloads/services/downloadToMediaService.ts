@@ -2,6 +2,7 @@ import { MediaFilesService } from '@/shared/services/database/MediaFilesService'
 import { LocalMediaFile } from '@/shared/services/database/schema';
 import { logger } from '@/shared/utils/logger';
 import { FileDownloadProgress } from '../hooks/useDownloadProgress';
+import MediaFilesVersesSyncService from '@/shared/services/sync/media/MediaFilesVersesSyncService';
 
 export interface DownloadToMediaOptions {
   languageEntityId?: string;
@@ -12,6 +13,7 @@ export interface DownloadToMediaOptions {
   version?: number;
   chapterId?: string;
   verses?: string; // JSON string of verse IDs
+  syncVersesData?: boolean; // Whether to automatically sync media file verses data after completion
 }
 
 export interface MediaFileCreationResult {
@@ -26,9 +28,12 @@ export interface MediaFileCreationResult {
 export class DownloadToMediaService {
   private static instance: DownloadToMediaService;
   private mediaFilesService: MediaFilesService;
+  private mediaFilesVersesSyncService: MediaFilesVersesSyncService;
 
   private constructor() {
     this.mediaFilesService = MediaFilesService.getInstance();
+    this.mediaFilesVersesSyncService =
+      MediaFilesVersesSyncService.getInstance();
   }
 
   static getInstance(): DownloadToMediaService {
@@ -267,6 +272,63 @@ export class DownloadToMediaService {
           mediaFile.file_size
         );
 
+        // Automatically search for media file verses data after updating existing media file
+        if (options.syncVersesData !== false) {
+          // Default to true if not specified
+          try {
+            logger.info(
+              'Searching for media file verses data for updated media file:',
+              {
+                mediaFileId: mediaFile.id,
+              }
+            );
+
+            const syncResult =
+              await this.mediaFilesVersesSyncService.syncForMediaFile(
+                mediaFile.id
+              );
+
+            if (syncResult && syncResult.length > 0) {
+              const versesResult = syncResult.find(
+                result => result.tableName === 'media_files_verses'
+              );
+              if (versesResult && versesResult.success) {
+                logger.info(
+                  'Successfully synced media file verses data for updated file:',
+                  {
+                    mediaFileId: mediaFile.id,
+                    recordsSynced: versesResult.recordsSynced,
+                  }
+                );
+              } else {
+                logger.warn(
+                  'Media file verses sync completed but may have had issues for updated file:',
+                  {
+                    mediaFileId: mediaFile.id,
+                    syncResult,
+                  }
+                );
+              }
+            } else {
+              logger.info(
+                'No media file verses data found for updated media file:',
+                {
+                  mediaFileId: mediaFile.id,
+                }
+              );
+            }
+          } catch (syncError) {
+            logger.error(
+              'Failed to sync media file verses data after updating existing media file:',
+              {
+                mediaFileId: mediaFile.id,
+                error: (syncError as Error).message,
+              }
+            );
+            // Don't fail the download completion if verses sync fails
+          }
+        }
+
         return {
           success: true,
           mediaFileId: mediaFile.id,
@@ -299,7 +361,62 @@ export class DownloadToMediaService {
       logger.info('Successfully added download to media files table:', {
         mediaFileId: mediaFile.id,
         fileName: completedFile.fileName,
+        localPath: mediaFile.local_path,
+        remotePath: mediaFile.remote_path,
+        fileSize: mediaFile.file_size,
+        chapterId: mediaFile.chapter_id,
       });
+
+      // Automatically search for media file verses data after successful media file creation
+      if (options.syncVersesData !== false) {
+        // Default to true if not specified
+        try {
+          logger.info(
+            'Searching for media file verses data for newly created media file:',
+            {
+              mediaFileId: mediaFile.id,
+            }
+          );
+
+          const syncResult =
+            await this.mediaFilesVersesSyncService.syncForMediaFile(
+              mediaFile.id
+            );
+
+          if (syncResult && syncResult.length > 0) {
+            const versesResult = syncResult.find(
+              result => result.tableName === 'media_files_verses'
+            );
+            if (versesResult && versesResult.success) {
+              logger.info('Successfully synced media file verses data:', {
+                mediaFileId: mediaFile.id,
+                recordsSynced: versesResult.recordsSynced,
+              });
+            } else {
+              logger.warn(
+                'Media file verses sync completed but may have had issues:',
+                {
+                  mediaFileId: mediaFile.id,
+                  syncResult,
+                }
+              );
+            }
+          } else {
+            logger.info('No media file verses data found for media file:', {
+              mediaFileId: mediaFile.id,
+            });
+          }
+        } catch (syncError) {
+          logger.error(
+            'Failed to sync media file verses data after download completion:',
+            {
+              mediaFileId: mediaFile.id,
+              error: (syncError as Error).message,
+            }
+          );
+          // Don't fail the download completion if verses sync fails
+        }
+      }
 
       return {
         success: true,

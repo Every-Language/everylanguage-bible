@@ -10,6 +10,9 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { onboardingSyncService } from '../services/OnboardingSyncService';
+import type { OnboardingSyncProgress } from '../services/OnboardingSyncService';
+import { logger } from '@/shared/utils/logger';
 
 interface ImportBibleScreenProps {
   onBack: () => void;
@@ -102,20 +105,19 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
   onComplete,
 }) => {
   const { theme } = useTheme();
-  const [bibleVersions, setBibleVersions] =
-    useState<BibleVersion[]>(sampleBibleVersions);
+  const [versions] = useState<BibleVersion[]>(sampleBibleVersions);
+  const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
-
-  const selectedVersions = bibleVersions.filter(version => version.isSelected);
+  const [syncProgress, setSyncProgress] =
+    useState<OnboardingSyncProgress | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const handleVersionToggle = (versionId: string) => {
-    setBibleVersions(prev =>
-      prev.map(version =>
-        version.id === versionId
-          ? { ...version, isSelected: !version.isSelected }
-          : version
-      )
+    setSelectedVersions(prev =>
+      prev.includes(versionId)
+        ? prev.filter(id => id !== versionId)
+        : [...prev, versionId]
     );
   };
 
@@ -124,73 +126,112 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
 
     setIsImporting(true);
     setImportProgress(0);
+    setSyncError(null);
 
-    // Simulate import process
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      setImportProgress(i);
+    try {
+      // Set up progress callback
+      onboardingSyncService.setProgressCallback(
+        (progress: OnboardingSyncProgress) => {
+          setSyncProgress(progress);
+          setImportProgress(progress.progress);
+        }
+      );
+
+      // Perform optimized onboarding sync
+      const result = await onboardingSyncService.performOnboardingSync();
+
+      if (result.success) {
+        logger.info(
+          `Onboarding sync completed successfully in ${result.duration}ms`
+        );
+        onComplete();
+      } else {
+        logger.error('Onboarding sync failed:', result.errors);
+        setSyncError(result.errors.join(', '));
+        // Still complete onboarding even with errors
+        setTimeout(() => {
+          onComplete();
+        }, 2000);
+      }
+    } catch (error) {
+      logger.error('Import failed:', error);
+      setSyncError(error instanceof Error ? error.message : 'Import failed');
+      // Still complete onboarding even with errors
+      setTimeout(() => {
+        onComplete();
+      }, 2000);
+    } finally {
+      setIsImporting(false);
+      onboardingSyncService.setProgressCallback(null);
     }
-
-    setIsImporting(false);
-    onComplete();
   };
 
-  const renderBibleVersion = (version: BibleVersion) => (
-    <TouchableOpacity
-      key={version.id}
-      style={[
-        styles.versionItem,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: version.isSelected
-            ? theme.colors.primary
-            : theme.colors.border,
-        },
-      ]}
-      onPress={() => handleVersionToggle(version.id)}>
-      <View style={styles.versionInfo}>
-        <View style={styles.versionHeader}>
-          <Text style={[styles.versionName, { color: theme.colors.text }]}>
-            {version.name}
-          </Text>
-          <View
-            style={[
-              styles.typeBadge,
-              {
-                backgroundColor:
-                  version.type === 'audio'
-                    ? theme.colors.accent
-                    : theme.colors.info,
-              },
-            ]}>
-            <Text
-              style={[styles.typeText, { color: theme.colors.textInverse }]}>
-              {version.type.toUpperCase()}
+  const renderBibleVersion = (version: BibleVersion) => {
+    const isSelected = selectedVersions.includes(version.id);
+    return (
+      <TouchableOpacity
+        key={version.id}
+        style={[
+          styles.versionItem,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor: isSelected
+              ? theme.colors.primary
+              : theme.colors.border,
+          },
+        ]}
+        onPress={() => handleVersionToggle(version.id)}>
+        <View style={styles.versionInfo}>
+          <View style={styles.versionHeader}>
+            <Text style={[styles.versionName, { color: theme.colors.text }]}>
+              {version.name}
             </Text>
+            <View
+              style={[
+                styles.typeBadge,
+                {
+                  backgroundColor:
+                    version.type === 'audio'
+                      ? theme.colors.accent
+                      : theme.colors.info,
+                },
+              ]}>
+              <Text
+                style={[styles.typeText, { color: theme.colors.textInverse }]}>
+                {version.type.toUpperCase()}
+              </Text>
+            </View>
           </View>
-        </View>
-        <Text
-          style={[
-            styles.versionLanguage,
-            { color: theme.colors.textSecondary },
-          ]}>
-          {version.language}
-        </Text>
-        <Text
-          style={[styles.versionSize, { color: theme.colors.textSecondary }]}>
-          {version.size}
-        </Text>
-      </View>
-      <View
-        style={[styles.checkbox, getCheckboxStyle(theme, version.isSelected)]}>
-        {version.isSelected && (
-          <Text style={[styles.checkmark, { color: theme.colors.textInverse }]}>
-            ✓
+          <Text
+            style={[
+              styles.versionLanguage,
+              { color: theme.colors.textSecondary },
+            ]}>
+            {version.language}
           </Text>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+          <Text
+            style={[styles.versionSize, { color: theme.colors.textSecondary }]}>
+            {version.size}
+          </Text>
+        </View>
+        <View style={[styles.checkbox, getCheckboxStyle(theme, isSelected)]}>
+          {isSelected && (
+            <Text
+              style={[styles.checkmark, { color: theme.colors.textInverse }]}>
+              ✓
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const getProgressMessage = () => {
+    if (syncProgress) {
+      return syncProgress.message;
+    }
+    return 'Preparing Bible content...';
+  };
 
   return (
     <SafeAreaView
@@ -217,78 +258,91 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.versionsContainer}>
-          {bibleVersions.map(renderBibleVersion)}
-        </View>
-      </ScrollView>
-
-      {isImporting && (
-        <View style={styles.importOverlay}>
-          <View
-            style={[
-              styles.importModal,
-              { backgroundColor: theme.colors.surface },
-            ]}>
-            <Text style={[styles.importTitle, { color: theme.colors.text }]}>
-              Importing Bible Content
+        {/* Bible Version Selection */}
+        {!isImporting && (
+          <>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              Available Bible Versions
             </Text>
-            <View style={styles.progressContainer}>
+            <Text
+              style={[
+                styles.sectionSubtitle,
+                { color: theme.colors.textSecondary },
+              ]}>
+              Select the versions you want to download for offline use
+            </Text>
+            {versions.map(renderBibleVersion)}
+          </>
+        )}
+
+        {/* Import Progress */}
+        {isImporting && (
+          <View style={styles.progressContainer}>
+            <ActivityIndicator size='large' color={theme.colors.primary} />
+            <Text style={[styles.progressText, { color: theme.colors.text }]}>
+              {getProgressMessage()}
+            </Text>
+            <View style={styles.progressBar}>
               <View
                 style={[
-                  styles.progressBar,
-                  { backgroundColor: theme.colors.border },
-                ]}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      backgroundColor: theme.colors.primary,
-                      width: `${importProgress}%`,
-                    },
-                  ]}
-                />
-              </View>
+                  styles.progressFill,
+                  {
+                    width: `${importProgress}%`,
+                    backgroundColor: theme.colors.primary,
+                  },
+                ]}
+              />
+            </View>
+            <Text
+              style={[
+                styles.progressPercentage,
+                { color: theme.colors.textSecondary },
+              ]}>
+              {importProgress}%
+            </Text>
+            {syncProgress?.recordsSynced !== undefined && (
               <Text
                 style={[
-                  styles.progressText,
+                  styles.recordsSynced,
                   { color: theme.colors.textSecondary },
                 ]}>
-                {importProgress}%
+                Synced {syncProgress.recordsSynced.toLocaleString()} records
               </Text>
-            </View>
-            <ActivityIndicator
-              color={theme.colors.primary}
-              style={styles.spinner}
-            />
+            )}
+            {syncError && (
+              <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                {syncError}
+              </Text>
+            )}
           </View>
-        </View>
-      )}
+        )}
+      </ScrollView>
 
+      {/* Action Button */}
       <View style={styles.footer}>
-        <Text
-          style={[styles.selectionInfo, { color: theme.colors.textSecondary }]}>
-          {selectedVersions.length} version
-          {selectedVersions.length !== 1 ? 's' : ''} selected
-        </Text>
         <TouchableOpacity
           style={[
             styles.importButton,
             {
               backgroundColor:
-                selectedVersions.length > 0
+                selectedVersions.length > 0 && !isImporting
                   ? theme.colors.primary
-                  : theme.colors.interactiveDisabled,
+                  : theme.colors.border,
             },
           ]}
           onPress={handleImport}
           disabled={selectedVersions.length === 0 || isImporting}>
-          <Text
-            style={[
-              styles.importButtonText,
-              { color: theme.colors.textInverse },
-            ]}>
-            {isImporting ? 'Importing...' : 'Import Selected'}
-          </Text>
+          {isImporting ? (
+            <ActivityIndicator size='small' color={theme.colors.textInverse} />
+          ) : (
+            <Text
+              style={[
+                styles.importButtonText,
+                { color: theme.colors.textInverse },
+              ]}>
+              Import Selected ({selectedVersions.length})
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -326,9 +380,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  versionsContainer: {
     padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    marginBottom: 16,
   },
   versionItem: {
     flexDirection: 'row',
@@ -354,7 +415,7 @@ const styles = StyleSheet.create({
   },
   typeBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,
     borderRadius: 6,
     marginLeft: 8,
   },
@@ -382,14 +443,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
+  progressContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  progressText: {
+    textAlign: 'center',
+    fontSize: 16,
+    marginBottom: 16,
+    fontWeight: '500',
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    overflow: 'hidden',
+    marginBottom: 8,
+    width: '100%',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressPercentage: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  recordsSynced: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#ff4444',
+  },
   footer: {
     padding: 20,
     paddingTop: 10,
-  },
-  selectionInfo: {
-    textAlign: 'center',
-    marginBottom: 12,
-    fontSize: 14,
   },
   importButton: {
     height: 50,
@@ -400,49 +493,5 @@ const styles = StyleSheet.create({
   importButtonText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  importOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  importModal: {
-    padding: 24,
-    borderRadius: 16,
-    margin: 20,
-    alignItems: 'center',
-    minWidth: 280,
-  },
-  importTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  progressContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  progressText: {
-    textAlign: 'center',
-    fontSize: 14,
-  },
-  spinner: {
-    marginTop: 10,
   },
 });
