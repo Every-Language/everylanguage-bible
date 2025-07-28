@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
@@ -15,8 +15,9 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { BRAND_COLORS, COLOR_VARIATIONS } from '@/shared/constants/theme';
 
-// Custom background component for Android 9 compatibility
+// Custom background component for consistent solid colors across all platforms
 const SolidBackground: React.FC<BottomSheetBackgroundProps> = ({
   style,
   animatedIndex,
@@ -42,10 +43,12 @@ const SolidBackground: React.FC<BottomSheetBackgroundProps> = ({
       <View
         style={[
           StyleSheet.absoluteFillObject,
+          styles.backgroundView,
           {
-            backgroundColor: theme.mode === 'dark' ? '#1A1B19' : '#FFFFFF',
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
+            backgroundColor:
+              theme.mode === 'dark'
+                ? COLOR_VARIATIONS.CHARCOAL_DARK // Use theme's solid dark color
+                : BRAND_COLORS.WHITE, // Use theme's solid white color
           },
         ]}
       />
@@ -134,24 +137,16 @@ export const SlideUpModal: React.FC<SlideUpModalProps> = ({
         enableDismissOnClose={enableDismissOnClose}
         enablePanDownToClose={enablePanDownToClose}
         backdropComponent={backdropComponent || renderBackdrop}
-        backgroundComponent={Platform.OS === 'android' ? SolidBackground : null}
-        backgroundStyle={
-          Platform.OS === 'android'
-            ? undefined
-            : [
-                styles.modal,
-                {
-                  // Ensure solid background for Android 9 compatibility
-                  backgroundColor:
-                    theme.mode === 'dark'
-                      ? '#1A1B19' // Use solid color instead of potentially transparent theme color
-                      : '#FFFFFF',
-                },
-              ]
-        }
+        backgroundComponent={SolidBackground}
+        backgroundStyle={undefined}
         handleIndicatorStyle={[
           styles.handle,
-          { backgroundColor: theme.colors.border },
+          {
+            backgroundColor:
+              theme.mode === 'dark'
+                ? COLOR_VARIATIONS.CHARCOAL_LIGHT // Use solid color for better visibility
+                : COLOR_VARIATIONS.CREAM_DARK, // Use solid color for better visibility
+          },
         ]}
         keyboardBehavior='fillParent'
         keyboardBlurBehavior='restore'
@@ -162,7 +157,12 @@ export const SlideUpModal: React.FC<SlideUpModalProps> = ({
             <View
               style={[
                 styles.header,
-                { borderBottomColor: theme.colors.border },
+                {
+                  borderBottomColor:
+                    theme.mode === 'dark'
+                      ? COLOR_VARIATIONS.CHARCOAL_LIGHT // Use solid color for better visibility
+                      : COLOR_VARIATIONS.CREAM_DARK, // Use solid color for better visibility
+                },
               ]}>
               {header}
             </View>
@@ -186,11 +186,11 @@ export const SlideUpModal: React.FC<SlideUpModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  modal: {
+  backgroundView: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     // iOS shadow properties
-    shadowColor: '#000',
+    shadowColor: BRAND_COLORS.BLACK,
     shadowOffset: {
       width: 0,
       height: -2,
