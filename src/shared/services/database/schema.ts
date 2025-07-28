@@ -725,7 +725,7 @@ export const migrateMediaFilesTable = async (
     try {
       if (db) {
         const pragmaResult = await db.getAllAsync('PRAGMA integrity_check');
-        logger.error('Database integrity check result:', pragmaResult);
+        logger.info('Database integrity check result:', pragmaResult);
       }
     } catch (integrityError) {
       logger.error('Failed to run integrity check:', integrityError);
