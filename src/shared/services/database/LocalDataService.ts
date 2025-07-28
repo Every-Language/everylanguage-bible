@@ -31,6 +31,12 @@ export interface VerseSort {
   direction: 'asc' | 'desc';
 }
 
+export enum MediaAvailabilityStatus {
+  NONE = 'none',
+  PARTIAL = 'partial',
+  COMPLETE = 'complete',
+}
+
 export class LocalDataService {
   private static instance: LocalDataService;
 
@@ -165,6 +171,187 @@ export class LocalDataService {
     return count > 0;
   }
 
+  /**
+   * Check if all required tables have complete data
+   */
+  async isDataComplete(): Promise<{
+    isComplete: boolean;
+    details: Array<{
+      tableName: string;
+      localCount: number;
+      expectedMinCount: number;
+      isComplete: boolean;
+    }>;
+  }> {
+    try {
+      const checks = [
+        {
+          tableName: 'books',
+          checkFn: () => this.getBooksCount(),
+          expectedMinCount: 66,
+        },
+        {
+          tableName: 'chapters',
+          checkFn: () => this.getChaptersCount(),
+          expectedMinCount: 1000,
+        },
+        {
+          tableName: 'verses',
+          checkFn: () => this.getVersesCount(),
+          expectedMinCount: 30000,
+        },
+      ];
+
+      const results = await Promise.all(
+        checks.map(async check => {
+          const count = await check.checkFn();
+          return {
+            tableName: check.tableName,
+            localCount: count,
+            expectedMinCount: check.expectedMinCount,
+            isComplete: count >= check.expectedMinCount,
+          };
+        })
+      );
+
+      const isComplete = results.every(result => result.isComplete);
+
+      return {
+        isComplete,
+        details: results,
+      };
+    } catch (error) {
+      logger.error('Error checking data completeness:', error);
+      return {
+        isComplete: false,
+        details: [],
+      };
+    }
+  }
+
+  /**
+   * Get detailed completeness information for each table
+   */
+  async getDetailedCompletenessInfo(): Promise<{
+    books: {
+      count: number;
+      expectedMin: number;
+      isComplete: boolean;
+      percentage: number;
+    };
+    chapters: {
+      count: number;
+      expectedMin: number;
+      isComplete: boolean;
+      percentage: number;
+    };
+    verses: {
+      count: number;
+      expectedMin: number;
+      isComplete: boolean;
+      percentage: number;
+    };
+    overall: {
+      totalRecords: number;
+      totalExpected: number;
+      overallPercentage: number;
+      health: 'excellent' | 'good' | 'warning' | 'critical';
+    };
+  }> {
+    try {
+      const [booksCount, chaptersCount, versesCount] = await Promise.all([
+        this.getBooksCount(),
+        this.getChaptersCount(),
+        this.getVersesCount(),
+      ]);
+
+      const booksInfo = {
+        count: booksCount,
+        expectedMin: 66,
+        isComplete: booksCount >= 66,
+        percentage: Math.min((booksCount / 66) * 100, 100),
+      };
+
+      const chaptersInfo = {
+        count: chaptersCount,
+        expectedMin: 1000,
+        isComplete: chaptersCount >= 1000,
+        percentage: Math.min((chaptersCount / 1000) * 100, 100),
+      };
+
+      const versesInfo = {
+        count: versesCount,
+        expectedMin: 30000,
+        isComplete: versesCount >= 30000,
+        percentage: Math.min((versesCount / 30000) * 100, 100),
+      };
+
+      const totalRecords = booksCount + chaptersCount + versesCount;
+      const totalExpected = 66 + 1000 + 30000;
+      const overallPercentage = Math.min(
+        (totalRecords / totalExpected) * 100,
+        100
+      );
+
+      // Determine overall health
+      let health: 'excellent' | 'good' | 'warning' | 'critical' = 'excellent';
+
+      if (
+        overallPercentage >= 95 &&
+        booksInfo.isComplete &&
+        chaptersInfo.isComplete &&
+        versesInfo.isComplete
+      ) {
+        health = 'excellent';
+      } else if (
+        overallPercentage >= 80 &&
+        booksInfo.isComplete &&
+        chaptersInfo.isComplete
+      ) {
+        health = 'good';
+      } else if (overallPercentage >= 50 && booksInfo.isComplete) {
+        health = 'warning';
+      } else {
+        health = 'critical';
+      }
+
+      return {
+        books: booksInfo,
+        chapters: chaptersInfo,
+        verses: versesInfo,
+        overall: {
+          totalRecords,
+          totalExpected,
+          overallPercentage,
+          health,
+        },
+      };
+    } catch (error) {
+      logger.error('Error getting detailed completeness info:', error);
+      return {
+        books: { count: 0, expectedMin: 66, isComplete: false, percentage: 0 },
+        chapters: {
+          count: 0,
+          expectedMin: 1000,
+          isComplete: false,
+          percentage: 0,
+        },
+        verses: {
+          count: 0,
+          expectedMin: 30000,
+          isComplete: false,
+          percentage: 0,
+        },
+        overall: {
+          totalRecords: 0,
+          totalExpected: 31066,
+          overallPercentage: 0,
+          health: 'critical',
+        },
+      };
+    }
+  }
+
   // Utility method to convert local book to the format expected by the UI
   transformToUIFormat(localBook: LocalBook): Tables<'books'> {
     return {
@@ -249,10 +436,11 @@ export class LocalDataService {
 
   /**
    * Get media availability for multiple chapters
+   * Returns: 'none' (no media files), 'partial' (some verses covered), 'complete' (all verses covered)
    */
   async getChaptersMediaAvailability(
     chapterIds: string[]
-  ): Promise<Map<string, boolean>> {
+  ): Promise<Map<string, MediaAvailabilityStatus>> {
     if (chapterIds.length === 0) {
       return new Map();
     }
@@ -260,36 +448,105 @@ export class LocalDataService {
     try {
       const placeholders = chapterIds.map(() => '?').join(',');
       const query = `
-        SELECT chapter_id, COUNT(*) as count 
-        FROM media_files 
-        WHERE chapter_id IN (${placeholders}) AND deleted_at IS NULL 
-        GROUP BY chapter_id
+        SELECT 
+          mf.chapter_id,
+          mf.start_verse_id,
+          mf.end_verse_id,
+          c.total_verses
+        FROM media_files mf
+        LEFT JOIN chapters c ON mf.chapter_id = c.id
+        WHERE mf.chapter_id IN (${placeholders}) AND mf.deleted_at IS NULL
+        ORDER BY mf.chapter_id, mf.start_verse_id
       `;
 
       const results = await databaseManager.executeQuery<{
         chapter_id: string;
-        count: number;
+        start_verse_id: string | null;
+        end_verse_id: string | null;
+        total_verses: number;
       }>(query, chapterIds);
 
-      const availabilityMap = new Map<string, boolean>();
+      const availabilityMap = new Map<string, MediaAvailabilityStatus>();
 
       // Initialize all chapters as not available
       for (const chapterId of chapterIds) {
-        availabilityMap.set(chapterId, false);
+        availabilityMap.set(chapterId, MediaAvailabilityStatus.NONE);
       }
 
-      // Set available chapters based on results
+      // Group results by chapter
+      const chapterGroups = new Map<
+        string,
+        Array<{
+          start_verse_id: string | null;
+          end_verse_id: string | null;
+          total_verses: number;
+        }>
+      >();
+
       for (const result of results) {
-        availabilityMap.set(result.chapter_id, result.count > 0);
+        if (!chapterGroups.has(result.chapter_id)) {
+          chapterGroups.set(result.chapter_id, []);
+        }
+        chapterGroups.get(result.chapter_id)!.push({
+          start_verse_id: result.start_verse_id,
+          end_verse_id: result.end_verse_id,
+          total_verses: result.total_verses,
+        });
+      }
+
+      // Calculate availability for each chapter
+      for (const [chapterId, mediaFiles] of chapterGroups) {
+        if (mediaFiles.length === 0) {
+          availabilityMap.set(chapterId, MediaAvailabilityStatus.NONE);
+          continue;
+        }
+
+        const totalVerses = mediaFiles[0]?.total_verses || 0;
+        let coveredVerses = 0;
+
+        // Calculate total verses covered by all media files
+        for (const mediaFile of mediaFiles) {
+          if (mediaFile.start_verse_id && mediaFile.end_verse_id) {
+            // Parse verse numbers from format like "gen-1-1" and "gen-1-31"
+            // Split by "-" and get the 3rd element (index 2)
+            const startVerseParts = mediaFile.start_verse_id.split('-');
+            const endVerseParts = mediaFile.end_verse_id.split('-');
+
+            if (startVerseParts.length >= 3 && endVerseParts.length >= 3) {
+              const startVerseStr = startVerseParts[2];
+              const endVerseStr = endVerseParts[2];
+
+              if (startVerseStr && endVerseStr) {
+                const startVerse = parseInt(startVerseStr, 10);
+                const endVerse = parseInt(endVerseStr, 10);
+
+                // Validate that we got valid numbers
+                if (!isNaN(startVerse) && !isNaN(endVerse)) {
+                  const versesInFile = endVerse - startVerse + 1;
+                  coveredVerses += versesInFile;
+                }
+              }
+            }
+          }
+        }
+
+        // Determine availability status
+        if (coveredVerses === 0) {
+          availabilityMap.set(chapterId, MediaAvailabilityStatus.NONE);
+        } else if (coveredVerses >= totalVerses) {
+          availabilityMap.set(chapterId, MediaAvailabilityStatus.COMPLETE);
+        } else {
+          availabilityMap.set(chapterId, MediaAvailabilityStatus.PARTIAL);
+        }
       }
 
       return availabilityMap;
     } catch (error) {
       logger.error('Error getting chapters media availability:', error);
       // Return all chapters as not available on error
-      const availabilityMap = new Map<string, boolean>();
+      const availabilityMap = new Map<string, MediaAvailabilityStatus>();
       for (const chapterId of chapterIds) {
-        availabilityMap.set(chapterId, false);
+        availabilityMap.set(chapterId, MediaAvailabilityStatus.NONE);
       }
       return availabilityMap;
     }
@@ -318,7 +575,8 @@ export class LocalDataService {
 
     return localChapters.map(chapter => ({
       ...this.transformChapterToUIFormat(chapter),
-      isAvailable: mediaAvailability.get(chapter.id) || false,
+      mediaAvailability:
+        mediaAvailability.get(chapter.id) || MediaAvailabilityStatus.NONE,
     }));
   }
 

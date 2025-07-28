@@ -1,5 +1,6 @@
 import type { Tables } from '@everylanguage/shared-types';
 import type { LocalVerseText } from '../../../shared/services/database/schema';
+import type { MediaAvailabilityStatus } from '../../../shared/services/database/LocalDataService';
 
 // Use the existing books table type from shared types
 export type Book = Tables<'books'>;
@@ -10,7 +11,7 @@ export type Verse = Tables<'verses'>;
 export interface ChapterWithMetadata extends Chapter {
   title: string;
   verseRange: string;
-  isAvailable: boolean;
+  mediaAvailability: MediaAvailabilityStatus;
 }
 
 // ✅ NEW: Interface for verse with associated text

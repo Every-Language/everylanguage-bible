@@ -12,6 +12,80 @@ export interface AudioFileInfo {
 }
 
 /**
+ * Audio utility functions for consistent time formatting and audio operations
+ */
+
+/**
+ * Format time in seconds to MM:SS or HH:MM:SS format
+ * Truncates to standard decimal places (no decimal places for display)
+ * @param seconds - Time in seconds (can have decimal places)
+ * @returns Formatted time string
+ */
+export const formatTime = (seconds: number): string => {
+  // Truncate to whole seconds for display
+  const truncatedSeconds = Math.floor(seconds);
+
+  const hours = Math.floor(truncatedSeconds / 3600);
+  const minutes = Math.floor((truncatedSeconds % 3600) / 60);
+  const secs = truncatedSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  } else {
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
+};
+
+/**
+ * Format duration for display (e.g., "2m 30s" or "1h 15m 30s")
+ * Truncates to standard decimal places
+ * @param seconds - Duration in seconds (can have decimal places)
+ * @returns Formatted duration string
+ */
+export const formatDuration = (seconds: number): string => {
+  // Truncate to whole seconds for display
+  const truncatedSeconds = Math.floor(seconds);
+
+  const hours = Math.floor(truncatedSeconds / 3600);
+  const minutes = Math.floor((truncatedSeconds % 3600) / 60);
+  const secs = truncatedSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  } else {
+    return `${secs}s`;
+  }
+};
+
+/**
+ * Truncate time value to standard decimal places for internal use
+ * @param seconds - Time in seconds with potential many decimal places
+ * @param decimalPlaces - Number of decimal places to keep (default: 1)
+ * @returns Truncated time value
+ */
+export const truncateTime = (
+  seconds: number,
+  decimalPlaces: number = 1
+): number => {
+  const factor = Math.pow(10, decimalPlaces);
+  return Math.floor(seconds * factor) / factor;
+};
+
+/**
+ * Validate and sanitize time values
+ * @param time - Time value to validate
+ * @returns Sanitized time value
+ */
+export const sanitizeTime = (time: number): number => {
+  if (isNaN(time) || !isFinite(time)) {
+    return 0;
+  }
+  return Math.max(0, time);
+};
+
+/**
  * Validate an audio file before attempting to load it
  */
 export async function validateAudioFile(

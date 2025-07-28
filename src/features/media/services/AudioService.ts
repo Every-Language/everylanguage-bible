@@ -5,7 +5,12 @@ import {
   AudioSource,
 } from 'expo-audio';
 import { logger } from '@/shared/utils/logger';
-import { validateAudioFile, retryAudioLoad } from '../utils/audioUtils';
+import {
+  validateAudioFile,
+  retryAudioLoad,
+  truncateTime,
+  sanitizeTime,
+} from '../utils/audioUtils';
 import { MediaTrack } from '../types';
 
 export interface AudioServiceState {
@@ -161,10 +166,16 @@ export class AudioService {
         }
       );
 
+      // Ensure we start from the beginning
+      if (this.player) {
+        await this.player.seekTo(0);
+      }
+
       this.setState({
         isLoaded: true,
         isLoading: false,
         error: null,
+        position: 0,
       });
 
       this.callbacks.onLoad?.(this.state.duration);
@@ -294,10 +305,13 @@ export class AudioService {
       return;
     }
 
+    const sanitizedPosition = sanitizeTime(position);
+    const truncatedPosition = truncateTime(sanitizedPosition, 1);
     const clampedPosition = Math.max(
       0,
-      Math.min(position, this.state.duration)
+      Math.min(truncatedPosition, this.state.duration)
     );
+
     await this.player.seekTo(clampedPosition);
     this.setState({ position: clampedPosition });
     // logger.info('Audio seeked to position:', clampedPosition);
@@ -411,17 +425,23 @@ export class AudioService {
   private onPlaybackStatusUpdate(status: any) {
     if (!status) return;
 
+    // Sanitize and truncate time values to standard decimal places
+    const sanitizedPosition = sanitizeTime(status.currentTime || 0);
+    const sanitizedDuration = sanitizeTime(status.duration || 0);
+    const truncatedPosition = truncateTime(sanitizedPosition, 1);
+    const truncatedDuration = truncateTime(sanitizedDuration, 1);
+
     const updates: Partial<AudioServiceState> = {
-      position: status.currentTime || 0,
-      duration: status.duration || 0,
+      position: truncatedPosition,
+      duration: truncatedDuration,
       isPlaying: status.playing || false,
       isLoaded: status.isLoaded || false,
     };
 
     this.setState(updates);
 
-    // Call progress callback
-    this.callbacks.onProgress?.(updates.position || 0);
+    // Call progress callback with truncated position
+    this.callbacks.onProgress?.(truncatedPosition);
 
     // Handle track end
     if (status.didJustFinish) {
@@ -436,12 +456,15 @@ export class AudioService {
     this.stopProgressTracking();
     this.progressInterval = setInterval(() => {
       if (this.player && this.state.isPlaying) {
-        const position = this.player.currentTime;
-        // Only update if position has actually changed
-        if (Math.abs(position - this.state.position) >= 0.1) {
-          // Update every 100ms or when position changes by 0.1s
-          this.setState({ position });
-          this.callbacks.onProgress?.(position);
+        const rawPosition = this.player.currentTime;
+        const sanitizedPosition = sanitizeTime(rawPosition);
+        const truncatedPosition = truncateTime(sanitizedPosition, 1);
+
+        // Only update if position has actually changed significantly
+        if (Math.abs(truncatedPosition - this.state.position) >= 0.1) {
+          // Update when position changes by 0.1s or more
+          this.setState({ position: truncatedPosition });
+          this.callbacks.onProgress?.(truncatedPosition);
         }
       }
     }, 250); // Reduced frequency from 100ms to 250ms

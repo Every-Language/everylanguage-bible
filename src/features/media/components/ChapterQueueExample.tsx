@@ -24,6 +24,7 @@ import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import { logger } from '@/shared/utils/logger';
 import { isAudioFile } from '@/features/downloads/utils/fileUtils';
+import { formatTime, formatDuration } from '../utils/audioUtils';
 
 type ViewMode = 'summary' | 'details' | 'background';
 
@@ -101,20 +102,6 @@ export const ChapterQueueExample: React.FC<ChapterQueueExampleProps> = ({
     outputRange: ['0deg', '360deg'],
   });
 
-  const formatDuration = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
-    }
-  };
-
   const formatFileSize = (bytes: number): string => {
     const mb = bytes / (1024 * 1024);
     return `${mb.toFixed(1)} MB`;
@@ -122,18 +109,6 @@ export const ChapterQueueExample: React.FC<ChapterQueueExampleProps> = ({
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    } else {
-      return `${minutes}:${secs.toString().padStart(2, '0')}`;
-    }
   };
 
   const renderChapterItem = (chapterInfo: ChapterAudioInfo) => (
@@ -297,6 +272,29 @@ export const ChapterQueueExample: React.FC<ChapterQueueExampleProps> = ({
           </Text>
         </View>
         <Text style={styles.statText}>Total Verses: {stats.totalVerses}</Text>
+
+        {/* New Database Totals Section */}
+        <View style={styles.databaseTotalsContainer}>
+          <Text style={styles.databaseTotalsTitle}>Database Totals</Text>
+          <View style={styles.databaseTotalsGrid}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{stats.totalBooks}</Text>
+              <Text style={styles.statLabel}>Books</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>
+                {stats.totalChaptersInDatabase}
+              </Text>
+              <Text style={styles.statLabel}>Chapters</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>
+                {stats.totalVersesInDatabase}
+              </Text>
+              <Text style={styles.statLabel}>Verses</Text>
+            </View>
+          </View>
+        </View>
       </View>
     );
   };
@@ -1009,6 +1007,22 @@ const styles = StyleSheet.create({
   statText: {
     fontSize: 14,
     color: '#666',
+  },
+  databaseTotalsContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  databaseTotalsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#333',
+  },
+  databaseTotalsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   titleContainer: {
     paddingHorizontal: 16,

@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useAudioService } from '@/features/media/hooks/useAudioService';
+import { formatTime } from '@/features/media/utils/audioUtils';
 
 interface MediaControlsProps {
   showAlbumArt?: boolean;
@@ -49,12 +50,6 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
 
   const handlePreviousTrack = async () => {
     await actions.previousTrack();
-  };
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const getSpeedDisplay = (): string => {

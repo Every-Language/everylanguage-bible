@@ -110,9 +110,8 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
           isComplete: false,
         });
 
-        const bibleResults = await bibleSync.syncAll({
-          forceFullSync: !hasData,
-        });
+        // Use forceCompleteSync to ensure all data is downloaded
+        const bibleResults = await bibleSync.forceCompleteSync();
         logger.info('Bible sync results:', bibleResults);
       }
 

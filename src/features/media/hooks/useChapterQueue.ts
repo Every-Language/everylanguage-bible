@@ -37,6 +37,9 @@ export interface UseChapterQueueReturn {
     totalDuration: number;
     totalFileSize: number;
     totalVerses: number;
+    totalBooks: number;
+    totalChaptersInDatabase: number;
+    totalVersesInDatabase: number;
   }>;
 }
 
@@ -227,6 +230,9 @@ export function useAudioAvailabilityStats(
     totalDuration: number;
     totalFileSize: number;
     totalVerses: number;
+    totalBooks: number;
+    totalChaptersInDatabase: number;
+    totalVersesInDatabase: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

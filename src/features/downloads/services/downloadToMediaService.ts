@@ -143,6 +143,10 @@ export class DownloadToMediaService {
             searchResult.sequence ||
             `seq_${fallbackId}_${Date.now()}`,
           media_type: searchResult.media_type || searchResult.type || 'audio',
+          remote_path:
+            searchResult.remote_path ||
+            searchResult.file_path ||
+            completedFile.filePath,
           file_size:
             searchResult.file_size ||
             searchResult.size ||
@@ -196,8 +200,8 @@ export class DownloadToMediaService {
           options.languageEntityId || extractedData.language_entity_id,
         sequence_id: fallbackSequenceId,
         media_type: options.mediaType || extractedData.media_type || 'audio',
-        local_path: completedFile.fileName, // Use the downloaded file name
-        remote_path: completedFile.filePath, // Original remote path
+        local_path: completedFile.filePath, // Use the full local path
+        remote_path: extractedData.remote_path || completedFile.filePath, // Use original remote path from search result
         file_size: extractedData.file_size || 0,
         duration_seconds: extractedData.duration_seconds || 0,
         upload_status:
@@ -216,6 +220,8 @@ export class DownloadToMediaService {
             extractedData.start_verse_id,
             extractedData.end_verse_id
           ),
+        start_verse_id: extractedData.start_verse_id,
+        end_verse_id: extractedData.end_verse_id,
       };
 
       // Log the final media file data for debugging
@@ -612,6 +618,10 @@ export class DownloadToMediaService {
             searchResult.sequence ||
             `seq_${fallbackId}_${Date.now()}`,
           media_type: searchResult.media_type || searchResult.type || 'audio',
+          remote_path:
+            searchResult.remote_path ||
+            searchResult.file_path ||
+            completedFile.filePath,
           file_size:
             searchResult.file_size ||
             searchResult.size ||
@@ -661,8 +671,8 @@ export class DownloadToMediaService {
           options.languageEntityId || extractedData.language_entity_id,
         sequence_id: fallbackSequenceId,
         media_type: options.mediaType || extractedData.media_type || 'audio',
-        local_path: completedFile.fileName,
-        remote_path: completedFile.filePath,
+        local_path: completedFile.filePath, // Use the full local path
+        remote_path: extractedData.remote_path || completedFile.filePath, // Use original remote path from search result
         file_size: extractedData.file_size || 0,
         duration_seconds: extractedData.duration_seconds || 0,
         upload_status:
@@ -681,6 +691,8 @@ export class DownloadToMediaService {
             extractedData.start_verse_id,
             extractedData.end_verse_id
           ),
+        start_verse_id: extractedData.start_verse_id,
+        end_verse_id: extractedData.end_verse_id,
       };
 
       // Validate media file data

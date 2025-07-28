@@ -22,6 +22,8 @@ import type { Book, ChapterWithMetadata } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 import { ChapterDownloadModal } from '@/features/downloads/components/ChapterDownloadModal';
 import { logger } from '@/shared/utils/logger';
+import { MediaAvailabilityStatus } from '@/shared/services/database/LocalDataService';
+import { mediaFilesService } from '@/shared/services/database/MediaFilesService';
 
 type ChapterScreenProps = NativeStackScreenProps<
   BibleStackParamList,
@@ -150,27 +152,58 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
     return count === 1 ? '1 chapter' : `${count} chapters`;
   };
 
-  const createTrackFromChapter = (chapter: ChapterWithMetadata): MediaTrack => {
-    // Estimate duration based on verse count (rough calculation)
-    const estimatedDuration = chapter.total_verses * 20; // ~20 seconds per verse
+  const createTrackFromChapter = async (
+    chapter: ChapterWithMetadata
+  ): Promise<MediaTrack | null> => {
+    try {
+      // Get media files for this chapter
+      const mediaFiles = await mediaFilesService.getMediaFilesByChapterId(
+        chapter.id
+      );
 
-    return {
-      id: `${book.id}-${chapter.id}`,
-      title: `${book.name} - Chapter ${chapter.chapter_number}`,
-      subtitle: `${chapter.total_verses} verses • ${Math.floor(estimatedDuration / 60)}:${(estimatedDuration % 60).toString().padStart(2, '0')}`,
-      duration: estimatedDuration,
-      currentTime: 0,
-      book: book.name,
-      chapter: `Chapter ${chapter.chapter_number}`,
-      url: `mock://audio/${book.id}/${chapter.id}`, // Mock URL for testing
-    };
+      if (!mediaFiles || mediaFiles.length === 0) {
+        logger.warn('No media files found for chapter:', chapter.id);
+        return null;
+      }
+
+      // Use the first media file for now (could be enhanced to handle multiple files)
+      const mediaFile = mediaFiles[0];
+
+      if (!mediaFile) {
+        logger.warn('No valid media file found for chapter:', chapter.id);
+        return null;
+      }
+
+      // Calculate total duration from all media files
+      const totalDuration = mediaFiles.reduce(
+        (sum, mf) => sum + (mf.duration_seconds || 0),
+        0
+      );
+
+      return {
+        id: `${book.id}-${chapter.id}`,
+        title: `${book.name} - Chapter ${chapter.chapter_number}`,
+        subtitle: `${chapter.total_verses} verses • ${Math.floor(totalDuration / 60)}:${(totalDuration % 60).toString().padStart(2, '0')}`,
+        duration: totalDuration,
+        currentTime: 0,
+        book: book.name,
+        chapter: `Chapter ${chapter.chapter_number}`,
+        url: mediaFile.local_path, // Use the actual local path
+      };
+    } catch (error) {
+      logger.error('Error creating track from chapter:', error);
+      return null;
+    }
   };
 
   // formatVerseCount moved to ChapterCard component
 
   const handleChapterPress = (chapter: ChapterWithMetadata) => {
-    // Check if chapter is available
-    if (!chapter.isAvailable) {
+    // Check if chapter has complete media availability
+    if (
+      chapter.mediaAvailability === MediaAvailabilityStatus.NONE ||
+      chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL
+    ) {
       setSelectedChapter(chapter);
       setShowUnavailableModal(true);
       return;
@@ -182,26 +215,35 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
 
   // handleBackFromVerses no longer needed with React Navigation
 
-  const handlePlayFromFirstChapter = () => {
+  const handlePlayFromFirstChapter = async () => {
     // Play from the first chapter
     const firstChapter = chapters[0];
     if (!firstChapter) return;
 
     logger.info('Playing from first chapter:', firstChapter);
 
-    // Set the track and start playback
-    mediaActions.setCurrentTrack(createTrackFromChapter(firstChapter));
-    mediaActions.play();
+    // Create track and start playback
+    const track = await createTrackFromChapter(firstChapter);
+    if (track) {
+      mediaActions.setCurrentTrack(track);
+      mediaActions.play();
+    } else {
+      logger.warn('Could not create track for first chapter');
+    }
   };
 
-  const handlePlayChapter = (chapter: ChapterWithMetadata) => {
-    // Create mock track data and load it into the media player
-    const track = createTrackFromChapter(chapter);
+  const handlePlayChapter = async (chapter: ChapterWithMetadata) => {
     logger.info('Playing chapter:', chapter);
+    logger.warn('Chapter media availability:', chapter);
 
-    // Set the track and start playback
-    mediaActions.setCurrentTrack(track);
-    mediaActions.play();
+    // Create track and start playback
+    const track = await createTrackFromChapter(chapter);
+    if (track) {
+      mediaActions.setCurrentTrack(track);
+      mediaActions.play();
+    } else {
+      logger.warn('Could not create track for chapter:', chapter.id);
+    }
   };
 
   const handleQueueChapter = (chapter: ChapterWithMetadata) => {
@@ -224,7 +266,6 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
       onPress={handleChapterPress}
       onQueue={handleQueueChapter}
       onPlay={handlePlayChapter}
-      isAvailable={chapter.isAvailable} // Use the isAvailable field from metadata
       isCloudAvailable={true} // Always available in cloud since it's in our database
     />
   );
@@ -304,15 +345,21 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
           </View>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.playButton}
-            onPress={handlePlayFromFirstChapter}>
-            <MaterialIcons
-              name='play-arrow'
-              size={24}
-              color={theme.colors.textInverse}
-            />
-          </TouchableOpacity>
+          {chapters.some(
+            chapter =>
+              chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE ||
+              chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL
+          ) && (
+            <TouchableOpacity
+              style={styles.playButton}
+              onPress={handlePlayFromFirstChapter}>
+              <MaterialIcons
+                name='play-arrow'
+                size={24}
+                color={theme.colors.textInverse}
+              />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
       <View style={styles.content}>{renderContent()}</View>

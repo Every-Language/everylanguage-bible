@@ -28,6 +28,28 @@ class Logger {
     return level <= this.config.level;
   }
 
+  private serializeError(error: any): any {
+    if (error instanceof Error) {
+      return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        // Include any additional properties
+        ...Object.getOwnPropertyNames(error).reduce((acc, key) => {
+          if (key !== 'name' && key !== 'message' && key !== 'stack') {
+            try {
+              acc[key] = (error as any)[key];
+            } catch {
+              acc[key] = '[Unable to serialize]';
+            }
+          }
+          return acc;
+        }, {} as any),
+      };
+    }
+    return error;
+  }
+
   private formatMessage(
     level: string,
     message: string,
@@ -37,11 +59,26 @@ class Logger {
     const formattedArgs =
       args.length > 0
         ? ` ${args
-            .map(arg =>
-              typeof arg === 'object'
-                ? JSON.stringify(arg, null, 2)
-                : String(arg)
-            )
+            .map(arg => {
+              if (arg instanceof Error) {
+                return JSON.stringify(this.serializeError(arg), null, 2);
+              }
+              if (typeof arg === 'object') {
+                // Handle objects that might contain Error instances
+                const serialized = JSON.stringify(
+                  arg,
+                  (key, value) => {
+                    if (value instanceof Error) {
+                      return this.serializeError(value);
+                    }
+                    return value;
+                  },
+                  2
+                );
+                return serialized;
+              }
+              return String(arg);
+            })
             .join(' ')}`
         : '';
     return `[${timestamp}] ${level}: ${message}${formattedArgs}`;

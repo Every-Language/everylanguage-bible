@@ -169,10 +169,11 @@ export class DatabaseDebugUtils {
       errorMessage: error?.message || 'No message',
       errorStack: error?.stack || 'No stack',
       errorCode: error?.code || 'No code',
-      errorStringified: JSON.stringify(
-        error,
-        Object.getOwnPropertyNames(error || {})
-      ),
+      // Remove the problematic JSON.stringify that was causing empty objects
+      // errorStringified: JSON.stringify(
+      //   error,
+      //   Object.getOwnPropertyNames(error || {})
+      // ),
       timestamp: new Date().toISOString(),
       context,
     });

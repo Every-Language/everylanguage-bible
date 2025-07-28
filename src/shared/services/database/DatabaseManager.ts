@@ -195,10 +195,11 @@ class DatabaseManager {
           errorConstructor: (error as any)?.constructor?.name,
           errorMessage: (error as any)?.message || 'No message',
           errorStack: (error as any)?.stack || 'No stack',
-          errorStringified: JSON.stringify(
-            error,
-            Object.getOwnPropertyNames(error || {})
-          ),
+          // Remove the problematic JSON.stringify that was causing empty objects
+          // errorStringified: JSON.stringify(
+          //   error,
+          //   Object.getOwnPropertyNames(error || {})
+          // ),
         });
 
         this.state = DatabaseState.ERROR;
@@ -259,10 +260,11 @@ class DatabaseManager {
         errorMessage: (error as any)?.message || 'No message',
         errorStack: (error as any)?.stack || 'No stack',
         errorCode: (error as any)?.code || 'No code',
-        errorStringified: JSON.stringify(
-          error,
-          Object.getOwnPropertyNames(error || {})
-        ),
+        // Remove the problematic JSON.stringify that was causing empty objects
+        // errorStringified: JSON.stringify(
+        //   error,
+        //   Object.getOwnPropertyNames(error || {})
+        // ),
       });
 
       // Try to get database state information

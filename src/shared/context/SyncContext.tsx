@@ -178,6 +178,9 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
 
       // Process results and update progress for each table
       let totalSynced = 0;
+      let hasErrors = false;
+      let errorMessages: string[] = [];
+
       for (const result of results) {
         totalSynced += result.recordsSynced;
         const progress: SyncProgress = {
@@ -186,9 +189,13 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
           totalRecords: totalSynced,
           isComplete: result.success,
         };
+
         if (result.error) {
           progress.error = result.error;
+          hasErrors = true;
+          errorMessages.push(`${result.tableName}: ${result.error}`);
         }
+
         setSyncProgress(progress);
 
         // Small delay to show progress for each table
@@ -202,7 +209,32 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       const lastSync = await localDataService.getLastSyncedAt();
       setLastSyncAt(lastSync);
 
-      logger.info('Bible sync completed:', results);
+      if (hasErrors) {
+        logger.warn('Bible sync completed with errors:', {
+          results,
+          errorMessages,
+          totalSynced,
+        });
+
+        // Show final error message if there were errors
+        setSyncProgress({
+          table: 'Sync completed with errors',
+          recordsSynced: totalSynced,
+          totalRecords: totalSynced,
+          isComplete: true,
+          error: errorMessages.join('; '),
+        });
+      } else {
+        logger.info('Bible sync completed successfully:', results);
+
+        // Show success message
+        setSyncProgress({
+          table: 'Sync completed successfully',
+          recordsSynced: totalSynced,
+          totalRecords: totalSynced,
+          isComplete: true,
+        });
+      }
     } catch (error) {
       // Enhanced error logging with detailed information
       const errorDetails = {
@@ -211,10 +243,11 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
         errorConstructor: (error as any)?.constructor?.name,
         errorMessage: (error as any)?.message || 'No message',
         errorStack: (error as any)?.stack || 'No stack',
-        errorStringified: JSON.stringify(
-          error,
-          Object.getOwnPropertyNames(error || {})
-        ),
+        // Remove the problematic JSON.stringify that was causing empty objects
+        // errorStringified: JSON.stringify(
+        //   error,
+        //   Object.getOwnPropertyNames(error || {})
+        // ),
       };
 
       logger.error('Bible sync failed:', errorDetails);
@@ -296,10 +329,11 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
         errorConstructor: (error as any)?.constructor?.name,
         errorMessage: (error as any)?.message || 'No message',
         errorStack: (error as any)?.stack || 'No stack',
-        errorStringified: JSON.stringify(
-          error,
-          Object.getOwnPropertyNames(error || {})
-        ),
+        // Remove the problematic JSON.stringify that was causing empty objects
+        // errorStringified: JSON.stringify(
+        //   error,
+        //   Object.getOwnPropertyNames(error || {})
+        // ),
       };
 
       logger.error('Force sync failed:', errorDetails);

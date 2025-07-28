@@ -81,10 +81,8 @@ class OnboardingSyncService {
       });
 
       try {
-        const bibleResults = await bibleSync.syncAll({
-          forceFullSync: !hasData,
-          batchSize: 3000, // Larger batch size for faster onboarding
-        });
+        // Use forceCompleteSync for onboarding to ensure all data is downloaded
+        const bibleResults = await bibleSync.forceCompleteSync();
 
         // Process Bible sync results
         for (const result of bibleResults) {
@@ -92,6 +90,11 @@ class OnboardingSyncService {
           if (!result.success && result.error) {
             errors.push(
               `Bible sync error (${result.tableName}): ${result.error}`
+            );
+          }
+          if (result.warning) {
+            errors.push(
+              `Bible sync warning (${result.tableName}): ${result.warning}`
             );
           }
         }
@@ -203,10 +206,11 @@ class OnboardingSyncService {
         errorConstructor: (error as any)?.constructor?.name,
         errorMessage: (error as any)?.message || 'No message',
         errorStack: (error as any)?.stack || 'No stack',
-        errorStringified: JSON.stringify(
-          error,
-          Object.getOwnPropertyNames(error || {})
-        ),
+        // Remove the problematic JSON.stringify that was causing empty objects
+        // errorStringified: JSON.stringify(
+        //   error,
+        //   Object.getOwnPropertyNames(error || {})
+        // ),
       };
 
       const errorMessage =

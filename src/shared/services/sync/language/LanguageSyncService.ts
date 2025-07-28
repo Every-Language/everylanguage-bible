@@ -189,7 +189,7 @@ class LanguageSyncService implements BaseSyncService {
       let allEntities: RemoteLanguageEntity[] = [];
       let hasMoreData = true;
       let lastFetchedId: string | null = null;
-      const mobileBatchSize = Math.min(batchSize, 500);
+      const mobileBatchSize = Math.min(batchSize, 2000); // Increased from 500 to 2000 for faster onboarding
 
       while (hasMoreData) {
         let query = supabase
@@ -359,7 +359,7 @@ class LanguageSyncService implements BaseSyncService {
     const audioVersions: any[] = [];
     let hasMoreData = true;
     let lastFetchedId: string | null = null;
-    const mobileBatchSize = Math.min(batchSize, 500);
+    const audioBatchSize = Math.min(batchSize, 2000); // Increased from 500 to 2000 for faster onboarding
 
     while (hasMoreData) {
       // Fetch audio_versions that have at least one published media file
@@ -384,7 +384,7 @@ class LanguageSyncService implements BaseSyncService {
         .is('media_files.deleted_at', null)
         .order('updated_at', { ascending: true })
         .order('id', { ascending: true })
-        .limit(mobileBatchSize);
+        .limit(audioBatchSize);
 
       if (lastFetchedId) {
         query = query.gt('id', lastFetchedId);
@@ -441,7 +441,7 @@ class LanguageSyncService implements BaseSyncService {
         lastFetchedId = lastAudioVersion.id;
       }
 
-      if (remoteAudioVersions.length < mobileBatchSize) {
+      if (remoteAudioVersions.length < audioBatchSize) {
         hasMoreData = false;
       }
     }
@@ -456,7 +456,7 @@ class LanguageSyncService implements BaseSyncService {
     const textVersions: any[] = [];
     let hasMoreData = true;
     let lastFetchedId: string | null = null;
-    const mobileBatchSize = Math.min(batchSize, 500);
+    const textBatchSize = Math.min(batchSize, 2000); // Increased from 500 to 2000 for faster onboarding
 
     while (hasMoreData) {
       // Only fetch text_versions that have at least one published verse_text
@@ -481,7 +481,7 @@ class LanguageSyncService implements BaseSyncService {
         .is('verse_texts.deleted_at', null)
         .order('updated_at', { ascending: true })
         .order('id', { ascending: true })
-        .limit(mobileBatchSize);
+        .limit(textBatchSize);
 
       if (lastFetchedId) {
         query = query.gt('id', lastFetchedId);
@@ -529,7 +529,7 @@ class LanguageSyncService implements BaseSyncService {
         lastFetchedId = lastTextVersion.id;
       }
 
-      if (remoteTextVersions.length < mobileBatchSize) {
+      if (remoteTextVersions.length < textBatchSize) {
         hasMoreData = false;
       }
     }

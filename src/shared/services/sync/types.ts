@@ -100,6 +100,7 @@ export interface SyncResult {
   tableName: string;
   recordsSynced: number;
   error?: string;
+  warning?: string;
 }
 
 export interface SyncProgress {

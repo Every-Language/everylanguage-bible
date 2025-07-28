@@ -102,12 +102,18 @@ export const useAudioService = (options: UseAudioServiceOptions = {}) => {
     ...actions,
     seekTo: handleSeek,
     setCurrentTrack: async (track: MediaPlayerTrack) => {
-      actions.setCurrentTrack(track);
+      // Ensure track starts from the beginning
+      const trackWithZeroTime = {
+        ...track,
+        currentTime: 0,
+      };
+
+      actions.setCurrentTrack(trackWithZeroTime);
 
       // Load the track in the audio service
       if (track.url) {
         try {
-          const adaptedTrack = adaptTrackForAudioService(track);
+          const adaptedTrack = adaptTrackForAudioService(trackWithZeroTime);
           await audioService.loadAudio(adaptedTrack);
 
           if (options.autoPlay) {

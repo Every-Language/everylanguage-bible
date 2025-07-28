@@ -8,6 +8,7 @@ import React, {
   useEffect,
 } from 'react';
 import { audioService } from '@/features/media/services/AudioService';
+import { truncateTime, sanitizeTime } from '@/features/media/utils/audioUtils';
 
 interface MediaTrack {
   id: string;
@@ -142,7 +143,10 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
   const setCurrentTrack = useCallback((track: MediaTrack) => {
     setState(prev => ({
       ...prev,
-      currentTrack: track,
+      currentTrack: {
+        ...track,
+        currentTime: 0, // Always start from the beginning
+      },
       isPlaying: false,
     }));
   }, []);
@@ -165,10 +169,13 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
   }, []);
 
   const seekTo = useCallback((time: number) => {
+    const sanitizedTime = sanitizeTime(time);
+    const truncatedTime = truncateTime(sanitizedTime, 1);
+
     setState(prev => ({
       ...prev,
       currentTrack: prev.currentTrack
-        ? { ...prev.currentTrack, currentTime: time }
+        ? { ...prev.currentTrack, currentTime: truncatedTime }
         : null,
     }));
   }, []);
@@ -275,16 +282,19 @@ export const MediaPlayerProvider: React.FC<MediaPlayerProviderProps> = ({
   }, []);
 
   const updateProgress = useCallback((currentTime: number) => {
+    const sanitizedTime = sanitizeTime(currentTime);
+    const truncatedTime = truncateTime(sanitizedTime, 1);
+
     setState(prev => {
       // Only update if the time has actually changed
-      if (prev.currentTrack?.currentTime === currentTime) {
+      if (prev.currentTrack?.currentTime === truncatedTime) {
         return prev; // Return same state to prevent re-render
       }
 
       return {
         ...prev,
         currentTrack: prev.currentTrack
-          ? { ...prev.currentTrack, currentTime }
+          ? { ...prev.currentTrack, currentTime: truncatedTime }
           : null,
       };
     });

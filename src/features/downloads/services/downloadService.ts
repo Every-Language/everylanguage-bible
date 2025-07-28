@@ -511,7 +511,7 @@ export class DownloadService {
             const mediaResult =
               await downloadToMediaService.addCompletedDownloadToMedia(
                 {
-                  filePath: updatedDownload.filePath,
+                  filePath: updatedDownload.localPath, // Use localPath instead of filePath
                   fileName: updatedDownload.fileName,
                   progress: 1,
                   status: 'completed',

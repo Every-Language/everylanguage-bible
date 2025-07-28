@@ -96,7 +96,7 @@ class VerseTextSyncService implements BaseSyncService {
       let allVerseTexts: Tables<'verse_texts'>[] = [];
       let hasMoreData = true;
       let lastFetchedId: string | null = null;
-      const mobileBatchSize = Math.min(batchSize, 500);
+      const mobileBatchSize = Math.min(batchSize, 2000); // Increased from 500 to 2000 for faster onboarding
 
       while (hasMoreData) {
         logger.info(

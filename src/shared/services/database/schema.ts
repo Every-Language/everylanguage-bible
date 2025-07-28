@@ -121,6 +121,8 @@ export interface LocalMediaFile {
   deleted_at: string | null;
   chapter_id: string | null;
   verses: string; // JSON string of verse IDs
+  start_verse_id: string | null;
+  end_verse_id: string | null;
 }
 
 // Media Files Verses Table Interface (Syncing table)
@@ -291,7 +293,9 @@ export const createTables = async (
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       deleted_at TEXT,
       chapter_id TEXT,
-      verses TEXT NOT NULL
+      verses TEXT NOT NULL,
+      start_verse_id TEXT,
+      end_verse_id TEXT
     )
   `);
 
@@ -431,6 +435,15 @@ export const createTables = async (
   );
   await db.execAsync(
     'CREATE INDEX IF NOT EXISTS idx_media_files_updated_at ON media_files(updated_at)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_start_verse_id ON media_files(start_verse_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_end_verse_id ON media_files(end_verse_id)'
+  );
+  await db.execAsync(
+    'CREATE INDEX IF NOT EXISTS idx_media_files_verse_range ON media_files(start_verse_id, end_verse_id)'
   );
 
   // Media Files Verses Indexes
@@ -581,7 +594,7 @@ export const migrateMediaFilesTable = async (
 
     logger.info('media_files table exists, checking schema...');
 
-    // Check if foreign key constraints exist
+    // Check current table schema
     const tableInfo = await db.getAllAsync('PRAGMA table_info(media_files)');
     logger.info('Current media_files table schema:', {
       columns: tableInfo.map((col: any) => ({
@@ -592,6 +605,30 @@ export const migrateMediaFilesTable = async (
       })),
     });
 
+    // Check if start_verse_id and end_verse_id columns exist
+    const hasStartVerseId = tableInfo.some(
+      (col: any) => col.name === 'start_verse_id'
+    );
+    const hasEndVerseId = tableInfo.some(
+      (col: any) => col.name === 'end_verse_id'
+    );
+
+    // Add missing columns if they don't exist
+    if (!hasStartVerseId) {
+      logger.info('Adding start_verse_id column to media_files table...');
+      await db.execAsync(
+        'ALTER TABLE media_files ADD COLUMN start_verse_id TEXT'
+      );
+    }
+
+    if (!hasEndVerseId) {
+      logger.info('Adding end_verse_id column to media_files table...');
+      await db.execAsync(
+        'ALTER TABLE media_files ADD COLUMN end_verse_id TEXT'
+      );
+    }
+
+    // Check if foreign key constraints exist (legacy migration)
     const hasForeignKeys = tableInfo.some(
       (column: any) =>
         column.name === 'language_entity_id' || column.name === 'chapter_id'
@@ -628,7 +665,9 @@ export const migrateMediaFilesTable = async (
           updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
           deleted_at TEXT,
           chapter_id TEXT,
-          verses TEXT NOT NULL
+          verses TEXT NOT NULL,
+          start_verse_id TEXT,
+          end_verse_id TEXT
         )
       `);
 
@@ -675,10 +714,11 @@ export const migrateMediaFilesTable = async (
       errorMessage: (error as any)?.message || 'No message',
       errorStack: (error as any)?.stack || 'No stack',
       errorCode: (error as any)?.code || 'No code',
-      errorStringified: JSON.stringify(
-        error,
-        Object.getOwnPropertyNames(error || {})
-      ),
+      // Remove the problematic JSON.stringify that was causing empty objects
+      // errorStringified: JSON.stringify(
+      //   error,
+      //   Object.getOwnPropertyNames(error || {})
+      // ),
     });
 
     // Try to get more SQLite-specific error information

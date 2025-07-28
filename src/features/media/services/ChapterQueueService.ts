@@ -1,5 +1,6 @@
 import { mediaFilesService } from '@/shared/services/database/MediaFilesService';
 import { mediaFilesVersesService } from '@/shared/services/database/MediaFilesVersesService';
+import DatabaseManager from '@/shared/services/database/DatabaseManager';
 import { logger } from '@/shared/utils/logger';
 import type {
   LocalMediaFile,
@@ -248,9 +249,30 @@ export class ChapterQueueService {
     totalDuration: number;
     totalFileSize: number;
     totalVerses: number;
+    totalBooks: number;
+    totalChaptersInDatabase: number;
+    totalVersesInDatabase: number;
   }> {
     try {
+      const databaseManager = DatabaseManager.getInstance();
       const chapterAudioInfo = await this.getChapterAudioInfo(options);
+
+      // Get total counts from database tables
+      const [booksResult, chaptersResult, versesResult] = await Promise.all([
+        databaseManager.executeQuery<{ count: number }>(
+          'SELECT COUNT(*) as count FROM books'
+        ),
+        databaseManager.executeQuery<{ count: number }>(
+          'SELECT COUNT(*) as count FROM chapters'
+        ),
+        databaseManager.executeQuery<{ count: number }>(
+          'SELECT COUNT(*) as count FROM verses'
+        ),
+      ]);
+
+      const totalBooks = booksResult?.[0]?.count || 0;
+      const totalChaptersInDatabase = chaptersResult?.[0]?.count || 0;
+      const totalVersesInDatabase = versesResult?.[0]?.count || 0;
 
       const chaptersWithAudio = chapterAudioInfo.filter(
         info => info.hasAudioFiles
@@ -283,6 +305,9 @@ export class ChapterQueueService {
         totalDuration,
         totalFileSize,
         totalVerses,
+        totalBooks,
+        totalChaptersInDatabase,
+        totalVersesInDatabase,
       };
     } catch (error) {
       logger.error('Error getting audio availability stats:', error);

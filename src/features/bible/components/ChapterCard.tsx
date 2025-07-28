@@ -3,14 +3,13 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 import type { ChapterWithMetadata } from '../types';
+import { MediaAvailabilityStatus } from '@/shared/services/database/LocalDataService';
 
 interface ChapterCardProps {
   chapter: ChapterWithMetadata;
   onPress: (chapter: ChapterWithMetadata) => void;
   onQueue?: (chapter: ChapterWithMetadata) => void;
   onPlay?: (chapter: ChapterWithMetadata) => void;
-  /** Whether the chapter content is locally available for offline use */
-  isAvailable?: boolean;
   /** Whether the chapter content is available in the cloud for download */
   isCloudAvailable?: boolean;
 }
@@ -20,7 +19,6 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
   onPress,
   onQueue,
   onPlay,
-  isAvailable = false,
   isCloudAvailable = true,
 }) => {
   const { theme } = useTheme();
@@ -103,13 +101,22 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
             />
           </View>
         )}
-        {/* Available icon - shows if content is locally available */}
-        {isAvailable && (
+        {/* Media availability icons */}
+        {chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE && (
           <View style={styles.availabilityIcon}>
             <MaterialIcons
               name='check-circle'
               size={16}
               color={theme.colors.primary}
+            />
+          </View>
+        )}
+        {chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL && (
+          <View style={styles.availabilityIcon}>
+            <MaterialIcons
+              name='warning'
+              size={16}
+              color={theme.colors.warning || '#ff9800'}
             />
           </View>
         )}
@@ -126,17 +133,19 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
             />
           </TouchableOpacity>
         )}
-        {onPlay && (
-          <TouchableOpacity
-            style={styles.playButton}
-            onPress={() => onPlay(chapter)}>
-            <MaterialIcons
-              name='play-arrow'
-              size={20}
-              color={theme.colors.textInverse}
-            />
-          </TouchableOpacity>
-        )}
+        {onPlay &&
+          (chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE ||
+            chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL) && (
+            <TouchableOpacity
+              style={styles.playButton}
+              onPress={() => onPlay(chapter)}>
+              <MaterialIcons
+                name='play-arrow'
+                size={20}
+                color={theme.colors.textInverse}
+              />
+            </TouchableOpacity>
+          )}
       </View>
     </TouchableOpacity>
   );

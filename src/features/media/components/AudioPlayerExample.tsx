@@ -10,6 +10,7 @@ import {
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useAudioService } from '../hooks/useAudioService';
 import { MediaTrack } from '../types';
+import { formatTime } from '../utils/audioUtils';
 
 interface AudioFile {
   id: string;
@@ -81,12 +82,6 @@ export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
 
   const handleSeek = async (time: number) => {
     await actions.seekTo(time);
-  };
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (

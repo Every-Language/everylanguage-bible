@@ -248,8 +248,9 @@ export class MediaFilesService {
         `INSERT INTO media_files (
           id, language_entity_id, sequence_id, media_type, local_path, remote_path,
           file_size, duration_seconds, upload_status, publish_status, check_status,
-          version, created_at, updated_at, deleted_at, chapter_id, verses
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          version, created_at, updated_at, deleted_at, chapter_id, verses,
+          start_verse_id, end_verse_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           mediaFile.id,
           mediaFile.language_entity_id,
@@ -268,6 +269,8 @@ export class MediaFilesService {
           mediaFile.deleted_at,
           mediaFile.chapter_id,
           mediaFile.verses,
+          mediaFile.start_verse_id,
+          mediaFile.end_verse_id,
         ]
       );
     } catch (error) {
@@ -625,6 +628,76 @@ export class MediaFilesService {
     } catch (error) {
       logger.error('Error incrementing version:', error);
       throw new Error('Failed to increment version');
+    }
+  }
+
+  /**
+   * Update start verse ID for a media file
+   */
+  async updateStartVerseId(id: string, startVerseId: string): Promise<void> {
+    if (!startVerseId) {
+      throw new Error('Start verse ID is required');
+    }
+    await this.updateMediaFile(id, { start_verse_id: startVerseId });
+  }
+
+  /**
+   * Update end verse ID for a media file
+   */
+  async updateEndVerseId(id: string, endVerseId: string): Promise<void> {
+    if (!endVerseId) {
+      throw new Error('End verse ID is required');
+    }
+    await this.updateMediaFile(id, { end_verse_id: endVerseId });
+  }
+
+  /**
+   * Get media files by verse range
+   */
+  async getMediaFilesByVerseRange(
+    startVerseId: string,
+    endVerseId: string
+  ): Promise<LocalMediaFile[]> {
+    if (!startVerseId || !endVerseId) {
+      throw new Error('Both start and end verse IDs are required');
+    }
+
+    try {
+      return await this.databaseManager.executeQuery<LocalMediaFile>(
+        `SELECT * FROM media_files 
+         WHERE start_verse_id = ? AND end_verse_id = ? 
+         AND deleted_at IS NULL 
+         ORDER BY created_at ASC`,
+        [startVerseId, endVerseId]
+      );
+    } catch (error) {
+      logger.error('Error getting media files by verse range:', error);
+      throw new Error('Failed to retrieve media files by verse range');
+    }
+  }
+
+  /**
+   * Get media files that contain a specific verse
+   */
+  async getMediaFilesContainingVerse(
+    verseId: string
+  ): Promise<LocalMediaFile[]> {
+    if (!verseId) {
+      throw new Error('Verse ID is required');
+    }
+
+    try {
+      return await this.databaseManager.executeQuery<LocalMediaFile>(
+        `SELECT * FROM media_files 
+         WHERE (start_verse_id = ? OR end_verse_id = ? OR 
+                (start_verse_id <= ? AND end_verse_id >= ?))
+         AND deleted_at IS NULL 
+         ORDER BY created_at ASC`,
+        [verseId, verseId, verseId, verseId]
+      );
+    } catch (error) {
+      logger.error('Error getting media files containing verse:', error);
+      throw new Error('Failed to retrieve media files containing verse');
     }
   }
 }

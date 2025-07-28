@@ -74,8 +74,9 @@ export const useChapters = (bookId: string | null) => {
       ...chapter,
       title: `Chapter ${chapter.chapter_number}`,
       verseRange: `1 - ${chapter.total_verses}`,
-      isAvailable:
-        (chapter as Chapter & { isAvailable?: boolean }).isAvailable || false,
+      mediaAvailability:
+        (chapter as Chapter & { mediaAvailability?: any }).mediaAvailability ||
+        'none',
     })) as ChapterWithMetadata[];
   }, [state.chapters]);
 
