@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
@@ -7,8 +7,51 @@ import {
   BottomSheetModalProvider,
   BottomSheetBackdropProps,
   BottomSheetScrollView,
+  BottomSheetBackgroundProps,
 } from '@gorhom/bottom-sheet';
+import Animated, {
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { useTheme } from '@/shared/context/ThemeContext';
+
+// Custom background component for Android 9 compatibility
+const SolidBackground: React.FC<BottomSheetBackgroundProps> = ({
+  style,
+  animatedIndex,
+}) => {
+  const { theme } = useTheme();
+
+  const containerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      animatedIndex.value,
+      [0, 1],
+      [0.95, 1],
+      Extrapolation.CLAMP
+    ),
+  }));
+
+  const containerStyle = useMemo(
+    () => [style, containerAnimatedStyle],
+    [style, containerAnimatedStyle]
+  );
+
+  return (
+    <Animated.View style={containerStyle}>
+      <View
+        style={[
+          StyleSheet.absoluteFillObject,
+          {
+            backgroundColor: theme.mode === 'dark' ? '#1A1B19' : '#FFFFFF',
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+          },
+        ]}
+      />
+    </Animated.View>
+  );
+};
 
 interface SlideUpModalProps {
   visible: boolean;
@@ -91,10 +134,21 @@ export const SlideUpModal: React.FC<SlideUpModalProps> = ({
         enableDismissOnClose={enableDismissOnClose}
         enablePanDownToClose={enablePanDownToClose}
         backdropComponent={backdropComponent || renderBackdrop}
-        backgroundStyle={[
-          styles.modal,
-          { backgroundColor: theme.colors.background },
-        ]}
+        backgroundComponent={Platform.OS === 'android' ? SolidBackground : null}
+        backgroundStyle={
+          Platform.OS === 'android'
+            ? undefined
+            : [
+                styles.modal,
+                {
+                  // Ensure solid background for Android 9 compatibility
+                  backgroundColor:
+                    theme.mode === 'dark'
+                      ? '#1A1B19' // Use solid color instead of potentially transparent theme color
+                      : '#FFFFFF',
+                },
+              ]
+        }
         handleIndicatorStyle={[
           styles.handle,
           { backgroundColor: theme.colors.border },
@@ -135,6 +189,7 @@ const styles = StyleSheet.create({
   modal: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    // iOS shadow properties
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -142,7 +197,8 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 10,
-    elevation: 5,
+    // Android elevation - increased for better visibility on older devices
+    elevation: 8,
   },
   handle: {
     width: 40,
