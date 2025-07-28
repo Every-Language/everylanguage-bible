@@ -84,16 +84,17 @@ export class BackgroundSyncService {
           return { success: true, hasNewData: false };
         }
       } catch (error: unknown) {
+        const err = error as Error;
         logger.error('Background bible sync failed:', {
           error: error,
           errorType: typeof error,
-          errorConstructor: (error as any)?.constructor?.name,
-          errorMessage: (error as any)?.message || 'No message',
-          errorStack: (error as any)?.stack || 'No stack',
+          errorConstructor: err?.constructor?.name,
+          errorMessage: err?.message || 'No message',
+          errorStack: err?.stack || 'No stack',
         });
         return {
           success: false,
-          error: (error as any)?.toString() || 'Unknown error',
+          error: err?.toString() || 'Unknown error',
         };
       }
     });
@@ -128,12 +129,13 @@ export class BackgroundSyncService {
       logger.info('Registering background sync task...');
       logger.info('✅ Background content sync registered successfully');
     } catch (error: unknown) {
+      const err = error as Error;
       logger.error('Failed to register background task:', {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: err?.constructor?.name,
+        errorMessage: err?.message || 'No message',
+        errorStack: err?.stack || 'No stack',
       });
       // Don't throw - this should be non-critical
     }
@@ -152,12 +154,13 @@ export class BackgroundSyncService {
       }
       this.isRegistered = false;
     } catch (error: unknown) {
+      const err = error as Error;
       logger.error('Failed to unregister background task:', {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: err?.constructor?.name,
+        errorMessage: err?.message || 'No message',
+        errorStack: err?.stack || 'No stack',
       });
     }
   }
@@ -175,12 +178,13 @@ export class BackgroundSyncService {
 
       return bibleUpdateCheck.needsUpdate || languageUpdateCheck.needsUpdate;
     } catch (error: unknown) {
+      const err = error as Error;
       logger.error('Error in checkForChanges:', {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: err?.constructor?.name,
+        errorMessage: err?.message || 'No message',
+        errorStack: err?.stack || 'No stack',
       });
       return false;
     }
@@ -204,12 +208,13 @@ export class BackgroundSyncService {
         return await bibleSync.hasRemoteChanges(tableName);
       }
     } catch (error: unknown) {
+      const err = error as Error;
       logger.error(`Error checking for remote changes in ${tableName}:`, {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: err?.constructor?.name,
+        errorMessage: err?.message || 'No message',
+        errorStack: err?.stack || 'No stack',
       });
       return false;
     }
@@ -234,12 +239,13 @@ export class BackgroundSyncService {
         logger.info('Remote changes detected in tables:', allChangedTables);
       }
     } catch (error: unknown) {
+      const err = error as Error;
       logger.error('Error checking for remote changes:', {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: err?.constructor?.name,
+        errorMessage: err?.message || 'No message',
+        errorStack: err?.stack || 'No stack',
       });
     }
   }
@@ -259,12 +265,13 @@ export class BackgroundSyncService {
           : BackgroundTaskStatus.DENIED;
       }
     } catch (error: unknown) {
+      const err = error as Error;
       logger.error('Error getting background task status:', {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: err?.constructor?.name,
+        errorMessage: err?.message || 'No message',
+        errorStack: err?.stack || 'No stack',
       });
       return BackgroundTaskStatus.DENIED;
     }
@@ -277,12 +284,13 @@ export class BackgroundSyncService {
         task => task.taskName === BACKGROUND_SYNC_TASK
       );
     } catch (error: unknown) {
+      const err = error as Error;
       logger.error('Error checking if task is registered:', {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: err?.constructor?.name,
+        errorMessage: err?.message || 'No message',
+        errorStack: err?.stack || 'No stack',
       });
       return false;
     }

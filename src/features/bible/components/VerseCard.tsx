@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import type { Verse } from '../types';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import type { LocalVerseText } from '../../../shared/services/database/schema';
 import type { TextVersion } from '../../languages/types';
 
@@ -42,7 +43,9 @@ export const VerseCard: React.FC<VerseCardProps> = ({
       marginBottom: 12,
       // Add border when playing
       borderWidth: isCurrentlyPlaying ? 2 : 0,
-      borderColor: isCurrentlyPlaying ? theme.colors.primary : 'transparent',
+      borderColor: isCurrentlyPlaying
+        ? theme.colors.primary
+        : COLOR_VARIATIONS.TRANSPARENT,
     },
     verseHeader: {
       flexDirection: 'row',

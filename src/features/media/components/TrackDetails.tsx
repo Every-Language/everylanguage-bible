@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface TrackDetailsProps {
   viewMode: 'text' | 'queue';
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: COLOR_VARIATIONS.WHITE_10,
   },
   toggleButton: {
     paddingHorizontal: 24,

@@ -11,10 +11,12 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { useBackgroundDownloads } from '../hooks/useBackgroundDownloads';
 import { logger } from '@/shared/utils/logger';
 import { formatFileSize, isAudioFile } from '../utils/fileUtils';
 import { audioService } from '@/features/media/services/AudioService';
+import { PersistentDownloadItem } from '../services/persistentDownloadStore';
 
 export const BackgroundDownloadsScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -124,7 +126,7 @@ export const BackgroundDownloadsScreen: React.FC = () => {
   const canContinueDownloads = hasPendingDownloads || hasFailedDownloads;
 
   // Handle playing/pausing audio file
-  const handlePlayAudio = async (download: any) => {
+  const handlePlayAudio = async (download: PersistentDownloadItem) => {
     try {
       // If this is the current track and it's playing, pause it
       if (mediaState.currentTrack?.id === download.id && mediaState.isPlaying) {
@@ -229,6 +231,23 @@ export const BackgroundDownloadsScreen: React.FC = () => {
     }
   };
 
+  const getDownloadItemStyle = (download: PersistentDownloadItem) => {
+    const isCurrentlyPlaying =
+      mediaState.currentTrack?.id === download.id && mediaState.isPlaying;
+    return [
+      styles.downloadItem,
+      {
+        backgroundColor: theme.colors.surface,
+        borderColor: isCurrentlyPlaying
+          ? theme.colors.success
+          : COLOR_VARIATIONS.BLACK_10,
+      },
+      isCurrentlyPlaying
+        ? styles.downloadItemPlaying
+        : styles.downloadItemNormal,
+    ];
+  };
+
   if (!isInitialized) {
     return (
       <View
@@ -327,8 +346,10 @@ export const BackgroundDownloadsScreen: React.FC = () => {
               backgroundColor: canContinueDownloads
                 ? theme.colors.success
                 : theme.colors.textSecondary,
-              opacity: canContinueDownloads ? 1 : 0.5,
             },
+            canContinueDownloads
+              ? styles.actionButtonEnabled
+              : styles.actionButtonDisabled,
           ]}
           onPress={handleContinueDownloads}
           disabled={!canContinueDownloads || isProcessing}>
@@ -433,24 +454,7 @@ export const BackgroundDownloadsScreen: React.FC = () => {
           </View>
         ) : (
           downloads.map(download => (
-            <View
-              key={download.id}
-              style={[
-                styles.downloadItem,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor:
-                    mediaState.currentTrack?.id === download.id &&
-                    mediaState.isPlaying
-                      ? theme.colors.success
-                      : 'rgba(0, 0, 0, 0.1)',
-                  borderWidth:
-                    mediaState.currentTrack?.id === download.id &&
-                    mediaState.isPlaying
-                      ? 2
-                      : 1,
-                },
-              ]}>
+            <View key={download.id} style={getDownloadItemStyle(download)}>
               <View style={styles.downloadHeader}>
                 <MaterialIcons
                   name={getStatusIcon(download.status)}
@@ -618,7 +622,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   title: {
     fontSize: 20,
@@ -637,7 +641,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   statItem: {
     flex: 1,
@@ -656,7 +660,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   actionButton: {
     flexDirection: 'row',
@@ -671,6 +675,12 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  actionButtonEnabled: {
+    opacity: 1,
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
   },
 
   downloadsList: {
@@ -697,7 +707,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderColor: COLOR_VARIATIONS.BLACK_10,
+  },
+  downloadItemNormal: {
+    borderWidth: 1,
+  },
+  downloadItemPlaying: {
+    borderWidth: 2,
   },
   downloadHeader: {
     flexDirection: 'row',

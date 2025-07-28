@@ -106,7 +106,7 @@ export const VersesScreen: React.FC = () => {
     };
 
     loadVerseTexts();
-  }, [chapter.id, currentTextVersion?.id]);
+  }, [chapter.id, currentTextVersion]);
 
   const styles = StyleSheet.create({
     container: {

@@ -422,6 +422,7 @@ export class AudioService {
   /**
    * Handle playback status updates
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private onPlaybackStatusUpdate(status: any) {
     if (!status) return;
 

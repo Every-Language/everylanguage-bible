@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 import { bibleSync } from '@/shared/services/sync/bible/BibleSyncService';
 import { languageSync } from '@/shared/services/sync/language/LanguageSyncService';
@@ -52,14 +53,14 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
     } else {
       stopRotationAnimation();
     }
-  }, [visible, progress.isComplete]);
+  }, [visible, progress.isComplete]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Perform real sync operations
   useEffect(() => {
     if (visible && !progress.isComplete) {
       performRealSync();
     }
-  }, [visible, progress.isComplete]);
+  }, [visible, progress.isComplete]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startRotationAnimation = () => {
     rotationAnim.setValue(0);
@@ -360,7 +361,7 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLOR_VARIATIONS.BLACK_50,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
     shadowOffset: {
       width: 0,
       height: 2,

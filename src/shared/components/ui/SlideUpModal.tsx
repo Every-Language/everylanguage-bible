@@ -17,6 +17,10 @@ import Animated, {
 import { useTheme } from '@/shared/context/ThemeContext';
 import { BRAND_COLORS, COLOR_VARIATIONS } from '@/shared/constants/theme';
 
+const getContentPaddingStyle = (insets: { bottom: number }) => ({
+  paddingBottom: Platform.OS === 'ios' ? 16 : insets.bottom + 16,
+});
+
 // Custom background component for consistent solid colors across all platforms
 const SolidBackground: React.FC<BottomSheetBackgroundProps> = ({
   style,
@@ -174,21 +178,14 @@ export const SlideUpModal: React.FC<SlideUpModalProps> = ({
             style={styles.scrollContent}
             contentContainerStyle={[
               styles.scrollContentContainer,
-              {
-                paddingBottom: Platform.OS === 'ios' ? 16 : insets.bottom + 16,
-              },
+              getContentPaddingStyle(insets),
             ]}
             showsVerticalScrollIndicator={false}>
             {children}
           </BottomSheetScrollView>
         ) : (
           <BottomSheetView
-            style={[
-              styles.content,
-              {
-                paddingBottom: Platform.OS === 'ios' ? 16 : insets.bottom + 16,
-              },
-            ]}>
+            style={[styles.content, getContentPaddingStyle(insets)]}>
             {children}
           </BottomSheetView>
         )}

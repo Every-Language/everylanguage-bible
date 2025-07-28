@@ -16,7 +16,7 @@ export class LanguageServiceError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: unknown
   ) {
     super(message);
     this.name = 'LanguageServiceError';
@@ -48,6 +48,7 @@ export interface LanguageServiceInterface {
 }
 
 // Language entity validation
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const validateLanguageEntity = (entity: any): LanguageEntity => {
   if (!entity.id || !entity.name) {
     throw new LanguageServiceError(
@@ -78,6 +79,7 @@ const validateLanguageEntity = (entity: any): LanguageEntity => {
 };
 
 // Helper to build hierarchy from flat entities
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const buildHierarchy = (entities: any[]): LanguageEntity[] => {
   const entityMap = new Map<string, LanguageEntity>();
   const rootEntities: LanguageEntity[] = [];

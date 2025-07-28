@@ -4,12 +4,13 @@ import { LocationDisplay } from './LocationDisplay';
 import { useLocation } from '@/shared/hooks/useLocation';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { LocationData } from '@/shared/services/location/LocationService';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 export const LocationExample: React.FC = () => {
   const { theme } = useTheme();
   const { location, calculateDistance, isLocationWithinRadius } = useLocation();
-  const handleLocationUpdate = (locationData: LocationData) => {
-    console.log('Location updated:', locationData);
+  const handleLocationUpdate = (_locationData: LocationData) => {
+    // Location update handled silently
   };
 
   // Example: Check if user is near a specific location (e.g., a church)
@@ -219,7 +220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: COLOR_VARIATIONS.BORDER_GRAY,
   },
   featureLabel: {
     fontSize: 14,

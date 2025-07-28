@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useCurrentVersions } from '@/features/languages/hooks/useLanguageSelection';
 
 import type { ViewStyle } from 'react-native';
 
@@ -15,6 +16,7 @@ export const TrackDetailsCollapsed: React.FC<TrackDetailsCollapsedProps> = ({
 }) => {
   const { theme } = useTheme();
   const { state } = useMediaPlayer();
+  const { currentAudioVersion } = useCurrentVersions();
 
   if (!state.currentTrack) return null;
 
@@ -27,21 +29,13 @@ export const TrackDetailsCollapsed: React.FC<TrackDetailsCollapsedProps> = ({
             numberOfLines={1}>
             {state.currentTrack.title}
           </Text>
-          <Text
-            style={[
-              styles.collapsedSubtitle,
-              { color: theme.colors.textSecondary },
-            ]}
-            numberOfLines={1}>
-            {state.currentTrack.subtitle}
-          </Text>
         </View>
         <Text
           style={[
             styles.collapsedLanguage,
             { color: theme.colors.textSecondary },
           ]}>
-          {/* TODO: Add language display when available */}
+          {currentAudioVersion?.name || 'None'}
         </Text>
       </View>
     </Animated.View>
@@ -73,11 +67,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  collapsedSubtitle: {
-    fontSize: 14,
-    marginTop: 2,
-    opacity: 0.8,
-  },
+
   collapsedLanguage: {
     fontSize: 12,
     fontWeight: '500',

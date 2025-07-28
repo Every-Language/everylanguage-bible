@@ -64,7 +64,7 @@ export const useLocation = (
     permissionStatus: {
       granted: false,
       canAskAgain: true,
-      status: 'undetermined' as any,
+      status: 'undetermined' as LocationPermissionStatus['status'],
     },
     lastKnownLocation: null,
     isGettingLocation: false,
@@ -114,7 +114,7 @@ export const useLocation = (
         logger.error('Failed to stop location updates on cleanup:', error);
       });
     };
-  }, [autoRequestPermissions, autoGetLocation, watchLocation]);
+  }, [autoRequestPermissions, autoGetLocation, watchLocation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Request location permissions
   const requestPermissions =

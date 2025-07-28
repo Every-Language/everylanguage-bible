@@ -25,6 +25,7 @@ import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import { logger } from '@/shared/utils/logger';
 import { isAudioFile } from '@/features/downloads/utils/fileUtils';
 import { formatTime, formatDuration } from '../utils/audioUtils';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 type ViewMode = 'summary' | 'details' | 'background';
 
@@ -429,6 +430,23 @@ export const ChapterQueueExample: React.FC<ChapterQueueExampleProps> = ({
       }
     };
 
+    const getDownloadItemStyle = (download: { id: string }) => {
+      const isCurrentlyPlaying =
+        mediaState.currentTrack?.id === download.id && mediaState.isPlaying;
+      return [
+        styles.downloadItem,
+        {
+          backgroundColor: theme.colors.surface,
+          borderColor: isCurrentlyPlaying
+            ? theme.colors.success
+            : COLOR_VARIATIONS.BLACK_10,
+        },
+        isCurrentlyPlaying
+          ? styles.downloadItemPlaying
+          : styles.downloadItemNormal,
+      ];
+    };
+
     if (!isInitialized) {
       return (
         <View
@@ -540,8 +558,10 @@ export const ChapterQueueExample: React.FC<ChapterQueueExampleProps> = ({
                 backgroundColor: canContinueDownloads
                   ? theme.colors.success
                   : theme.colors.textSecondary,
-                opacity: canContinueDownloads ? 1 : 0.5,
               },
+              canContinueDownloads
+                ? styles.actionButtonEnabled
+                : styles.actionButtonDisabled,
             ]}
             onPress={handleContinueDownloads}
             disabled={!canContinueDownloads || isProcessing}>
@@ -658,24 +678,7 @@ export const ChapterQueueExample: React.FC<ChapterQueueExampleProps> = ({
             </View>
           ) : (
             downloads.map(download => (
-              <View
-                key={download.id}
-                style={[
-                  styles.downloadItem,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor:
-                      mediaState.currentTrack?.id === download.id &&
-                      mediaState.isPlaying
-                        ? theme.colors.success
-                        : 'rgba(0, 0, 0, 0.1)',
-                    borderWidth:
-                      mediaState.currentTrack?.id === download.id &&
-                      mediaState.isPlaying
-                        ? 2
-                        : 1,
-                  },
-                ]}>
+              <View key={download.id} style={getDownloadItemStyle(download)}>
                 <View style={styles.downloadHeader}>
                   <MaterialIcons
                     name={getStatusIcon(download.status)}
@@ -936,22 +939,22 @@ export const ChapterQueueExample: React.FC<ChapterQueueExampleProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLOR_VARIATIONS.GRAY_LIGHT,
   },
   loadingText: {
     fontSize: 16,
     textAlign: 'center',
     marginTop: 20,
-    color: '#666',
+    color: COLOR_VARIATIONS.GRAY_MEDIUM,
   },
   errorText: {
     fontSize: 16,
     textAlign: 'center',
     marginTop: 20,
-    color: '#d32f2f',
+    color: COLOR_VARIATIONS.RED_ERROR,
   },
   retryButton: {
-    backgroundColor: '#1976d2',
+    backgroundColor: COLOR_VARIATIONS.BLUE_PRIMARY,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -959,16 +962,16 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   retryButtonText: {
-    color: 'white',
+    color: COLOR_VARIATIONS.WHITE_PURE,
     fontSize: 16,
     fontWeight: '600',
   },
   statsContainer: {
-    backgroundColor: 'white',
+    backgroundColor: COLOR_VARIATIONS.WHITE_PURE,
     margin: 16,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -978,7 +981,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#333',
+    color: COLOR_VARIATIONS.GRAY_DARK,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -992,11 +995,11 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1976d2',
+    color: COLOR_VARIATIONS.BLUE_PRIMARY,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: COLOR_VARIATIONS.GRAY_MEDIUM,
     marginTop: 4,
   },
   statsRow: {
@@ -1006,19 +1009,19 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: 14,
-    color: '#666',
+    color: COLOR_VARIATIONS.GRAY_MEDIUM,
   },
   databaseTotalsContainer: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    borderTopColor: COLOR_VARIATIONS.BLACK_10,
   },
   databaseTotalsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#333',
+    color: COLOR_VARIATIONS.GRAY_DARK,
   },
   databaseTotalsGrid: {
     flexDirection: 'row',
@@ -1028,7 +1031,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   controlsContainer: {
     flexDirection: 'row',
@@ -1037,7 +1040,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   viewModeButtons: {
     flexDirection: 'row',
@@ -1048,26 +1051,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLOR_VARIATIONS.GRAY_VERY_LIGHT,
   },
   viewModeButtonActive: {
-    backgroundColor: '#1976d2',
+    backgroundColor: COLOR_VARIATIONS.BLUE_PRIMARY,
   },
   viewModeButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
+    color: COLOR_VARIATIONS.GRAY_MEDIUM,
   },
   viewModeButtonTextActive: {
-    color: 'white',
+    color: COLOR_VARIATIONS.WHITE_PURE,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLOR_VARIATIONS.GRAY_DARK,
   },
   refreshButton: {
-    backgroundColor: '#4caf50',
+    backgroundColor: COLOR_VARIATIONS.GREEN_SUCCESS,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
@@ -1076,11 +1079,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   refreshButtonLoading: {
-    backgroundColor: '#666',
+    backgroundColor: COLOR_VARIATIONS.GRAY_MEDIUM,
     opacity: 0.7,
   },
   refreshButtonText: {
-    color: 'white',
+    color: COLOR_VARIATIONS.WHITE_PURE,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1091,23 +1094,23 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#666',
+    color: COLOR_VARIATIONS.GRAY_MEDIUM,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: COLOR_VARIATIONS.GRAY_VERY_DARK,
     textAlign: 'center',
   },
   chapterList: {
     paddingHorizontal: 16,
   },
   chapterItem: {
-    backgroundColor: 'white',
+    backgroundColor: COLOR_VARIATIONS.WHITE_PURE,
     marginBottom: 12,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -1122,7 +1125,7 @@ const styles = StyleSheet.create({
   chapterId: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLOR_VARIATIONS.GRAY_DARK,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -1134,34 +1137,34 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   audioBadge: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: COLOR_VARIATIONS.BLUE_LIGHT,
   },
   versesBadge: {
-    backgroundColor: '#f3e5f5',
+    backgroundColor: COLOR_VARIATIONS.PURPLE_LIGHT,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1976d2',
+    color: COLOR_VARIATIONS.BLUE_PRIMARY,
   },
   chapterDetails: {
     gap: 4,
   },
   detailText: {
     fontSize: 14,
-    color: '#666',
+    color: COLOR_VARIATIONS.GRAY_MEDIUM,
   },
   detailLabel: {
     fontWeight: '600',
-    color: '#333',
+    color: COLOR_VARIATIONS.GRAY_DARK,
   },
   mediaFileItem: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLOR_VARIATIONS.GRAY_100,
     marginTop: 8,
     padding: 12,
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#1976d2',
+    borderLeftColor: COLOR_VARIATIONS.BLUE_PRIMARY,
   },
   mediaFileHeader: {
     flexDirection: 'row',
@@ -1172,13 +1175,13 @@ const styles = StyleSheet.create({
   mediaFileId: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1976d2',
+    color: COLOR_VARIATIONS.BLUE_PRIMARY,
   },
   mediaFileStatus: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#4caf50',
-    backgroundColor: '#e8f5e8',
+    color: COLOR_VARIATIONS.GREEN_SUCCESS,
+    backgroundColor: COLOR_VARIATIONS.GREEN_LIGHT,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -1187,23 +1190,23 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   verseItem: {
-    backgroundColor: '#fff',
+    backgroundColor: COLOR_VARIATIONS.WHITE_PURE,
     marginTop: 4,
     padding: 6,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: COLOR_VARIATIONS.BORDER_LIGHT,
   },
   verseText: {
     fontSize: 12,
-    color: '#666',
+    color: COLOR_VARIATIONS.GRAY_MEDIUM,
   },
   backgroundContainer: {
-    backgroundColor: 'white',
+    backgroundColor: COLOR_VARIATIONS.WHITE_PURE,
     margin: 16,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1213,7 +1216,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#333',
+    color: COLOR_VARIATIONS.GRAY_DARK,
   },
 
   // Background Downloads Styles
@@ -1229,7 +1232,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   processingIndicator: {
     flexDirection: 'row',
@@ -1244,14 +1247,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   backgroundActionsContainer: {
     flexDirection: 'row',
     padding: 16,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   actionButton: {
     flexDirection: 'row',
@@ -1266,6 +1269,12 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  actionButtonEnabled: {
+    opacity: 1,
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
   },
   backgroundDownloadsList: {
     flex: 1,
@@ -1291,7 +1300,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderColor: COLOR_VARIATIONS.BLACK_10,
+  },
+  downloadItemNormal: {
+    borderWidth: 1,
+  },
+  downloadItemPlaying: {
+    borderWidth: 2,
   },
   downloadHeader: {
     flexDirection: 'row',

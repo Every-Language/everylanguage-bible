@@ -132,7 +132,7 @@ export const DatabaseOnboarding: React.FC<DatabaseOnboardingProps> = ({
     ]).start();
 
     initializeDatabase();
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const initializeDatabase = async () => {
     try {

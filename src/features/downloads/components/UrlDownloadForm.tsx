@@ -14,14 +14,15 @@ import { Theme } from '@/shared/types/theme';
 import { useDownloads } from '../hooks';
 import { urlSigningService } from '../services/urlSigningService';
 import { logger } from '@/shared/utils/logger';
+import { DownloadProgress, DownloadItem } from '../services/types';
 
 interface UrlDownloadFormProps {
   onDownloadStart?: () => void;
   onDownloadComplete?: () => void;
   // Add media file integration options
   addToMediaFiles?: boolean;
-  originalSearchResults?: any[];
-  mediaFileOptions?: any;
+  originalSearchResults?: Record<string, unknown>[];
+  mediaFileOptions?: Record<string, unknown>;
 }
 
 export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
@@ -101,13 +102,20 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
             filePath: filePath,
           });
 
-          await downloadFile(filePath, individualFileName, {
-            onProgress: progress => {
+          const downloadOptions: {
+            onProgress: (progress: DownloadProgress) => void;
+            onComplete: (item: DownloadItem) => void;
+            onError: (error: string) => void;
+            addToMediaFiles: boolean;
+            mediaFileOptions: Record<string, unknown>;
+            originalSearchResult?: Record<string, unknown>;
+          } = {
+            onProgress: (progress: DownloadProgress) => {
               logger.debug(
                 `Download progress for ${individualFileName}: ${progress.progress * 100}%`
               );
             },
-            onComplete: item => {
+            onComplete: (item: DownloadItem) => {
               logger.info('Download completed:', item.fileName);
               if (i === urlList.length - 1) {
                 // Last file completed
@@ -122,16 +130,23 @@ export const UrlDownloadForm: React.FC<UrlDownloadFormProps> = ({
                 onDownloadComplete?.();
               }
             },
-            onError: error => {
+            onError: (error: string) => {
               logger.error('Download failed:', error);
               Alert.alert('Download Failed', `${individualFileName}: ${error}`);
             },
             // Add media file integration options
             addToMediaFiles,
-            originalSearchResult:
-              originalSearchResults[i] || originalSearchResults[0],
             mediaFileOptions,
-          });
+          };
+
+          // Only add originalSearchResult if it exists
+          const searchResult =
+            originalSearchResults[i] || originalSearchResults[0];
+          if (searchResult) {
+            downloadOptions.originalSearchResult = searchResult;
+          }
+
+          await downloadFile(filePath, individualFileName, downloadOptions);
         } catch (error) {
           logger.error(`Download error for ${individualFileName}:`, error);
           Alert.alert(

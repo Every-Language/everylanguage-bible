@@ -10,6 +10,7 @@ import {
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useAudioService } from '../hooks/useAudioService';
 import { MediaTrack } from '../types';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { formatTime } from '../utils/audioUtils';
 
 interface AudioFile {
@@ -211,7 +212,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: COLOR_VARIATIONS.BLACK_05,
   },
   statusText: {
     fontSize: 14,

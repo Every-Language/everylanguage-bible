@@ -111,61 +111,62 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   }, [validMediaFiles]);
 
   // Download completion callback using utility function - stabilize dependencies
-  const handleDownloadCompletion = useCallback(
-    createDownloadCompletionCallback({
-      showSuccessNotification: true,
-      showErrorNotification: true,
-      autoCloseModal: false, // Set to true if you want auto-close
-      refreshDownloads: true,
-      // Media file integration
-      addToMediaFiles: true,
-      originalSearchResults: validMediaFiles,
-      mediaFileOptions: {
-        chapterId: chapterId,
-        mediaType: 'audio',
-        uploadStatus: 'completed',
-        publishStatus: 'published',
-        checkStatus: 'checked',
-        version: 1,
-      },
-      onSuccess: () => {
-        logger.info('All downloads completed successfully');
-        // Add any success-specific logic here
-      },
-      onError: failedFiles => {
-        logger.warn('Some downloads failed', {
-          failedCount: failedFiles.length,
-          failedFiles: failedFiles.map(f => ({
-            fileName: f.fileName,
-            error: f.error,
-          })),
-        });
-        // Add any error-specific logic here
-      },
-      onComplete: (completedFiles, failedFiles, totalFiles) => {
-        logger.info('Download session completed', {
-          completedCount: completedFiles.length,
-          failedCount: failedFiles.length,
-          totalCount: totalFiles,
-        });
-        // Add any completion-specific logic here
-      },
-      onMediaFileAdded: (mediaFileId, fileName) => {
-        logger.info('Media file added to local database:', {
-          mediaFileId,
-          fileName,
-        });
-        // Add any media file added logic here
-      },
-      onMediaFileError: (fileName, error) => {
-        logger.error('Failed to add media file to local database:', {
-          fileName,
-          error,
-        });
-        // Add any media file error logic here
-      },
-    }),
-    [chapterId] // Only depend on chapterId, not validMediaFiles to prevent frequent re-renders
+  const handleDownloadCompletion = useMemo(
+    () =>
+      createDownloadCompletionCallback({
+        showSuccessNotification: true,
+        showErrorNotification: true,
+        autoCloseModal: false, // Set to true if you want auto-close
+        refreshDownloads: true,
+        // Media file integration
+        addToMediaFiles: true,
+        originalSearchResults: validMediaFiles,
+        mediaFileOptions: {
+          chapterId: chapterId,
+          mediaType: 'audio',
+          uploadStatus: 'completed',
+          publishStatus: 'published',
+          checkStatus: 'checked',
+          version: 1,
+        },
+        onSuccess: () => {
+          logger.info('All downloads completed successfully');
+          // Add any success-specific logic here
+        },
+        onError: failedFiles => {
+          logger.warn('Some downloads failed', {
+            failedCount: failedFiles.length,
+            failedFiles: failedFiles.map(f => ({
+              fileName: f.fileName,
+              error: f.error,
+            })),
+          });
+          // Add any error-specific logic here
+        },
+        onComplete: (completedFiles, failedFiles, totalFiles) => {
+          logger.info('Download session completed', {
+            completedCount: completedFiles.length,
+            failedCount: failedFiles.length,
+            totalCount: totalFiles,
+          });
+          // Add any completion-specific logic here
+        },
+        onMediaFileAdded: (mediaFileId, fileName) => {
+          logger.info('Media file added to local database:', {
+            mediaFileId,
+            fileName,
+          });
+          // Add any media file added logic here
+        },
+        onMediaFileError: (fileName, error) => {
+          logger.error('Failed to add media file to local database:', {
+            fileName,
+            error,
+          });
+          // Add any media file error logic here
+        },
+      }),
+    [chapterId, validMediaFiles] // Include validMediaFiles as dependency
   );
 
   // Set completion callback when component mounts - only run once
@@ -176,7 +177,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     return () => {
       setDownloadCompletionCallback(null);
     };
-  }, []); // Empty dependency array - only run once on mount
+  }, [handleDownloadCompletion]); // Include handleDownloadCompletion as dependency
 
   // Memoized values
   const searchError = useMemo(
@@ -278,6 +279,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     book.name,
     chapterTitle,
     onClose,
+    validMediaFiles,
   ]);
 
   // Check online capabilities when modal becomes visible
@@ -291,7 +293,13 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
       });
       handleOnlineCapabilitiesCheck();
     }
-  }, [visible, handleOnlineCapabilitiesCheck]);
+  }, [
+    visible,
+    handleOnlineCapabilitiesCheck,
+    isConnected,
+    connectionType,
+    isInternetReachable,
+  ]);
 
   // Handle retry internet check
   const handleRetryInternetCheck = useCallback(async () => {
@@ -432,8 +440,10 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
                     backgroundColor: isDownloadDisabled
                       ? theme.colors.border
                       : theme.colors.success,
-                    opacity: isDownloadDisabled ? 0.6 : 1,
                   },
+                  isDownloadDisabled
+                    ? styles.downloadButtonDisabled
+                    : styles.downloadButtonEnabled,
                 ]}
                 onPress={handleDownload}
                 disabled={isDownloadDisabled}>
@@ -529,6 +539,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     gap: 8,
+  },
+  downloadButtonEnabled: {
+    opacity: 1,
+  },
+  downloadButtonDisabled: {
+    opacity: 0.6,
   },
   downloadButtonText: {
     fontSize: 16,

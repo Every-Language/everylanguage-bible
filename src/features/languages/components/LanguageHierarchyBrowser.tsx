@@ -25,7 +25,7 @@ import { logger } from '@/shared/utils/logger';
 
 // Individual Language Node Component with proper expansion handling
 interface LanguageNodeWrapperProps {
-  node: any;
+  node: LanguageEntity;
   onToggleExpand: (nodeId: string) => void;
   onSelect: (language: LanguageEntity) => void;
   isNodeExpanded: (nodeId: string) => boolean;
@@ -184,7 +184,7 @@ const LanguageNodeWrapper: React.FC<LanguageNodeWrapperProps> = ({
       {/* Render children if expanded - each child checks its own expansion state */}
       {hasChildren && isExpanded && node.children && (
         <View>
-          {node.children.map((child: any) => (
+          {node.children.map((child: LanguageEntity) => (
             <LanguageNodeWrapper
               key={child.id}
               node={child}

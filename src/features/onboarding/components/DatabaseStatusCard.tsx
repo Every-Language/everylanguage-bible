@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { DatabaseInitProgress } from '@/shared/services/database/DatabaseManager';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface DatabaseStatusCardProps {
   status: 'checking' | 'ready' | 'error' | 'initializing';
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 20,
     width: '100%',
-    shadowColor: '#000',
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
     shadowOffset: {
       width: 0,
       height: 2,

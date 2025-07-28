@@ -17,7 +17,7 @@ export interface DownloadCompletionOptions {
   refreshDownloads?: boolean;
   // Media file integration options
   addToMediaFiles?: boolean;
-  originalSearchResults?: any[]; // Original search results from the download (can be SearchResult[] or MediaFile[])
+  originalSearchResults?: Record<string, unknown>[]; // Original search results from the download (can be SearchResult[] or MediaFile[])
   mediaFileOptions?: DownloadToMediaOptions;
   onSuccess?: () => void;
   onError?: (failedFiles: FileDownloadProgress[]) => void;

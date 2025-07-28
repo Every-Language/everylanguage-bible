@@ -3,7 +3,6 @@ import { StyleSheet, View, Text, Image, Dimensions } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
-  BottomSheetModalProvider,
   BottomSheetBackgroundProps,
   useBottomSheet,
 } from '@gorhom/bottom-sheet';
@@ -16,11 +15,12 @@ import Animated, {
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { useAudioService } from '@/features/media/hooks/useAudioService';
-import { COLOR_VARIATIONS } from '@/shared/constants/theme';
+
 import { MediaControls } from './MediaControls';
 import { TextAndQueueTabs } from './TextAndQueueTabs';
 import { TrackDetailsCollapsed } from './TrackDetailsCollapsed';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -50,7 +50,7 @@ const BlurredBackground: React.FC<BottomSheetBackgroundProps> = ({
     opacity: interpolate(
       animatedIndex.value,
       [0, 1],
-      [0.8, 1], // Increased minimum opacity from 0.95 to 0.8 to ensure it's not fully transparent
+      [0.95, 1], // Increased minimum opacity from 0.8 to 0.95 for better visibility
       Extrapolation.CLAMP
     ),
   }));
@@ -61,11 +61,11 @@ const BlurredBackground: React.FC<BottomSheetBackgroundProps> = ({
   );
 
   return (
-    <Animated.View style={containerStyle}>
+    <Animated.View style={[containerStyle, styles.blurContainer]}>
       <BlurView
-        intensity={30}
+        intensity={50} // Increased blur intensity from 30 to 50 for stronger blur effect
         tint={theme.mode === 'dark' ? 'dark' : 'light'}
-        style={StyleSheet.absoluteFillObject}
+        style={[StyleSheet.absoluteFillObject, styles.blurContainer]}
       />
       <View
         style={[
@@ -73,9 +73,10 @@ const BlurredBackground: React.FC<BottomSheetBackgroundProps> = ({
           {
             backgroundColor:
               theme.mode === 'dark'
-                ? COLOR_VARIATIONS.BLACK_90
-                : COLOR_VARIATIONS.WHITE_90,
+                ? COLOR_VARIATIONS.CHARCOAL_95
+                : COLOR_VARIATIONS.CREAM_95,
           },
+          styles.blurContainer,
         ]}
       />
     </Animated.View>
@@ -240,7 +241,7 @@ const MediaPlayerContent: React.FC = () => {
             styles.controlsContainer,
             controlsContainerStyle,
             {
-              paddingBottom: Math.max(insets.bottom, 20), // Increased minimum padding for better safe area handling
+              paddingBottom: Math.max(insets.bottom + 16, 36), // Increased bottom padding for better spacing
             },
           ]}>
           <MediaControls showAlbumArt={false} compact={true} />
@@ -255,29 +256,41 @@ export const MediaPlayerSheet: React.FC = () => {
   const { state, actions } = useAudioService();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
+  const isInitializing = useRef(false);
+  const currentSheetIndex = useRef(0); // Track current sheet index to prevent unwanted changes
 
   // Snap points: collapsed (25%), expanded (100vh) - account for safe areas
   const snapPoints = useMemo(() => {
-    // Calculate snap points with safe area consideration
-    const collapsedHeight = Math.max(SCREEN_HEIGHT * 0.25, 160 + insets.bottom); // Further increased minimum height for better safe area handling
+    // Calculate snap points with safe area consideration and additional padding for controls
+    const collapsedHeight = Math.max(
+      SCREEN_HEIGHT * 0.25,
+      180 + insets.bottom + 16
+    ); // Increased minimum height for better spacing
 
     return [`${(collapsedHeight / SCREEN_HEIGHT) * 100}%`, '100%'];
   }, [insets.bottom]);
 
-  // Handle sheet changes for state management only
+  // Handle sheet changes for state management only - with improved logic to prevent unwanted state changes
   const handleSheetChanges = useCallback(
     (index: number) => {
-      if (index === 0) {
-        // Collapsed state
-        if (state.isExpanded) {
-          actions.collapse();
-        }
-      } else if (index === 1) {
-        // Expanded state
-        if (!state.isExpanded) {
-          actions.expand();
-        }
+      // Prevent state changes during initialization
+      if (isInitializing.current) {
+        return;
       }
+
+      // Update current sheet index
+      currentSheetIndex.current = index;
+
+      // Only update state if there's an actual change needed
+      if (index === 0 && state.isExpanded) {
+        // Collapsed state - only collapse if currently expanded
+        actions.collapse();
+      } else if (index === 1 && !state.isExpanded) {
+        // Expanded state - only expand if currently collapsed
+        actions.expand();
+      }
+      // If index is -1 (dismissed), don't change the expanded state
+      // This prevents the sheet from hiding itself when expanded
     },
     [state.isExpanded, actions]
   );
@@ -285,64 +298,97 @@ export const MediaPlayerSheet: React.FC = () => {
   // Present/dismiss modal based on track availability
   useEffect(() => {
     if (state.currentTrack) {
+      isInitializing.current = true;
       bottomSheetRef.current?.present();
-      // Set initial index based on expanded state
+
+      // Set initial index based on expanded state with a delay to ensure proper initialization
       setTimeout(() => {
-        bottomSheetRef.current?.snapToIndex(state.isExpanded ? 1 : 0);
-      }, 100);
+        const targetIndex = state.isExpanded ? 1 : 0;
+        currentSheetIndex.current = targetIndex;
+        bottomSheetRef.current?.snapToIndex(targetIndex);
+        isInitializing.current = false;
+      }, 150); // Increased delay to ensure proper initialization
     } else {
+      // Only dismiss if there's no current track
       bottomSheetRef.current?.dismiss();
     }
   }, [state.currentTrack]);
 
-  // Update sheet position when expanded state changes
+  // Update sheet position when expanded state changes - with improved logic
   useEffect(() => {
-    if (state.currentTrack) {
-      bottomSheetRef.current?.snapToIndex(state.isExpanded ? 1 : 0);
+    if (state.currentTrack && !isInitializing.current) {
+      const targetIndex = state.isExpanded ? 1 : 0;
+
+      // Only change index if it's different from current to prevent unnecessary updates
+      if (currentSheetIndex.current !== targetIndex) {
+        currentSheetIndex.current = targetIndex;
+        bottomSheetRef.current?.snapToIndex(targetIndex);
+      }
+    }
+  }, [state.isExpanded, state.currentTrack]);
+
+  // Prevent the sheet from being dismissed when expanded
+  const handleDismiss = useCallback(() => {
+    // If the sheet is expanded and there's a current track, don't allow dismissal
+    if (state.isExpanded && state.currentTrack) {
+      // Force the sheet back to expanded state
+      setTimeout(() => {
+        bottomSheetRef.current?.snapToIndex(1);
+      }, 50);
+      return;
     }
   }, [state.isExpanded, state.currentTrack]);
 
   if (!state.currentTrack) return null;
 
   return (
-    <BottomSheetModalProvider>
-      <BottomSheetModal
-        ref={bottomSheetRef}
-        index={0} // Start collapsed
-        snapPoints={snapPoints}
-        onChange={handleSheetChanges}
-        backdropComponent={() => null}
-        backgroundComponent={BlurredBackground}
-        handleIndicatorStyle={[
-          styles.handle,
-          { backgroundColor: theme.colors.border },
-        ]}
-        enablePanDownToClose={false}
-        enableDynamicSizing={false}
-        enableOverDrag={false}
-        animateOnMount={true}
-        keyboardBehavior='fillParent'
-        keyboardBlurBehavior='restore'
-        android_keyboardInputMode='adjustResize'
-        enableHandlePanningGesture={true}
-        enableContentPanningGesture={true}
-        style={styles.bottomSheetContainer} // Ensure no extra margin that could interfere with safe area
-      >
-        <BottomSheetView style={styles.content}>
-          <MediaPlayerContent />
-        </BottomSheetView>
-      </BottomSheetModal>
-    </BottomSheetModalProvider>
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      index={0} // Start collapsed
+      snapPoints={snapPoints}
+      onChange={handleSheetChanges}
+      onDismiss={handleDismiss}
+      backdropComponent={() => null}
+      backgroundComponent={BlurredBackground}
+      handleIndicatorStyle={[
+        styles.handle,
+        {
+          backgroundColor: theme.colors.border, // Use theme border color for consistency
+        },
+      ]}
+      enablePanDownToClose={false}
+      enableDynamicSizing={false}
+      enableOverDrag={false}
+      animateOnMount={true}
+      keyboardBehavior='fillParent'
+      keyboardBlurBehavior='restore'
+      android_keyboardInputMode='adjustResize'
+      enableHandlePanningGesture={true}
+      enableContentPanningGesture={true}
+      style={styles.bottomSheetContainer} // Ensure no extra margin that could interfere with safe area
+    >
+      <BottomSheetView style={styles.content}>
+        <MediaPlayerContent />
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create({
+  blurContainer: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
   // Content wrapper - no longer needs blur background
   contentWrapper: {
     flex: 1,
+    borderRadius: 20, // Add border radius to match background
+    overflow: 'hidden', // Ensure content is clipped to rounded corners
   },
   bottomSheetContainer: {
     marginBottom: 0,
+    borderRadius: 20, // Add border radius for rounded appearance
+    overflow: 'hidden', // Ensure content is clipped to rounded corners
   },
   handle: {
     width: 40,
@@ -351,10 +397,24 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    borderRadius: 20, // Add border radius for rounded appearance
+    overflow: 'hidden', // Ensure content is clipped to rounded corners
   },
   mainContent: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingBottom: 8, // Add bottom padding for better spacing
+    borderRadius: 20, // Add border radius to match background
+    overflow: 'hidden', // Ensure content is clipped to rounded corners
+    // Add subtle shadow for better visibility against blurred background
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3, // For Android shadow
   },
 
   // Track Details Styles
@@ -408,6 +468,7 @@ const styles = StyleSheet.create({
   controlsContainer: {
     justifyContent: 'center',
     paddingHorizontal: 8,
-    minHeight: 160, // Increased minimum height for better safe area handling
+    minHeight: 180, // Increased minimum height for better spacing and safe area handling
+    paddingTop: 8, // Add top padding for better spacing
   },
 });

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { AudioVersionSelectorProps } from '../types';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 export const AudioVersionSelector: React.FC<AudioVersionSelectorProps> = ({
   currentVersion,
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    backgroundColor: COLOR_VARIATIONS.BLUE_10,
   },
   contentContainer: {
     flex: 1,

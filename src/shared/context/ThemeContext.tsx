@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useState,
   useMemo,
+  useCallback,
   ReactNode,
 } from 'react';
 import { useColorScheme } from 'react-native';
@@ -32,7 +33,7 @@ export function ThemeProvider({ children, initialTheme }: ThemeProviderProps) {
   // Load saved theme preference on mount
   useEffect(() => {
     loadThemePreference();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update theme when system color scheme changes (if using system default)
   useEffect(() => {
@@ -73,17 +74,17 @@ export function ThemeProvider({ children, initialTheme }: ThemeProviderProps) {
   };
 
   // Toggle between light and dark theme
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     const newMode = mode === 'light' ? 'dark' : 'light';
     setMode(newMode);
     saveThemePreference(newMode);
-  };
+  }, [mode]);
 
   // Set specific theme
-  const setTheme = (newMode: ThemeMode) => {
+  const setTheme = useCallback((newMode: ThemeMode) => {
     setMode(newMode);
     saveThemePreference(newMode);
-  };
+  }, []);
 
   // Get current theme object
   const theme: Theme = themes[mode];

@@ -112,16 +112,16 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
         logger.warn('Failed to register background sync:', {
           error: error,
           errorType: typeof error,
-          errorConstructor: (error as any)?.constructor?.name,
-          errorMessage: (error as any)?.message || 'No message',
-          errorStack: (error as any)?.stack || 'No stack',
+          errorConstructor: (error as Error)?.constructor?.name,
+          errorMessage: (error as Error)?.message || 'No message',
+          errorStack: (error as Error)?.stack || 'No stack',
         });
       }
     } catch (error) {
       logger.error('Failed to initialize app:', error);
       throw error;
     }
-  }, [isInitialized, isOnboardingMode]);
+  }, [isInitialized, isOnboardingMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkForUpdates = useCallback(async (): Promise<{
     needsUpdate: boolean;
@@ -240,9 +240,9 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       const errorDetails = {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: (error as Error)?.constructor?.name,
+        errorMessage: (error as Error)?.message || 'No message',
+        errorStack: (error as Error)?.stack || 'No stack',
         // Remove the problematic JSON.stringify that was causing empty objects
         // errorStringified: JSON.stringify(
         //   error,
@@ -326,9 +326,9 @@ export const SyncProvider: React.FC<SyncProviderProps> = ({ children }) => {
       const errorDetails = {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: (error as Error)?.constructor?.name,
+        errorMessage: (error as Error)?.message || 'No message',
+        errorStack: (error as Error)?.stack || 'No stack',
         // Remove the problematic JSON.stringify that was causing empty objects
         // errorStringified: JSON.stringify(
         //   error,

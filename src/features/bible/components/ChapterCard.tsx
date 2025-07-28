@@ -5,6 +5,7 @@ import { useTheme } from '@/shared/context/ThemeContext';
 import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import type { ChapterWithMetadata } from '../types';
 import { MediaAvailabilityStatus } from '@/shared/services/database/LocalDataService';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface ChapterCardProps {
   chapter: ChapterWithMetadata;
@@ -45,7 +46,9 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
       justifyContent: 'space-between',
       // Add border when playing
       borderWidth: isCurrentlyPlaying ? 2 : 0,
-      borderColor: isCurrentlyPlaying ? theme.colors.primary : 'transparent',
+      borderColor: isCurrentlyPlaying
+        ? theme.colors.primary
+        : COLOR_VARIATIONS.TRANSPARENT,
     },
     chapterInfo: {
       flex: 1,

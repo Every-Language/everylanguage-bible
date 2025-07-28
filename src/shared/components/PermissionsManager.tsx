@@ -10,6 +10,7 @@ import {
 import { usePermissions } from '@/shared/hooks/usePermissions';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { logger } from '@/shared/utils/logger';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface PermissionsManagerProps {
   showOnlyMissing?: boolean;
@@ -107,7 +108,10 @@ export const PermissionsManager: React.FC<PermissionsManagerProps> = ({
     return descriptions[type];
   };
 
-  const shouldShowPermission = (permission: any) => {
+  const shouldShowPermission = (permission: {
+    granted: boolean;
+    canAskAgain: boolean;
+  }) => {
     if (!showOnlyMissing) return true;
     return !permission.granted;
   };
@@ -172,7 +176,7 @@ export const PermissionsManager: React.FC<PermissionsManagerProps> = ({
               },
             ]}>
             <View style={styles.permissionHeader}>
-              <Text style={[styles.permissionIcon, { fontSize: 20 }]}>
+              <Text style={[styles.permissionIcon, styles.permissionIconLarge]}>
                 {getPermissionIcon(permission.granted, permission.canAskAgain)}
               </Text>
               <View style={styles.permissionInfo}>
@@ -222,7 +226,10 @@ export const PermissionsManager: React.FC<PermissionsManagerProps> = ({
                       }
                     }}>
                     <Text
-                      style={[styles.actionButtonText, { color: '#FFFFFF' }]}>
+                      style={[
+                        styles.actionButtonText,
+                        { color: COLOR_VARIATIONS.WHITE_PURE },
+                      ]}>
                       {type === 'notifications' ? 'Enable' : 'Learn More'}
                     </Text>
                   </TouchableOpacity>
@@ -234,7 +241,10 @@ export const PermissionsManager: React.FC<PermissionsManagerProps> = ({
                     ]}
                     onPress={openAppSettings}>
                     <Text
-                      style={[styles.actionButtonText, { color: '#FFFFFF' }]}>
+                      style={[
+                        styles.actionButtonText,
+                        { color: COLOR_VARIATIONS.WHITE_PURE },
+                      ]}>
                       Open Settings
                     </Text>
                   </TouchableOpacity>
@@ -254,7 +264,11 @@ export const PermissionsManager: React.FC<PermissionsManagerProps> = ({
           ]}
           onPress={handleRequestAllPermissions}
           disabled={isRequesting}>
-          <Text style={[styles.requestAllButtonText, { color: '#FFFFFF' }]}>
+          <Text
+            style={[
+              styles.requestAllButtonText,
+              { color: COLOR_VARIATIONS.WHITE_PURE },
+            ]}>
             {isRequesting ? 'Requesting...' : 'Request All Permissions'}
           </Text>
         </TouchableOpacity>
@@ -318,6 +332,9 @@ const styles = StyleSheet.create({
   },
   permissionIcon: {
     marginRight: 12,
+  },
+  permissionIconLarge: {
+    fontSize: 20,
   },
   permissionInfo: {
     flex: 1,

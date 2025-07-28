@@ -19,12 +19,15 @@ export interface UseChapterQueueReturn {
     options?: ChapterQueueOptions
   ) => Promise<string[]>;
   getChapterMediaDetails: (chapterId: string) => Promise<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mediaFiles: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mediaFileVerses: any[];
     versesWithTiming: Array<{
       verseId: string;
       startTime: number;
       mediaFileId: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mediaFile: any;
       localPath: string;
     }>;
@@ -63,6 +66,7 @@ export function useChapterQueue(
       initialOptions.includeDeleted,
       initialOptions.sortBy,
       initialOptions.sortDirection,
+      initialOptions,
     ]
   );
 
@@ -246,6 +250,7 @@ export function useAudioAvailabilityStats(
       options.includeDeleted,
       options.sortBy,
       options.sortDirection,
+      options,
     ]
   );
 

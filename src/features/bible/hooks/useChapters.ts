@@ -87,11 +87,8 @@ export const useChapters = (bookId: string | null) => {
               chapter.id
             );
             newVersesMarkedMap.set(chapter.id, versesMarked);
-          } catch (error) {
-            console.error(
-              `Error calculating versesMarked for chapter ${chapter.id}:`,
-              error
-            );
+          } catch {
+            // Silently handle error and set versesMarked to false
             newVersesMarkedMap.set(chapter.id, false);
           }
         })
@@ -110,8 +107,8 @@ export const useChapters = (bookId: string | null) => {
       title: `Chapter ${chapter.chapter_number}`,
       verseRange: `1 - ${chapter.total_verses}`,
       mediaAvailability:
-        (chapter as Chapter & { mediaAvailability?: any }).mediaAvailability ||
-        'none',
+        (chapter as Chapter & { mediaAvailability?: string })
+          .mediaAvailability || 'none',
       versesMarked: versesMarkedMap.get(chapter.id) || false,
     })) as ChapterWithMetadata[];
   }, [state.chapters, versesMarkedMap]);

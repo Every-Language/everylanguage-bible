@@ -63,6 +63,29 @@ export const COLOR_VARIATIONS = {
   WHITE_90: 'rgba(255, 255, 255, 0.9)',
   BLUE_10: 'rgba(0, 122, 255, 0.1)',
   GREEN_10: 'rgba(76, 175, 80, 0.1)',
+
+  // Additional colors for specific use cases
+  TRANSPARENT: 'transparent',
+  CHARCOAL_95: 'rgba(40, 41, 39, 0.95)',
+  CREAM_95: 'rgba(212, 207, 195, 0.95)',
+
+  // Additional colors for inline styles
+  SHADOW_BLACK: '#000',
+  ERROR_RED: '#ff4444',
+  GRAY_LIGHT: '#f5f5f5',
+  GRAY_MEDIUM: '#666',
+  GRAY_DARK: '#333',
+  GRAY_VERY_LIGHT: '#f0f0f0',
+  BLUE_PRIMARY: '#1976d2',
+  GREEN_SUCCESS: '#4caf50',
+  RED_ERROR: '#d32f2f',
+  GRAY_VERY_DARK: '#999',
+  BLUE_LIGHT: '#e3f2fd',
+  PURPLE_LIGHT: '#f3e5f5',
+  GREEN_LIGHT: '#e8f5e8',
+  WHITE_PURE: '#fff',
+  BORDER_LIGHT: '#e0e0e0',
+  BORDER_GRAY: '#E0E0E0',
 };
 
 // Light Theme Colors

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface NoInternetModalProps {
   visible: boolean;
@@ -95,7 +96,7 @@ export const NoInternetModal: React.FC<NoInternetModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLOR_VARIATIONS.BLACK_50,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -105,7 +106,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
     shadowOffset: {
       width: 0,
       height: 2,

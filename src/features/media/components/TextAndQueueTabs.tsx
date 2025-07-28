@@ -9,6 +9,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../../shared/context/ThemeContext';
 import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
+import { COLOR_VARIATIONS } from '../../../shared/constants/theme';
 import { useCurrentVersions } from '../../languages/hooks';
 import { localDataService } from '../../../shared/services/database/LocalDataService';
 import type { Verse } from '../../bible/types';
@@ -423,7 +424,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: COLOR_VARIATIONS.WHITE_10,
     alignItems: 'center',
   },
   toggleButtonText: {
@@ -504,7 +505,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 20,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLOR_VARIATIONS.WHITE_08,
   },
   verseHeader: {
     flexDirection: 'row',
@@ -539,7 +540,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 8,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLOR_VARIATIONS.WHITE_08,
     gap: 12,
   },
   queueItemText: {
@@ -554,10 +555,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   darkBackground: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLOR_VARIATIONS.WHITE_08,
   },
   lightBackground: {
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: COLOR_VARIATIONS.BLACK_05,
   },
   tabVisible: {
     display: 'flex',

@@ -19,11 +19,17 @@ export interface BibleSyncOptions extends SyncOptions {
 }
 
 // Enhanced error types for better error handling
+export interface BibleSyncErrorDetails {
+  tableName?: string;
+  recordId?: string;
+  originalError?: unknown;
+}
+
 export class BibleSyncError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: BibleSyncErrorDetails
   ) {
     super(message);
     this.name = 'BibleSyncError';
@@ -31,14 +37,20 @@ export class BibleSyncError extends Error {
 }
 
 // Validation utilities for Bible-specific data
-const validateBookData = (book: any): any => {
-  if (!book.id || !book.name || typeof book.book_number !== 'number') {
+const validateBookData = (
+  book: Record<string, unknown>
+): Record<string, unknown> => {
+  if (!book['id'] || !book['name'] || typeof book['book_number'] !== 'number') {
     throw new Error('Invalid book data: missing required fields');
   }
 
   // Normalize testament field
-  if (book.testament && !['OT', 'NT'].includes(book.testament)) {
-    book.testament = null; // Set to null if invalid
+  if (
+    book['testament'] &&
+    typeof book['testament'] === 'string' &&
+    !['OT', 'NT'].includes(book['testament'] as string)
+  ) {
+    book['testament'] = null; // Set to null if invalid
   }
 
   return book;

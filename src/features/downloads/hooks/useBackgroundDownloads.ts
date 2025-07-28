@@ -21,11 +21,11 @@ export interface UseBackgroundDownloadsReturn {
   addToBackgroundQueue: (
     filePath: string,
     fileName: string,
-    options?: any
+    options?: Record<string, unknown>
   ) => Promise<string>;
   addBatchToBackgroundQueue: (
     files: Array<{ filePath: string; fileName: string; fileSize?: number }>,
-    options?: any
+    options?: Record<string, unknown>
   ) => Promise<string[]>;
   cancelDownload: (downloadId: string) => Promise<void>;
   pauseDownload: (downloadId: string) => Promise<void>;
@@ -73,6 +73,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   const refreshIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize the background download service
+
   const initialize = useCallback(async () => {
     try {
       await downloadService.initialize();
@@ -168,7 +169,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
     async (
       filePath: string,
       fileName: string,
-      options: any = {}
+      options: Record<string, unknown> = {}
     ): Promise<string> => {
       try {
         const downloadId = await downloadService.addToQueue(
@@ -190,7 +191,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   const addBatchToBackgroundQueue = useCallback(
     async (
       files: Array<{ filePath: string; fileName: string; fileSize?: number }>,
-      options: any = {}
+      options: Record<string, unknown> = {}
     ): Promise<string[]> => {
       try {
         const downloadIds = await downloadService.addBatchToQueue(

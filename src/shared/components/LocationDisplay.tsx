@@ -10,12 +10,18 @@ import {
 import { useLocation } from '@/shared/hooks/useLocation';
 import { useTheme } from '@/shared/context/ThemeContext';
 import { logger } from '@/shared/utils/logger';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface LocationDisplayProps {
   showControls?: boolean;
   showAccuracy?: boolean;
   showTimestamp?: boolean;
-  onLocationUpdate?: (location: any) => void;
+  onLocationUpdate?: (location: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    timestamp?: number;
+  }) => void;
 }
 
 export const LocationDisplay: React.FC<LocationDisplayProps> = ({
@@ -218,7 +224,11 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({
             <TouchableOpacity
               style={[styles.button, { backgroundColor: theme.colors.primary }]}
               onPress={handleRequestPermissions}>
-              <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
+              <Text
+                style={[
+                  styles.buttonText,
+                  { color: COLOR_VARIATIONS.WHITE_PURE },
+                ]}>
                 Enable Location
               </Text>
             </TouchableOpacity>
@@ -230,7 +240,11 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({
               style={[styles.button, { backgroundColor: theme.colors.primary }]}
               onPress={handleGetLocation}
               disabled={isGettingLocation}>
-              <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
+              <Text
+                style={[
+                  styles.buttonText,
+                  { color: COLOR_VARIATIONS.WHITE_PURE },
+                ]}>
                 {isGettingLocation ? 'Getting...' : 'Get Location'}
               </Text>
             </TouchableOpacity>
@@ -248,7 +262,11 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({
                 },
               ]}
               onPress={isWatching ? handleStopWatching : handleStartWatching}>
-              <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
+              <Text
+                style={[
+                  styles.buttonText,
+                  { color: COLOR_VARIATIONS.WHITE_PURE },
+                ]}>
                 {isWatching ? 'Stop Watching' : 'Watch Location'}
               </Text>
             </TouchableOpacity>
@@ -323,7 +341,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: COLOR_VARIATIONS.BORDER_GRAY,
   },
   statusHeader: {
     flexDirection: 'row',

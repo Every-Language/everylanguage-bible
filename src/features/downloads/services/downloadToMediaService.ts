@@ -48,6 +48,7 @@ export class DownloadToMediaService {
    */
   async addCompletedDownloadToMedia(
     completedFile: FileDownloadProgress,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     originalSearchResult: any,
     options: DownloadToMediaOptions = {}
   ): Promise<MediaFileCreationResult> {
@@ -115,6 +116,7 @@ export class DownloadToMediaService {
       }
 
       // Extract data from the original search result with fallbacks
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const extractDataWithFallbacks = (searchResult: any) => {
         // Generate a unique ID if none exists
         const fallbackId =
@@ -451,6 +453,7 @@ export class DownloadToMediaService {
    */
   async addCompletedDownloadsToMedia(
     completedFiles: FileDownloadProgress[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     originalSearchResults: any[],
     options: DownloadToMediaOptions = {}
   ): Promise<{
@@ -570,12 +573,15 @@ export class DownloadToMediaService {
    */
   async debugMediaFileCreation(
     completedFile: FileDownloadProgress,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     originalSearchResult: any,
     options: DownloadToMediaOptions = {}
   ): Promise<{
     isValid: boolean;
     issues: string[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     extractedData: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mediaFileData: any;
   }> {
     const issues: string[] = [];

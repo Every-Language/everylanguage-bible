@@ -107,7 +107,7 @@ export const createLanguageHierarchySlice: StateCreator<
         set({ isLoadingHierarchy: false });
 
         // Optionally trigger background sync if data is stale
-        languageService.syncInBackground().catch((error: any) => {
+        languageService.syncInBackground().catch((error: unknown) => {
           logger.warn('Background sync failed:', error);
         });
 
@@ -132,7 +132,7 @@ export const createLanguageHierarchySlice: StateCreator<
           });
 
           // Trigger background sync if needed
-          languageService.syncInBackground().catch((error: any) => {
+          languageService.syncInBackground().catch((error: unknown) => {
             logger.warn('Background sync failed:', error);
           });
 
@@ -182,7 +182,7 @@ export const createLanguageHierarchySlice: StateCreator<
       .then((path: LanguageEntity[]) => {
         set({ currentLanguagePath: path });
       })
-      .catch((error: any) => {
+      .catch((error: unknown) => {
         logger.error('Error getting language path:', error);
         set({ hierarchyError: 'Failed to navigate to language' });
       });
