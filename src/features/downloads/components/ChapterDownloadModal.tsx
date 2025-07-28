@@ -110,7 +110,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     }));
   }, [validMediaFiles]);
 
-  // Download completion callback using utility function
+  // Download completion callback using utility function - stabilize dependencies
   const handleDownloadCompletion = useCallback(
     createDownloadCompletionCallback({
       showSuccessNotification: true,
@@ -165,10 +165,10 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
         // Add any media file error logic here
       },
     }),
-    [validMediaFiles, chapterId]
+    [chapterId] // Only depend on chapterId, not validMediaFiles to prevent frequent re-renders
   );
 
-  // Set completion callback when component mounts
+  // Set completion callback when component mounts - only run once
   useEffect(() => {
     setDownloadCompletionCallback(handleDownloadCompletion);
 
@@ -176,7 +176,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     return () => {
       setDownloadCompletionCallback(null);
     };
-  }, [setDownloadCompletionCallback, handleDownloadCompletion]);
+  }, []); // Empty dependency array - only run once on mount
 
   // Memoized values
   const searchError = useMemo(

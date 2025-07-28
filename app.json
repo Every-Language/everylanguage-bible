@@ -10,22 +10,98 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.everylanguage.elbible",
       "infoPlist": {
-        "UIBackgroundModes": ["background-fetch", "background-processing"]
+        "UIBackgroundModes": [
+          "background-fetch",
+          "background-processing",
+          "audio",
+          "remote-notification"
+        ],
+        "NSMicrophoneUsageDescription": "This app does not use the microphone. Audio playback is for Bible content only.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSExceptionDomains": {
+            "everylanguage.org": {
+              "NSExceptionAllowsInsecureHTTPLoads": false,
+              "NSExceptionMinimumTLSVersion": "1.2"
+            }
+          }
+        },
+        "NSCameraUsageDescription": "This app does not use the camera.",
+        "NSPhotoLibraryUsageDescription": "This app does not access your photo library.",
+        "NSLocationUsageDescription": "This app uses location to provide region-specific Bible content and language recommendations.",
+        "NSLocationWhenInUseUsageDescription": "This app uses location to provide region-specific Bible content and language recommendations.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses location to provide region-specific Bible content and language recommendations.",
+        "NSContactsUsageDescription": "This app does not access your contacts.",
+        "NSBluetoothAlwaysUsageDescription": "This app does not use Bluetooth.",
+        "NSBluetoothPeripheralUsageDescription": "This app does not use Bluetooth peripherals.",
+        "NSFaceIDUsageDescription": "This app does not use Face ID.",
+        "NSLocalNetworkUsageDescription": "This app may access your local network for content synchronization.",
+        "NSUserTrackingUsageDescription": "This app does not track you across other companies' apps or websites."
       }
     },
     "android": {
-      "package": "com.everylanguage.elbible"
+      "package": "com.everylanguage.elbible",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
     },
     "web": {},
     "plugins": [
       "expo-router",
       "expo-font",
       "expo-localization",
-      "expo-notifications",
-      "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "color": "#ffffff"
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false
+        }
+      ],
       "expo-sqlite",
-      "expo-background-task",
-      "expo-task-manager"
+      [
+        "expo-background-task",
+        {
+          "backgroundModes": ["background-fetch", "background-processing"]
+        }
+      ],
+      "expo-task-manager",
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ],
+      [
+        "expo-file-system",
+        {
+          "photosPermission": false,
+          "savePhotosPermission": false,
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "This app uses location to provide region-specific Bible content and language recommendations.",
+          "locationAlwaysPermission": "This app uses location to provide region-specific Bible content and language recommendations.",
+          "locationWhenInUsePermission": "This app uses location to provide region-specific Bible content and language recommendations.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ]
     ],
     "scheme": "el-bible",
     "newArchEnabled": true,

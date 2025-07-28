@@ -15,6 +15,7 @@ import { AuthProvider } from '@/features/auth';
 import { HomeScreen } from '@/features/home';
 import { logger } from '@/shared/utils/logger';
 import { OnboardingScreen } from '@/features/onboarding/screens/OnboardingScreen';
+import { permissionsService } from '@/shared/services/permissions/PermissionsService';
 
 const StatusBarWrapper: React.FC = () => {
   const { theme } = useTheme();
@@ -44,7 +45,10 @@ const MainContent: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      // Check onboarding status first
+      // Initialize permissions service first
+      await permissionsService.initialize();
+
+      // Check onboarding status
       await checkOnboardingStatus();
     } catch (error) {
       logger.error('App: Failed to initialize:', error);
@@ -125,26 +129,38 @@ const MainContent: React.FC = () => {
   return <HomeScreen />;
 };
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { theme } = useTheme();
+
   return (
     <SafeAreaProvider>
-      <LocalizationProvider>
-        <ThemeProvider>
-          <OnboardingProvider>
-            <SyncProvider>
-              <AuthProvider>
-                <MediaPlayerProvider>
-                  <GestureHandlerRootView style={styles.gestureHandlerRoot}>
-                    <StatusBarWrapper />
-                    <MainContent />
-                  </GestureHandlerRootView>
-                </MediaPlayerProvider>
-              </AuthProvider>
-            </SyncProvider>
-          </OnboardingProvider>
-        </ThemeProvider>
-      </LocalizationProvider>
+      <GestureHandlerRootView
+        style={[
+          styles.gestureHandlerRoot,
+          { backgroundColor: theme.colors.background },
+        ]}>
+        <StatusBarWrapper />
+        <MainContent />
+      </GestureHandlerRootView>
     </SafeAreaProvider>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <LocalizationProvider>
+      <ThemeProvider>
+        <OnboardingProvider>
+          <SyncProvider>
+            <AuthProvider>
+              <MediaPlayerProvider>
+                <AppContent />
+              </MediaPlayerProvider>
+            </AuthProvider>
+          </SyncProvider>
+        </OnboardingProvider>
+      </ThemeProvider>
+    </LocalizationProvider>
   );
 };
 

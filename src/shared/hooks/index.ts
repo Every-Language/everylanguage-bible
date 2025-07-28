@@ -1,5 +1,7 @@
 export { useBackgroundSync } from './useBackgroundSync';
 export { useNetworkConnectivity } from './useNetworkConnectivity';
+export { usePermissions } from './usePermissions';
+export { useLocation } from './useLocation';
 
 // Media Files Hooks
 export {

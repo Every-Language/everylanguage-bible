@@ -94,15 +94,44 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
       const currentStats = downloadService.getStats();
       const processing = downloadService.processing;
 
-      setDownloads(allDownloads);
-      setQueueItems(queueItems);
-      setStats({
-        ...currentStats,
-        lastUpdated: new Date(),
-        totalRetries: 0, // This would need to be calculated from downloads
-        averageDownloadTime: 0, // This would need to be calculated from downloads
+      // Only update state if there are actual changes
+      setDownloads(prevDownloads => {
+        // Check if downloads have actually changed
+        if (JSON.stringify(prevDownloads) === JSON.stringify(allDownloads)) {
+          return prevDownloads; // Return same reference to prevent re-render
+        }
+        return allDownloads;
       });
-      setIsProcessing(processing);
+
+      setQueueItems(prevQueueItems => {
+        // Check if queue items have actually changed
+        if (JSON.stringify(prevQueueItems) === JSON.stringify(queueItems)) {
+          return prevQueueItems; // Return same reference to prevent re-render
+        }
+        return queueItems;
+      });
+
+      setStats(prevStats => {
+        const newStats = {
+          ...currentStats,
+          lastUpdated: new Date(),
+          totalRetries: 0, // This would need to be calculated from downloads
+          averageDownloadTime: 0, // This would need to be calculated from downloads
+        };
+
+        // Check if stats have actually changed
+        if (JSON.stringify(prevStats) === JSON.stringify(newStats)) {
+          return prevStats; // Return same reference to prevent re-render
+        }
+        return newStats;
+      });
+
+      setIsProcessing(prevProcessing => {
+        if (prevProcessing === processing) {
+          return prevProcessing; // Return same value to prevent re-render
+        }
+        return processing;
+      });
     } catch (error) {
       logger.error('Error refreshing downloads:', error);
     }
@@ -116,7 +145,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
 
     refreshIntervalRef.current = setInterval(() => {
       refreshDownloads();
-    }, 1000); // Refresh every second
+    }, 3000); // Refresh every 3 seconds instead of every second to reduce re-renders
   }, [refreshDownloads]);
 
   // Stop refresh interval

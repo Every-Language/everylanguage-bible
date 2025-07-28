@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import { ChapterCard } from '../components/ChapterCard';
 import { useAudioService } from '../../media/hooks/useAudioService';
 import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
 import type { MediaTrack } from '../../../shared/context/MediaPlayerContext';
-import type { Book, ChapterWithMetadata } from '../types';
+import type { ChapterWithMetadata } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 
 import { logger } from '@/shared/utils/logger';
@@ -138,12 +138,10 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
     },
   });
 
-  const formatTestament = (_book: Book) => {
-    logger.debug('Current book', _book);
-
+  const formatTestament = useMemo(() => {
     // You can implement proper testament detection based on book data
     return 'OLD TESTAMENT'; // Placeholder
-  };
+  }, []); // Empty dependency array since it's a static value for now
 
   const formatChapterCount = (count: number) => {
     return count === 1 ? '1 chapter' : `${count} chapters`;
@@ -340,7 +338,7 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
             />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Text style={styles.testament}>{formatTestament(book)}</Text>
+            <Text style={styles.testament}>{formatTestament}</Text>
             <Text style={styles.bookTitle}>{book.name}</Text>
             <Text style={styles.chapterCount}>
               {formatChapterCount(chapters.length)}

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { DownloadProgress } from '../services/types';
 import { logger } from '@/shared/utils/logger';
 
@@ -40,8 +40,8 @@ export const useDownloadProgress = () => {
     downloadError: null,
   });
 
-  const [completionCallback, setCompletionCallback] =
-    useState<DownloadCompletionCallback | null>(null);
+  // Use ref instead of state to prevent infinite re-renders
+  const completionCallbackRef = useRef<DownloadCompletionCallback | null>(null);
 
   const initializeDownloadProgress = useCallback(
     (searchResults: SearchResult[], chapterId: string) => {
@@ -136,7 +136,7 @@ export const useDownloadProgress = () => {
           });
 
           // Execute completion callback if provided
-          if (completionCallback) {
+          if (completionCallbackRef.current) {
             const completedFiles = updatedProgress.filter(
               f => f.status === 'completed'
             );
@@ -144,18 +144,18 @@ export const useDownloadProgress = () => {
               f => f.status === 'failed'
             );
             // Execute callback asynchronously to avoid blocking state updates
-            completionCallback(completedFiles, failedFiles, totalFiles).catch(
-              error => {
+            completionCallbackRef
+              .current(completedFiles, failedFiles, totalFiles)
+              .catch(error => {
                 logger.error('Error in download completion callback:', error);
-              }
-            );
+              });
           }
         }
 
         return newState;
       });
     },
-    [completionCallback]
+    [] // Remove completionCallback from dependencies to prevent infinite re-renders
   );
 
   const setDownloadError = useCallback((error: string | null) => {
@@ -175,10 +175,10 @@ export const useDownloadProgress = () => {
     });
   }, []);
 
-  // Set completion callback
+  // Set completion callback using ref
   const setDownloadCompletionCallback = useCallback(
     (callback: DownloadCompletionCallback | null) => {
-      setCompletionCallback(() => callback);
+      completionCallbackRef.current = callback;
     },
     []
   );
