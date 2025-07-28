@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -17,10 +17,11 @@ import { useTheme } from '../../../shared/context/ThemeContext';
 import { useChapters } from '../hooks/useChapters';
 import { ChapterCard } from '../components/ChapterCard';
 import { useAudioService } from '../../media/hooks/useAudioService';
+import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
 import type { MediaTrack } from '../../../shared/context/MediaPlayerContext';
 import type { Book, ChapterWithMetadata } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
-import { ChapterDownloadModal } from '@/features/downloads/components/ChapterDownloadModal';
+
 import { logger } from '@/shared/utils/logger';
 import { MediaAvailabilityStatus } from '@/shared/services/database/LocalDataService';
 import { mediaFilesService } from '@/shared/services/database/MediaFilesService';
@@ -38,11 +39,7 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
   const { book } = route.params;
   const { chapters, loading, error } = useChapters(book.id);
   const { actions: mediaActions } = useAudioService();
-
-  // Modal state for unavailable chapters
-  const [showUnavailableModal, setShowUnavailableModal] = useState(false);
-  const [selectedChapter, setSelectedChapter] =
-    useState<ChapterWithMetadata | null>(null);
+  const { state: mediaState } = useMediaPlayer();
 
   const styles = StyleSheet.create({
     container: {
@@ -199,16 +196,6 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
   // formatVerseCount moved to ChapterCard component
 
   const handleChapterPress = (chapter: ChapterWithMetadata) => {
-    // Check if chapter has complete media availability
-    if (
-      chapter.mediaAvailability === MediaAvailabilityStatus.NONE ||
-      chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL
-    ) {
-      setSelectedChapter(chapter);
-      setShowUnavailableModal(true);
-      return;
-    }
-
     // Navigate to verses screen using React Navigation
     navigation.navigate('BibleVerses', { book: book, chapter });
   };
@@ -216,14 +203,18 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
   // handleBackFromVerses no longer needed with React Navigation
 
   const handlePlayFromFirstChapter = async () => {
-    // Play from the first chapter
-    const firstChapter = chapters[0];
-    if (!firstChapter) return;
+    // Play from the first chapter that has verses marked
+    const firstChapterWithVersesMarked = chapters.find(
+      chapter =>
+        chapter.versesMarked &&
+        (chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE ||
+          chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL)
+    );
 
-    logger.info('Playing from first chapter:', firstChapter);
+    if (!firstChapterWithVersesMarked) return;
 
     // Create track and start playback
-    const track = await createTrackFromChapter(firstChapter);
+    const track = await createTrackFromChapter(firstChapterWithVersesMarked);
     if (track) {
       mediaActions.setCurrentTrack(track);
       mediaActions.play();
@@ -235,6 +226,23 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
   const handlePlayChapter = async (chapter: ChapterWithMetadata) => {
     logger.info('Playing chapter:', chapter);
     logger.warn('Chapter media availability:', chapter);
+
+    // Check if this chapter is currently playing
+    const currentTrackId = `${book.id}-${chapter.id}`;
+    const isCurrentlyPlaying =
+      mediaState.currentTrack?.id === currentTrackId && mediaState.isPlaying;
+
+    if (isCurrentlyPlaying) {
+      // If currently playing, pause it
+      await mediaActions.pause();
+      return;
+    }
+
+    // Only play if verses are marked
+    if (!chapter.versesMarked) {
+      logger.warn('Cannot play chapter - verses not marked:', chapter.id);
+      return;
+    }
 
     // Create track and start playback
     const track = await createTrackFromChapter(chapter);
@@ -249,11 +257,6 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
   const handleQueueChapter = (chapter: ChapterWithMetadata) => {
     // TODO: Implement queue chapter functionality
     logger.info('Queue chapter:', chapter);
-  };
-
-  const handleCloseModal = () => {
-    setShowUnavailableModal(false);
-    setSelectedChapter(null);
   };
 
   const renderChapterCard = ({
@@ -347,8 +350,10 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
         <View style={styles.headerActions}>
           {chapters.some(
             chapter =>
-              chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE ||
-              chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL
+              (chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE ||
+                chapter.mediaAvailability ===
+                  MediaAvailabilityStatus.PARTIAL) &&
+              chapter.versesMarked
           ) && (
             <TouchableOpacity
               style={styles.playButton}
@@ -363,16 +368,6 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
         </View>
       </View>
       <View style={styles.content}>{renderContent()}</View>
-
-      <ChapterDownloadModal
-        book={book}
-        visible={showUnavailableModal}
-        chapterTitle={
-          selectedChapter ? `Chapter ${selectedChapter.chapter_number}` : ''
-        }
-        chapterId={selectedChapter?.id || ''}
-        onClose={handleCloseModal}
-      />
     </SafeAreaView>
   );
 };

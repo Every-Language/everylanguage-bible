@@ -20,10 +20,13 @@ import { useCurrentVersions } from '../../languages/hooks';
 import { localDataService } from '../../../shared/services/database/LocalDataService';
 import type { LocalVerseText } from '../../../shared/services/database/schema';
 import { useAudioService } from '../../media/hooks/useAudioService';
+import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
 import type { MediaTrack } from '../../../shared/context/MediaPlayerContext';
 import type { Chapter, Verse } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 import { logger } from '../../../shared/utils/logger';
+import { ChapterDownloadModal } from '../../downloads/components/ChapterDownloadModal';
+import { useChapterAudioInfo } from '../../media/hooks/useChapterQueue';
 
 type VersesScreenProps = NativeStackScreenProps<
   BibleStackParamList,
@@ -33,6 +36,7 @@ type VersesScreenProps = NativeStackScreenProps<
 export const VersesScreen: React.FC = () => {
   const { theme } = useTheme();
   const { actions: mediaActions } = useAudioService();
+  const { state: mediaState } = useMediaPlayer();
   const navigation =
     useNavigation<NativeStackNavigationProp<BibleStackParamList>>();
   const route = useRoute<VersesScreenProps['route']>();
@@ -45,6 +49,19 @@ export const VersesScreen: React.FC = () => {
     Map<string, LocalVerseText>
   >(new Map());
   const [loadingTexts, setLoadingTexts] = React.useState(false);
+
+  // Download modal state
+  const [showDownloadModal, setShowDownloadModal] = React.useState(false);
+
+  // Check media availability for this chapter
+  const { audioInfo, loading: audioLoading } = useChapterAudioInfo(chapter.id);
+
+  // Check if media is available and show download modal if not
+  React.useEffect(() => {
+    if (!audioLoading && audioInfo && !audioInfo.hasAudioFiles) {
+      setShowDownloadModal(true);
+    }
+  }, [audioInfo, audioLoading]);
 
   // Load verse texts when currentTextVersion changes
   React.useEffect(() => {
@@ -256,6 +273,17 @@ export const VersesScreen: React.FC = () => {
   };
 
   const handlePlayVerse = (verse: Verse) => {
+    // Check if this verse is currently playing
+    const currentTrackId = `${book.id}-${chapter.id}-${verse.id}`;
+    const isCurrentlyPlaying =
+      mediaState.currentTrack?.id === currentTrackId && mediaState.isPlaying;
+
+    if (isCurrentlyPlaying) {
+      // If currently playing, pause it
+      mediaActions.pause();
+      return;
+    }
+
     // Create mock track data and load it into the media player
     const mockTrack = createMockTrackForVerse(verse);
 
@@ -272,6 +300,10 @@ export const VersesScreen: React.FC = () => {
     logger.log('Share verse:', verse);
   };
 
+  const handleCloseDownloadModal = () => {
+    setShowDownloadModal(false);
+  };
+
   const renderVerseCard = (verse: Verse) => {
     const verseText = verseTexts.get(verse.id) || null;
     return (
@@ -282,6 +314,8 @@ export const VersesScreen: React.FC = () => {
         currentTextVersion={currentTextVersion}
         onPlay={handlePlayVerse}
         onShare={handleShareVerse}
+        bookId={book.id}
+        chapterId={chapter.id}
       />
     );
   };
@@ -386,6 +420,14 @@ export const VersesScreen: React.FC = () => {
         </View>
       </View>
       {renderContent()}
+
+      <ChapterDownloadModal
+        book={book}
+        visible={showDownloadModal}
+        chapterTitle={formatChapterTitle(chapter)}
+        chapterId={chapter.id}
+        onClose={handleCloseDownloadModal}
+      />
     </SafeAreaView>
   );
 };

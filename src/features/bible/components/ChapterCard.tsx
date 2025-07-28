@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import type { ChapterWithMetadata } from '../types';
 import { MediaAvailabilityStatus } from '@/shared/services/database/LocalDataService';
 
@@ -22,10 +23,16 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
   isCloudAvailable = true,
 }) => {
   const { theme } = useTheme();
+  const { state: mediaState } = useMediaPlayer();
 
   const formatVerseCount = (count: number) => {
     return count === 1 ? '1 verse' : `${count} verses`;
   };
+
+  // Check if this chapter is currently playing
+  const isCurrentlyPlaying =
+    mediaState.currentTrack?.id === `${chapter.book_id}-${chapter.id}` &&
+    mediaState.isPlaying;
 
   const styles = StyleSheet.create({
     chapterCard: {
@@ -36,7 +43,9 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      // No border
+      // Add border when playing
+      borderWidth: isCurrentlyPlaying ? 2 : 0,
+      borderColor: isCurrentlyPlaying ? theme.colors.primary : 'transparent',
     },
     chapterInfo: {
       flex: 1,
@@ -69,7 +78,9 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
       padding: 8,
     },
     playButton: {
-      backgroundColor: theme.colors.primary,
+      backgroundColor: isCurrentlyPlaying
+        ? theme.colors.success
+        : theme.colors.primary,
       borderRadius: 16,
       width: 32,
       height: 32,
@@ -77,6 +88,12 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
       alignItems: 'center',
     },
   });
+
+  const handlePlayPress = () => {
+    if (onPlay) {
+      onPlay(chapter);
+    }
+  };
 
   return (
     <TouchableOpacity
@@ -120,6 +137,17 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
             />
           </View>
         )}
+        {/* Verses marked indicator */}
+        {chapter.mediaAvailability !== MediaAvailabilityStatus.NONE &&
+          !chapter.versesMarked && (
+            <View style={styles.availabilityIcon}>
+              <MaterialIcons
+                name='schedule'
+                size={16}
+                color={theme.colors.textSecondary}
+              />
+            </View>
+          )}
       </View>
       <View style={styles.chapterActions}>
         {onQueue && (
@@ -135,12 +163,13 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
         )}
         {onPlay &&
           (chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE ||
-            chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL) && (
+            chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL) &&
+          chapter.versesMarked && (
             <TouchableOpacity
               style={styles.playButton}
-              onPress={() => onPlay(chapter)}>
+              onPress={handlePlayPress}>
               <MaterialIcons
-                name='play-arrow'
+                name={isCurrentlyPlaying ? 'pause' : 'play-arrow'}
                 size={20}
                 color={theme.colors.textInverse}
               />

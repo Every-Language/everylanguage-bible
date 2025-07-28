@@ -12,6 +12,7 @@ export interface ChapterWithMetadata extends Chapter {
   title: string;
   verseRange: string;
   mediaAvailability: MediaAvailabilityStatus;
+  versesMarked: boolean; // Whether all verses in the chapter have corresponding media file verses
 }
 
 // ✅ NEW: Interface for verse with associated text

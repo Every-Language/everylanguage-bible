@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/context/ThemeContext';
+import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
 import type { Verse } from '../types';
 import type { LocalVerseText } from '../../../shared/services/database/schema';
 import type { TextVersion } from '../../languages/types';
@@ -12,6 +13,8 @@ interface VerseCardProps {
   currentTextVersion?: TextVersion | null;
   onPlay?: (verse: Verse) => void;
   onShare?: (verse: Verse) => void;
+  bookId?: string;
+  chapterId?: string;
 }
 
 export const VerseCard: React.FC<VerseCardProps> = ({
@@ -20,8 +23,16 @@ export const VerseCard: React.FC<VerseCardProps> = ({
   currentTextVersion,
   onPlay,
   onShare,
+  bookId,
+  chapterId,
 }) => {
   const { theme } = useTheme();
+  const { state: mediaState } = useMediaPlayer();
+
+  // Check if this verse is currently playing
+  const isCurrentlyPlaying =
+    mediaState.currentTrack?.id === `${bookId}-${chapterId}-${verse.id}` &&
+    mediaState.isPlaying;
 
   const styles = StyleSheet.create({
     verseCard: {
@@ -29,7 +40,9 @@ export const VerseCard: React.FC<VerseCardProps> = ({
       borderRadius: 12,
       padding: 16,
       marginBottom: 12,
-      // No border
+      // Add border when playing
+      borderWidth: isCurrentlyPlaying ? 2 : 0,
+      borderColor: isCurrentlyPlaying ? theme.colors.primary : 'transparent',
     },
     verseHeader: {
       flexDirection: 'row',
@@ -60,7 +73,9 @@ export const VerseCard: React.FC<VerseCardProps> = ({
       padding: 4,
     },
     playButton: {
-      backgroundColor: theme.colors.primary,
+      backgroundColor: isCurrentlyPlaying
+        ? theme.colors.success
+        : theme.colors.primary,
       borderRadius: 14,
       width: 28,
       height: 28,
@@ -77,6 +92,12 @@ export const VerseCard: React.FC<VerseCardProps> = ({
       color: theme.colors.textSecondary,
     },
   });
+
+  const handlePlayPress = () => {
+    if (onPlay) {
+      onPlay(verse);
+    }
+  };
 
   return (
     <View style={styles.verseCard}>
@@ -102,9 +123,9 @@ export const VerseCard: React.FC<VerseCardProps> = ({
           {onPlay && (
             <TouchableOpacity
               style={styles.playButton}
-              onPress={() => onPlay(verse)}>
+              onPress={handlePlayPress}>
               <MaterialIcons
-                name='play-arrow'
+                name={isCurrentlyPlaying ? 'pause' : 'play-arrow'}
                 size={18}
                 color={theme.colors.textInverse}
               />

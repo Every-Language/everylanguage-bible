@@ -6,6 +6,7 @@ import type {
   LocalMediaFile,
   LocalMediaFileVerse,
 } from '@/shared/services/database/schema';
+import { localDataService } from '@/shared/services/database/LocalDataService';
 
 export interface ChapterAudioInfo {
   chapterId: string;
@@ -312,6 +313,65 @@ export class ChapterQueueService {
     } catch (error) {
       logger.error('Error getting audio availability stats:', error);
       throw new Error('Failed to get audio availability stats');
+    }
+  }
+
+  /**
+   * Check if all verses in a chapter have corresponding media file verses
+   */
+  async checkVersesMarked(chapterId: string): Promise<boolean> {
+    try {
+      // Get the chapter to know how many verses it should have
+      const chapter = await localDataService.getChapterById(chapterId);
+      if (!chapter) {
+        logger.warn(`Chapter not found: ${chapterId}`);
+        return false;
+      }
+
+      // Get all verses for this chapter
+      const verses = await localDataService.getVersesByChapterId(chapterId);
+      const totalVerses = verses.length;
+
+      if (totalVerses === 0) {
+        logger.warn(`No verses found for chapter: ${chapterId}`);
+        return false;
+      }
+
+      // Get media files for this chapter
+      const mediaFiles =
+        await mediaFilesService.getMediaFilesByChapterId(chapterId);
+      if (mediaFiles.length === 0) {
+        logger.debug(`No media files found for chapter: ${chapterId}`);
+        return false;
+      }
+
+      // Get all media file verses for this chapter's media files
+      const mediaFileIds = mediaFiles.map(mf => mf.id);
+      const mediaFileVerses =
+        await this.getMediaFileVersesForMediaFiles(mediaFileIds);
+
+      // Get unique verse IDs from media file verses
+      const markedVerseIds = new Set(mediaFileVerses.map(mfv => mfv.verse_id));
+      const markedVersesCount = markedVerseIds.size;
+
+      // Check if all verses are marked
+      const allVersesMarked = markedVersesCount === totalVerses;
+
+      logger.debug(`Chapter ${chapterId} verses check:`, {
+        totalVerses,
+        markedVersesCount,
+        allVersesMarked,
+        mediaFilesCount: mediaFiles.length,
+        mediaFileVersesCount: mediaFileVerses.length,
+      });
+
+      return allVersesMarked;
+    } catch (error) {
+      logger.error(
+        `Error checking verses marked for chapter ${chapterId}:`,
+        error
+      );
+      return false;
     }
   }
 

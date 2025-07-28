@@ -1,4 +1,4 @@
-export type HomeTab = 'Bible' | 'Playlists' | 'Audio Queue';
+export type HomeTab = 'Bible' | 'Playlists';
 
 export interface HomeTabConfig {
   key: HomeTab;
