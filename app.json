@@ -16,11 +16,7 @@
       }
     },
     "android": {
-      "package": "com.everylanguage.elbible",
-      "statusBar": {
-        "barStyle": "light-content",
-        "backgroundColor": "#070707"
-      }
+      "package": "com.everylanguage.elbible"
     },
     "web": {},
     "plugins": [
