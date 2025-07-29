@@ -151,7 +151,10 @@ export class AudioService {
   /**
    * Load an audio file from local path
    */
-  async loadAudio(track: MediaTrack): Promise<void> {
+  async loadAudio(
+    track: MediaTrack,
+    options: { autoPlay?: boolean } = {}
+  ): Promise<void> {
     if (!track.url) {
       throw new Error('Track URL is required');
     }
@@ -167,7 +170,7 @@ export class AudioService {
       return;
     }
 
-    this.loadingPromise = this._loadAudioInternal(track);
+    this.loadingPromise = this._loadAudioInternal(track, options);
     try {
       await this.loadingPromise;
     } finally {
@@ -178,7 +181,10 @@ export class AudioService {
   /**
    * Internal load audio implementation
    */
-  private async _loadAudioInternal(track: MediaTrack): Promise<void> {
+  private async _loadAudioInternal(
+    track: MediaTrack,
+    options: { autoPlay?: boolean } = {}
+  ): Promise<void> {
     if (this.isDisposed) {
       throw new Error('Audio service has been disposed');
     }
@@ -238,7 +244,25 @@ export class AudioService {
       logger.info('Audio loaded successfully:', {
         trackId: track.id,
         duration: this.state.duration,
+        autoPlay: options.autoPlay,
       });
+
+      // Auto-play if requested
+      if (options.autoPlay && this.player && this.state.isLoaded) {
+        try {
+          await this.player.play();
+          this.setState({ isPlaying: true, error: null });
+          this.startProgressTracking();
+          logger.info('Audio auto-played successfully:', track.id);
+        } catch (playError) {
+          const errorMessage =
+            playError instanceof Error
+              ? playError.message
+              : 'Failed to auto-play audio';
+          logger.warn('Auto-play failed, but audio is loaded:', errorMessage);
+          // Don't throw error for auto-play failure, just log it
+        }
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to load audio';

@@ -23,7 +23,7 @@ import type {
   LocalVerseText,
   LocalVerse,
 } from '../../../shared/services/database/schema';
-import { useAudioService } from '../../media/hooks/useAudioService';
+import { useUnifiedMediaPlayer } from '../../media/hooks/useUnifiedMediaPlayer';
 import type { MediaTrack } from '@/shared/store/mediaPlayerStore';
 import type { Chapter, Verse } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
@@ -38,7 +38,7 @@ type VersesScreenProps = NativeStackScreenProps<
 
 export const VersesScreen: React.FC = () => {
   const { theme } = useTheme();
-  const { actions: mediaActions } = useAudioService();
+  const { actions: mediaActions } = useUnifiedMediaPlayer();
   const navigation =
     useNavigation<NativeStackNavigationProp<BibleStackParamList>>();
   const route = useRoute<VersesScreenProps['route']>();

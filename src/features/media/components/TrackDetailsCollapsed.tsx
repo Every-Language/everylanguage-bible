@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useTheme } from '@/shared/hooks';
-import { useMediaPlayer } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
 import { useCurrentVersions } from '@/features/languages/hooks/useLanguageSelection';
 
 import type { ViewStyle } from 'react-native';
@@ -15,7 +15,7 @@ export const TrackDetailsCollapsed: React.FC<TrackDetailsCollapsedProps> = ({
   style,
 }) => {
   const { theme } = useTheme();
-  const { state } = useMediaPlayer();
+  const { state } = useUnifiedMediaPlayer();
   const { currentAudioVersion } = useCurrentVersions();
 
   if (!state.currentTrack) return null;

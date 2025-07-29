@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/hooks';
-import { useMediaPlayer } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
 import { COLOR_VARIATIONS } from '../../../shared/constants/theme';
 import { useCurrentVersions } from '../../languages/hooks';
 import { useVersesWithTextsQuery } from '../../bible/hooks/useBibleQueries';
@@ -23,7 +23,7 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
   initialTab = 'text',
 }) => {
   const { theme } = useTheme();
-  const { state } = useMediaPlayer();
+  const { state } = useUnifiedMediaPlayer();
   const { currentTextVersion } = useCurrentVersions();
   const [activeTab, setActiveTab] = useState<'text' | 'queue'>(initialTab);
 

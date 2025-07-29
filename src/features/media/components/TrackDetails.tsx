@@ -8,7 +8,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useTheme } from '@/shared/hooks';
-import { useMediaPlayer } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface TrackDetailsProps {
@@ -23,7 +23,7 @@ export const TrackDetails: React.FC<TrackDetailsProps> = ({
   isExpanded,
 }) => {
   const { theme } = useTheme();
-  const { state } = useMediaPlayer();
+  const { state } = useUnifiedMediaPlayer();
 
   if (!state.currentTrack) return null;
 

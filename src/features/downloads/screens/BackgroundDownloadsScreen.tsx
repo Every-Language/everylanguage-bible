@@ -10,18 +10,17 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/hooks';
-import { useMediaPlayer } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
 import { PlayButton } from '@/shared/components';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { useBackgroundDownloads } from '../hooks/useBackgroundDownloads';
 import { logger } from '@/shared/utils/logger';
 import { formatFileSize, isAudioFile } from '../utils/fileUtils';
-import { audioService } from '@/features/media/services/AudioService';
 import { PersistentDownloadItem } from '../services/persistentDownloadStore';
 
 export const BackgroundDownloadsScreen: React.FC = () => {
   const { theme } = useTheme();
-  const { state: mediaState, actions: mediaActions } = useMediaPlayer();
+  const { state: mediaState, actions: mediaActions } = useUnifiedMediaPlayer();
   const {
     downloads,
     stats,
@@ -131,8 +130,7 @@ export const BackgroundDownloadsScreen: React.FC = () => {
     try {
       // If this is the current track and it's playing, pause it
       if (mediaState.currentTrack?.id === download.id && mediaState.isPlaying) {
-        await audioService.pause();
-        mediaActions.pause();
+        await mediaActions.pause();
         // logger.info('Paused audio file:', download.fileName);
         return;
       }
@@ -142,8 +140,7 @@ export const BackgroundDownloadsScreen: React.FC = () => {
         mediaState.currentTrack?.id === download.id &&
         !mediaState.isPlaying
       ) {
-        await audioService.play();
-        mediaActions.play();
+        await mediaActions.play();
         // logger.info('Resumed audio file:', download.fileName);
         return;
       }
@@ -164,15 +161,11 @@ export const BackgroundDownloadsScreen: React.FC = () => {
         url: download.localPath,
       };
 
-      // Set the current track in the media player first
-      mediaActions.setCurrentTrack(track);
+      // Set the current track and auto-play - this will automatically stop any currently playing audio
+      await mediaActions.setCurrentTrack(track);
+      await mediaActions.play();
 
-      // Load and play the audio - this will automatically stop any currently playing audio
-      await audioService.loadAudio(track);
-      await audioService.play();
-
-      // Expand the media player
-      mediaActions.expand();
+      // Keep the media player in collapsed state - user can expand manually if needed
 
       // logger.info('Started playing audio file:', download.fileName);
     } catch {

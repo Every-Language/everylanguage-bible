@@ -124,6 +124,26 @@ export const useUnifiedMediaPlayer = (
           case 'stateChanged':
             setAudioServiceState(event.state);
 
+            // Sync audio service state to store for better state management
+            // Always sync playing state regardless of current track
+            if (event.state.isPlaying !== storeState.isPlaying) {
+              if (event.state.isPlaying) {
+                storeActions.play();
+              } else {
+                storeActions.pause();
+              }
+            }
+
+            // Update current track with new position and duration if it exists
+            if (storeState.currentTrack) {
+              const updatedTrack = {
+                ...storeState.currentTrack,
+                currentTime: event.state.position,
+                duration: event.state.duration,
+              };
+              storeActions.setCurrentTrack(updatedTrack);
+            }
+
             // Handle errors
             if (event.state.error) {
               onError?.(event.state.error);
@@ -147,16 +167,22 @@ export const useUnifiedMediaPlayer = (
       // Return cleanup function
       return unsubscribe;
     }
-  }, [onError, storeActions]);
+  }, [onError, storeActions, storeState.currentTrack, storeState.isPlaying]);
 
   // Unified state that combines store and audio service state
   const unifiedState: UnifiedMediaPlayerState = useMemo(
     () => ({
-      // Track information (from store)
-      currentTrack: storeState.currentTrack,
+      // Track information (from store with audio service position updates)
+      currentTrack: storeState.currentTrack
+        ? {
+            ...storeState.currentTrack,
+            currentTime: audioServiceState.position,
+            duration: audioServiceState.duration,
+          }
+        : null,
 
-      // Playback state (from audio service - single source of truth)
-      isPlaying: audioServiceState.isPlaying,
+      // Playback state (from store - synchronized with audio service)
+      isPlaying: storeState.isPlaying,
       isLoaded: audioServiceState.isLoaded,
       isLoading: audioServiceState.isLoading,
       position: audioServiceState.position,
@@ -197,11 +223,11 @@ export const useUnifiedMediaPlayer = (
         if (track.url) {
           try {
             const adaptedTrack = adaptTrackForAudioService(trackWithZeroTime);
-            await audioService.loadAudio(adaptedTrack);
-
-            if (options.autoPlay) {
-              await audioService.play();
-            }
+            const loadOptions =
+              options.autoPlay !== undefined
+                ? { autoPlay: options.autoPlay }
+                : {};
+            await audioService.loadAudio(adaptedTrack, loadOptions);
           } catch (error) {
             const errorMessage =
               error instanceof Error ? error.message : 'Failed to load track';
@@ -216,11 +242,16 @@ export const useUnifiedMediaPlayer = (
 
       // Playback controls
       play: async () => {
+        // Optimistic UI update - update store state immediately
+        storeActions.play();
+
         if (audioService.isLoaded()) {
           try {
             await audioService.play();
           } catch (error) {
             logger.error('Failed to play audio:', error);
+            // Revert optimistic update on error
+            storeActions.pause();
             onError?.(
               error instanceof Error ? error.message : 'Failed to play audio'
             );
@@ -229,11 +260,16 @@ export const useUnifiedMediaPlayer = (
       },
 
       pause: async () => {
+        // Optimistic UI update - update store state immediately
+        storeActions.pause();
+
         if (audioService.isLoaded()) {
           try {
             await audioService.pause();
           } catch (error) {
             logger.error('Failed to pause audio:', error);
+            // Revert optimistic update on error
+            storeActions.play();
           }
         }
       },
@@ -253,6 +289,13 @@ export const useUnifiedMediaPlayer = (
         if (audioService.isLoaded()) {
           try {
             await audioService.seekTo(time);
+            // Update store state immediately for optimistic UI
+            if (storeState.currentTrack) {
+              storeActions.setCurrentTrack({
+                ...storeState.currentTrack,
+                currentTime: time,
+              });
+            }
           } catch (error) {
             logger.error('Failed to seek audio:', error);
           }
@@ -299,7 +342,7 @@ export const useUnifiedMediaPlayer = (
       // Error handling
       clearError: storeActions.clearError,
     }),
-    [storeActions, options.autoPlay, onError]
+    [storeActions, options.autoPlay, onError, storeState.currentTrack]
   );
 
   return {

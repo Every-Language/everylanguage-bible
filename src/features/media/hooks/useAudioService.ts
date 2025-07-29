@@ -149,11 +149,11 @@ export const useAudioService = (options: UseAudioServiceOptions = {}) => {
         if (track.url) {
           try {
             const adaptedTrack = adaptTrackForAudioService(trackWithZeroTime);
-            await audioService.loadAudio(adaptedTrack);
-
-            if (options.autoPlay) {
-              await audioService.play();
-            }
+            const loadOptions =
+              options.autoPlay !== undefined
+                ? { autoPlay: options.autoPlay }
+                : {};
+            await audioService.loadAudio(adaptedTrack, loadOptions);
           } catch (error) {
             const errorMessage =
               error instanceof Error ? error.message : 'Failed to load track';

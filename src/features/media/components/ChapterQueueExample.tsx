@@ -21,7 +21,7 @@ import type {
 } from '@/shared/services/database/schema';
 import { useBackgroundDownloads } from '@/features/downloads/hooks/useBackgroundDownloads';
 import { useTheme } from '@/shared/hooks';
-import { useMediaPlayer } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
 import { logger } from '@/shared/utils/logger';
 import { isAudioFile } from '@/features/downloads/utils/fileUtils';
 import { formatTime, formatDuration } from '../utils/audioUtils';
@@ -42,7 +42,7 @@ export const ChapterQueueExample: React.FC<ChapterQueueExampleProps> = ({
 
   // Background downloads hooks - must be at top level
   const { theme } = useTheme();
-  const { state: mediaState } = useMediaPlayer();
+  const { state: mediaState } = useUnifiedMediaPlayer();
   const {
     downloads,
     stats: backgroundStats,

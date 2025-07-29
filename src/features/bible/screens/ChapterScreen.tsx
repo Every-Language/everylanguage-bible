@@ -44,7 +44,12 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
   const { book } = route.params;
   const { chapters, loading, error, isRefetching, fetchChapters } =
     useChaptersWithMetadata(book.id);
-  const { state: mediaState, actions: mediaActions } = useUnifiedMediaPlayer();
+  const { state: mediaState, actions: mediaActions } = useUnifiedMediaPlayer({
+    autoPlay: true,
+    onError: (error: string) => {
+      logger.error('Media player error:', error);
+    },
+  });
 
   const styles = StyleSheet.create({
     container: {
@@ -189,7 +194,7 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
       }
 
       return {
-        id: `${book.id}-${chapter.id}`,
+        id: `${chapter.book_id}-${chapter.id}`, // Use consistent ID format with ChapterCard
         title: `${book.name} - Chapter ${chapter.chapter_number}`,
         subtitle: `${chapter.total_verses} verses • ${Math.floor(totalDuration / 60)}:${(totalDuration % 60).toString().padStart(2, '0')}`,
         duration: totalDuration,
@@ -222,8 +227,11 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
       firstChapterMediaFiles
     );
     if (track) {
-      mediaActions.setCurrentTrack(track);
-      mediaActions.play();
+      // Set the current track first to trigger MediaPlayerSheet appearance
+      await mediaActions.setCurrentTrack(track);
+      // Then start playing
+      await mediaActions.play();
+      // Keep the media player in collapsed state - user can expand manually if needed
     } else {
       logger.warn('Could not create track for first chapter');
     }
@@ -234,7 +242,7 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
     logger.warn('Chapter media availability:', chapter);
 
     // Check if this chapter is currently playing
-    const currentTrackId = `${book.id}-${chapter.id}`;
+    const currentTrackId = `${chapter.book_id}-${chapter.id}`; // Use consistent ID format
     const isCurrentlyPlaying =
       mediaState.currentTrack?.id === currentTrackId && mediaState.isPlaying;
 
@@ -290,8 +298,11 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
       // Create track and start playback
       const track = createTrackFromChapter(chapter, mediaFilesData);
       if (track) {
-        mediaActions.setCurrentTrack(track);
-        mediaActions.play();
+        // Set the current track first to trigger MediaPlayerSheet appearance
+        await mediaActions.setCurrentTrack(track);
+        // Then start playing
+        await mediaActions.play();
+        // Keep the media player in collapsed state - user can expand manually if needed
       } else {
         logger.warn('Could not create track for chapter:', chapter.id);
       }
