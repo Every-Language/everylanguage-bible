@@ -29,6 +29,32 @@ interface RemoteLanguageEntity {
   deleted_at?: string | null;
 }
 
+interface AudioVersionData {
+  id: string;
+  version_type: 'audio';
+  language_entity_id: string;
+  version_id: string;
+  version_name: string;
+  created_at: string | null;
+  updated_at: string | null;
+  is_available: boolean;
+  published_content_count: number;
+  last_availability_check: string;
+}
+
+interface TextVersionData {
+  id: string;
+  version_type: 'text';
+  language_entity_id: string;
+  version_id: string;
+  version_name: string;
+  created_at: string | null;
+  updated_at: string | null;
+  is_available: boolean;
+  published_content_count: number;
+  last_availability_check: string;
+}
+
 // Note: RemoteProject and RemoteTextVersion interfaces are defined inline where used
 // to avoid linter warnings about unused interfaces
 
@@ -37,7 +63,7 @@ export class LanguageSyncError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: unknown
   ) {
     super(message);
     this.name = 'LanguageSyncError';
@@ -310,8 +336,10 @@ class LanguageSyncService implements BaseSyncService {
 
       // Update sync metadata with the latest timestamp
       const latestTimestamp = Math.max(
-        ...audioVersions.map(v => new Date(v.updated_at).getTime()),
-        ...textVersions.map(v => new Date(v.updated_at).getTime())
+        ...audioVersions.map(v =>
+          new Date(v.updated_at || new Date()).getTime()
+        ),
+        ...textVersions.map(v => new Date(v.updated_at || new Date()).getTime())
       );
 
       if (latestTimestamp > 0) {
@@ -355,8 +383,8 @@ class LanguageSyncService implements BaseSyncService {
   private async fetchAudioVersions(
     lastSync: string,
     batchSize: number
-  ): Promise<any[]> {
-    const audioVersions: any[] = [];
+  ): Promise<AudioVersionData[]> {
+    const audioVersions: AudioVersionData[] = [];
     let hasMoreData = true;
     let lastFetchedId: string | null = null;
     const audioBatchSize = Math.min(batchSize, 2000); // Increased from 500 to 2000 for faster onboarding
@@ -452,8 +480,8 @@ class LanguageSyncService implements BaseSyncService {
   private async fetchTextVersions(
     lastSync: string,
     batchSize: number
-  ): Promise<any[]> {
-    const textVersions: any[] = [];
+  ): Promise<TextVersionData[]> {
+    const textVersions: TextVersionData[] = [];
     let hasMoreData = true;
     let lastFetchedId: string | null = null;
     const textBatchSize = Math.min(batchSize, 2000); // Increased from 500 to 2000 for faster onboarding
@@ -594,8 +622,8 @@ class LanguageSyncService implements BaseSyncService {
   }
 
   private async upsertAvailableVersions(
-    audioVersions: any[],
-    textVersions: any[]
+    audioVersions: AudioVersionData[],
+    textVersions: TextVersionData[]
   ): Promise<void> {
     const allVersions = [...audioVersions, ...textVersions];
 
@@ -747,7 +775,9 @@ class LanguageSyncService implements BaseSyncService {
 
       // For other tables, check normally
       const { data, error } = await supabase
-        .from(remoteTableName as any)
+        .from(
+          remoteTableName as 'language_entities' | 'projects' | 'text_versions'
+        )
         .select('id')
         .gt('updated_at', lastSync)
         .is('deleted_at', null)

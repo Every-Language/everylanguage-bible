@@ -25,7 +25,7 @@ export class MediaFilesVersesSyncError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: unknown
   ) {
     super(message);
     this.name = 'MediaFilesVersesSyncError';
@@ -33,11 +33,13 @@ export class MediaFilesVersesSyncError extends Error {
 }
 
 // Validation utilities for MediaFilesVerses-specific data
-const validateMediaFileVerseData = (mediaFileVerse: any): any => {
+const validateMediaFileVerseData = (
+  mediaFileVerse: Record<string, unknown>
+): Tables<'media_files_verses'> => {
   if (
-    !mediaFileVerse.id ||
-    !mediaFileVerse.media_file_id ||
-    !mediaFileVerse.verse_id
+    !mediaFileVerse['id'] ||
+    !mediaFileVerse['media_file_id'] ||
+    !mediaFileVerse['verse_id']
   ) {
     throw new MediaFilesVersesSyncError(
       'Invalid media file verse data: missing required fields',
@@ -49,8 +51,8 @@ const validateMediaFileVerseData = (mediaFileVerse: any): any => {
   return {
     ...mediaFileVerse,
     // Ensure start_time_seconds is a valid number (can be decimal for precise timing)
-    start_time_seconds: Number(mediaFileVerse.start_time_seconds) || 0,
-  };
+    start_time_seconds: Number(mediaFileVerse['start_time_seconds']) || 0,
+  } as Tables<'media_files_verses'>;
 };
 
 class MediaFilesVersesSyncService implements BaseSyncService {
@@ -206,7 +208,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
 
       // Step 2: For each media file, check and download corresponding media_files_verses data
       let totalRecordsSynced = 0;
-      const mediaFileIds = mediaFiles.map((mf: any) => mf.id);
+      const mediaFileIds = mediaFiles.map((mf: { id: string }) => mf.id);
 
       logger.info(
         `Checking for media_files_verses data for ${mediaFileIds.length} media files`
@@ -265,9 +267,7 @@ class MediaFilesVersesSyncService implements BaseSyncService {
         `Syncing verses data for ${Object.keys(groupedByMediaFile).length} media files:`
       );
       Object.entries(groupedByMediaFile).forEach(([mediaFileId, verses]) => {
-        logger.debug(
-          `  - Media file ${mediaFileId}: ${(verses as any[]).length} verses`
-        );
+        logger.debug(`  - Media file ${mediaFileId}: ${verses.length} verses`);
       });
 
       await this.upsertMediaFilesVerses(validatedMediaFilesVerses);

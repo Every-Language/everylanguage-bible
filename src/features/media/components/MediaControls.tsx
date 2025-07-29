@@ -75,12 +75,7 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
         <View
           style={[
             styles.progressBar,
-            {
-              backgroundColor:
-                theme.mode === 'dark'
-                  ? 'rgba(255, 255, 255, 0.2)'
-                  : 'rgba(0, 0, 0, 0.15)',
-            },
+            { backgroundColor: theme.colors.surfaceOverlay },
           ]}>
           <View
             style={[

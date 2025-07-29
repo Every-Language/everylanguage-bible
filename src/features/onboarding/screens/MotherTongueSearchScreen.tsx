@@ -12,6 +12,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/hooks';
 import { useNetworkForAction } from '@/shared/hooks/useNetworkState';
 import { NoInternetModal, SyncProgressModal } from '@/shared/components';
+import { logger } from '@/shared/utils/logger';
 
 interface MotherTongueSearchScreenProps {
   onBack: () => void;
@@ -61,7 +62,7 @@ export const MotherTongueSearchScreen: React.FC<
 
   // Debug logging for network state
   useEffect(() => {
-    console.log('MotherTongueSearchScreen: Network state debug:', {
+    logger.debug('MotherTongueSearchScreen: Network state debug:', {
       isOnline,
       isChecking,
       timestamp: new Date().toISOString(),
@@ -71,12 +72,12 @@ export const MotherTongueSearchScreen: React.FC<
   // Check for internet connectivity when component mounts
   useEffect(() => {
     if (!isOnline && !isChecking) {
-      console.log(
+      logger.debug(
         'MotherTongueSearchScreen: No internet detected, showing modal'
       );
       setShowNoInternetModal(true);
     } else {
-      console.log(
+      logger.debug(
         'MotherTongueSearchScreen: Internet available or checking, hiding modal'
       );
       setShowNoInternetModal(false);
@@ -96,7 +97,7 @@ export const MotherTongueSearchScreen: React.FC<
           setShowSyncProgressModal(true);
         });
       } catch (error) {
-        console.log(
+        logger.debug(
           'MotherTongueSearchScreen: Network not available for continue action:',
           error
         );
@@ -112,24 +113,24 @@ export const MotherTongueSearchScreen: React.FC<
         setShowNoInternetModal(false);
       });
     } catch (error) {
-      console.log('MotherTongueSearchScreen: Retry failed:', error);
+      logger.debug('MotherTongueSearchScreen: Retry failed:', error);
       // Modal will stay open if retry fails
     }
   };
 
   const handleDebugNetworkCheck = async () => {
-    console.log('MotherTongueSearchScreen: Debug network check triggered');
+    logger.debug('MotherTongueSearchScreen: Debug network check triggered');
     try {
       await retryAndExecute(() => {
-        console.log('MotherTongueSearchScreen: Debug check successful');
+        logger.debug('MotherTongueSearchScreen: Debug check successful');
       });
     } catch (error) {
-      console.log('MotherTongueSearchScreen: Debug check failed:', error);
+      logger.debug('MotherTongueSearchScreen: Debug check failed:', error);
     }
   };
 
   const handleTestEndpoints = async () => {
-    console.log('MotherTongueSearchScreen: Testing individual endpoints...');
+    logger.debug('MotherTongueSearchScreen: Testing individual endpoints...');
     const { networkService } = await import(
       '@/shared/services/network/NetworkService'
     );
@@ -145,12 +146,12 @@ export const MotherTongueSearchScreen: React.FC<
     for (const endpoint of endpoints) {
       try {
         const result = await networkService.testSingleEndpoint(endpoint);
-        console.log(
+        logger.debug(
           `MotherTongueSearchScreen: ${endpoint} - ${result.isOnline ? 'SUCCESS' : 'FAILED'} (${result.latency}ms)`,
           result.error || ''
         );
       } catch (error) {
-        console.log(`MotherTongueSearchScreen: ${endpoint} - ERROR:`, error);
+        logger.debug(`MotherTongueSearchScreen: ${endpoint} - ERROR:`, error);
       }
     }
   };

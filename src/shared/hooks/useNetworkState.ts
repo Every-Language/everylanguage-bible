@@ -1,5 +1,6 @@
 import { useNetworkStore } from '../store/networkStore';
 import { useEffect, useCallback } from 'react';
+import { logger } from '../utils/logger';
 
 /**
  * Hook to access basic network state from the centralized store
@@ -117,7 +118,7 @@ export const useNetworkForAction = () => {
     async (action: () => Promise<void> | void) => {
       // If we haven't checked network capabilities yet, check them first
       if (capabilities.lastChecked === null) {
-        console.log(
+        logger.debug(
           'NetworkForAction: No network check performed yet, checking now...'
         );
         await checkOnlineCapabilities();
@@ -138,7 +139,7 @@ export const useNetworkForAction = () => {
 
   const retryAndExecute = useCallback(
     async (action: () => Promise<void> | void) => {
-      console.log(
+      logger.debug(
         'NetworkForAction: Retrying network check and executing action...'
       );
       const isOnline = await retryOnlineCheck();

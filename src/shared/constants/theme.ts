@@ -56,10 +56,12 @@ export const COLOR_VARIATIONS = {
   // Additional rgba colors
   BLACK_05: 'rgba(0, 0, 0, 0.05)',
   BLACK_10: 'rgba(0, 0, 0, 0.1)',
+  BLACK_15: 'rgba(0, 0, 0, 0.15)',
   BLACK_50: 'rgba(0, 0, 0, 0.5)',
   BLACK_90: 'rgba(0, 0, 0, 0.9)',
   WHITE_08: 'rgba(255, 255, 255, 0.08)',
   WHITE_10: 'rgba(255, 255, 255, 0.1)',
+  WHITE_20: 'rgba(255, 255, 255, 0.2)',
   WHITE_90: 'rgba(255, 255, 255, 0.9)',
   BLUE_10: 'rgba(0, 122, 255, 0.1)',
   GREEN_10: 'rgba(76, 175, 80, 0.1)',
@@ -109,6 +111,7 @@ const lightColors: ThemeColors = {
   border: COLOR_VARIATIONS.CREAM_DARK,
   shadow: COLOR_VARIATIONS.SHADOW_LIGHT,
   overlay: COLOR_VARIATIONS.OVERLAY_LIGHT,
+  surfaceOverlay: COLOR_VARIATIONS.BLACK_15,
 
   // Status colors
   success: COLOR_VARIATIONS.SUCCESS,
@@ -144,6 +147,7 @@ const darkColors: ThemeColors = {
   border: COLOR_VARIATIONS.CHARCOAL_LIGHT,
   shadow: COLOR_VARIATIONS.SHADOW_DARK,
   overlay: COLOR_VARIATIONS.OVERLAY_DARK,
+  surfaceOverlay: COLOR_VARIATIONS.WHITE_20,
 
   // Status colors
   success: COLOR_VARIATIONS.SUCCESS,

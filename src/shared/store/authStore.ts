@@ -153,15 +153,18 @@ export const useAuthStore = create<AuthStore>()(
       subscribeToAuthChanges: () => {
         const {
           data: { subscription },
-        } = authService.onAuthStateChange((_event: string, session: any) => {
-          set({
-            user: session?.user ?? null,
-            session,
-            isLoading: false,
-            isInitialized: true,
-            error: null,
-          });
-        });
+        } = authService.onAuthStateChange(
+          (_event: string, session: unknown) => {
+            const typedSession = session as { user?: AuthState['user'] } | null;
+            set({
+              user: typedSession?.user ?? null,
+              session: typedSession as AuthState['session'],
+              isLoading: false,
+              isInitialized: true,
+              error: null,
+            });
+          }
+        );
 
         return () => {
           subscription.unsubscribe();

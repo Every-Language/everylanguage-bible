@@ -432,7 +432,8 @@ class DatabaseManager {
         'PRAGMA table_info(sync_metadata)'
       );
       const hasLastVersionCheck = tableInfo.some(
-        (col: any) => col.name === 'last_version_check'
+        (col: unknown) =>
+          (col as { name: string }).name === 'last_version_check'
       );
 
       if (!hasLastVersionCheck) {
@@ -474,7 +475,8 @@ class DatabaseManager {
         );
 
         const hasAvailableVersions = languageTableInfo.some(
-          (col: any) => col.name === 'has_available_versions'
+          (col: unknown) =>
+            (col as { name: string }).name === 'has_available_versions'
         );
 
         if (!hasAvailableVersions) {
@@ -514,7 +516,7 @@ class DatabaseManager {
         );
 
         const hasIsAvailable = versionsTableInfo.some(
-          (col: any) => col.name === 'is_available'
+          (col: unknown) => (col as { name: string }).name === 'is_available'
         );
 
         if (!hasIsAvailable) {

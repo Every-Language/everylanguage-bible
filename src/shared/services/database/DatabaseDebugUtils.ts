@@ -132,24 +132,45 @@ export class DatabaseDebugUtils {
 
       return {
         name: tableName,
-        columns: columns.map((col: any) => ({
-          name: col.name,
-          type: col.type,
-          notnull: col.notnull,
-          defaultValue: col.dflt_value,
-          pk: col.pk,
-        })),
+        columns: columns.map((col: unknown) => {
+          const typedCol = col as {
+            name: string;
+            type: string;
+            notnull: number;
+            dflt_value: unknown;
+            pk: number;
+          };
+          return {
+            name: typedCol.name,
+            type: typedCol.type,
+            notnull: typedCol.notnull,
+            defaultValue: typedCol.dflt_value,
+            pk: typedCol.pk,
+          };
+        }),
         indexes: indexDetails,
-        foreignKeys: foreignKeys.map((fk: any) => ({
-          id: fk.id,
-          seq: fk.seq,
-          table: fk.table,
-          from: fk.from,
-          to: fk.to,
-          onUpdate: fk.on_update,
-          onDelete: fk.on_delete,
-          match: fk.match,
-        })),
+        foreignKeys: foreignKeys.map((fk: unknown) => {
+          const typedFk = fk as {
+            id: number;
+            seq: number;
+            table: string;
+            from: string;
+            to: string;
+            on_update: string;
+            on_delete: string;
+            match: string;
+          };
+          return {
+            id: typedFk.id,
+            seq: typedFk.seq,
+            table: typedFk.table,
+            from: typedFk.from,
+            to: typedFk.to,
+            onUpdate: typedFk.on_update,
+            onDelete: typedFk.on_delete,
+            match: typedFk.match,
+          };
+        }),
       };
     } catch (error) {
       logger.error(`Failed to get schema info for table ${tableName}:`, error);
@@ -161,7 +182,7 @@ export class DatabaseDebugUtils {
    * Log comprehensive error information for debugging
    */
   static logDetailedError(
-    error: any,
+    error: unknown,
     context: string = 'Database operation'
   ): void {
     logger.error(`${context} failed:`, {
@@ -217,17 +238,23 @@ export class DatabaseDebugUtils {
   /**
    * Get SQLite error details from error object
    */
-  static extractSqliteErrorDetails(error: any): {
+  static extractSqliteErrorDetails(error: unknown): {
     code?: string;
     message?: string;
     extendedCode?: number;
     sql?: string;
   } {
+    const typedError = error as {
+      code?: string;
+      message?: string;
+      extendedCode?: number;
+      sql?: string;
+    };
     return {
-      code: error?.code,
-      message: error?.message,
-      extendedCode: error?.extendedCode,
-      sql: error?.sql,
+      code: typedError?.code,
+      message: typedError?.message,
+      extendedCode: typedError?.extendedCode,
+      sql: typedError?.sql,
     };
   }
 }

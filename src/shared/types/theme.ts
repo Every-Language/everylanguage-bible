@@ -20,6 +20,7 @@ export interface ThemeColors {
   border: string;
   shadow: string;
   overlay: string;
+  surfaceOverlay: string;
 
   // Status colors
   success: string;

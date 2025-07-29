@@ -113,12 +113,7 @@ export const DownloadProgressDisplay: React.FC<DownloadProgressDisplayProps> =
           <View
             style={[
               styles.progressBarContainer,
-              {
-                backgroundColor:
-                  theme.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.2)'
-                    : 'rgba(0, 0, 0, 0.15)',
-              },
+              { backgroundColor: theme.colors.surfaceOverlay },
             ]}>
             <View
               style={[
@@ -172,12 +167,7 @@ export const DownloadProgressDisplay: React.FC<DownloadProgressDisplayProps> =
                   <View
                     style={[
                       styles.fileProgressBarContainer,
-                      {
-                        backgroundColor:
-                          theme.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.2)'
-                            : 'rgba(0, 0, 0, 0.15)',
-                      },
+                      { backgroundColor: theme.colors.surfaceOverlay },
                     ]}>
                     <View
                       style={[

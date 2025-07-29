@@ -597,20 +597,20 @@ export const migrateMediaFilesTable = async (
     // Check current table schema
     const tableInfo = await db.getAllAsync('PRAGMA table_info(media_files)');
     logger.info('Current media_files table schema:', {
-      columns: tableInfo.map((col: any) => ({
-        name: col.name,
-        type: col.type,
-        notnull: col.notnull,
-        pk: col.pk,
+      columns: (tableInfo as Array<Record<string, unknown>>).map(col => ({
+        name: col['name'] as string,
+        type: col['type'] as string,
+        notnull: col['notnull'] as number,
+        pk: col['pk'] as number,
       })),
     });
 
     // Check if start_verse_id and end_verse_id columns exist
-    const hasStartVerseId = tableInfo.some(
-      (col: any) => col.name === 'start_verse_id'
+    const hasStartVerseId = (tableInfo as Array<Record<string, unknown>>).some(
+      col => col['name'] === 'start_verse_id'
     );
-    const hasEndVerseId = tableInfo.some(
-      (col: any) => col.name === 'end_verse_id'
+    const hasEndVerseId = (tableInfo as Array<Record<string, unknown>>).some(
+      col => col['name'] === 'end_verse_id'
     );
 
     // Add missing columns if they don't exist
@@ -741,12 +741,20 @@ export const migrateMediaFilesTable = async (
         'PRAGMA table_info(media_files)'
       );
       logger.info('Final media_files table schema:', {
-        columns: finalTableInfo.map((col: any) => ({
-          name: col.name,
-          type: col.type,
-          notnull: col.notnull,
-          pk: col.pk,
-        })),
+        columns: finalTableInfo.map((col: unknown) => {
+          const typedCol = col as {
+            name: string;
+            type: string;
+            notnull: number;
+            pk: number;
+          };
+          return {
+            name: typedCol.name,
+            type: typedCol.type,
+            notnull: typedCol.notnull,
+            pk: typedCol.pk,
+          };
+        }),
       });
 
       logger.info('Successfully migrated media_files table');
@@ -757,10 +765,10 @@ export const migrateMediaFilesTable = async (
     logger.error('Error migrating media_files table:', {
       error: error,
       errorType: typeof error,
-      errorConstructor: (error as any)?.constructor?.name,
-      errorMessage: (error as any)?.message || 'No message',
-      errorStack: (error as any)?.stack || 'No stack',
-      errorCode: (error as any)?.code || 'No code',
+      errorConstructor: (error as Error)?.constructor?.name,
+      errorMessage: (error as Error)?.message || 'No message',
+      errorStack: (error as Error)?.stack || 'No stack',
+      errorCode: (error as { code?: string })?.code || 'No code',
     });
 
     // Try to get more SQLite-specific error information

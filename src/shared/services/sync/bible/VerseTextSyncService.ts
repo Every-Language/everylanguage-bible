@@ -15,7 +15,7 @@ export class VerseTextSyncError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: unknown
   ) {
     super(message);
     this.name = 'VerseTextSyncError';
@@ -241,7 +241,7 @@ class VerseTextSyncService implements BaseSyncService {
         WHERE v.chapter_id = ? AND vt.publish_status = 'published'
       `;
 
-      const params: any[] = [chapterId];
+      const params: (string | number)[] = [chapterId];
 
       if (textVersionId) {
         query += ` AND vt.text_version_id = ?`;

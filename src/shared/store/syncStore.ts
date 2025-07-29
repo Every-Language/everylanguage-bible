@@ -36,7 +36,7 @@ export interface SyncStore extends SyncState {
   forceFullSync: () => Promise<void>;
   resetSyncTimestamp: () => void;
   clearLocalData: () => Promise<void>;
-  getSyncMetadata: () => Promise<any>;
+  getSyncMetadata: () => Promise<unknown>;
   checkForUpdates: () => Promise<{ needsUpdate: boolean; tables: string[] }>;
 }
 

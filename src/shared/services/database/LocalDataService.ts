@@ -405,7 +405,7 @@ export class LocalDataService {
 
   async getChaptersCount(bookId?: string): Promise<number> {
     let query = 'SELECT COUNT(*) as count FROM chapters';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (bookId) {
       query += ' WHERE book_id = ?';
@@ -588,7 +588,7 @@ export class LocalDataService {
     sort?: VerseSort
   ): Promise<LocalVerse[]> {
     let query = 'SELECT * FROM verses WHERE chapter_id = ?';
-    const params: any[] = [chapterId];
+    const params: (string | number)[] = [chapterId];
     const conditions: string[] = [];
 
     // Apply additional filters
@@ -636,7 +636,7 @@ export class LocalDataService {
 
   async getVersesCount(chapterId?: string): Promise<number> {
     let query = 'SELECT COUNT(*) as count FROM verses';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (chapterId) {
       query += ' WHERE chapter_id = ?';
@@ -683,7 +683,7 @@ export class LocalDataService {
       LIMIT 1
     `;
 
-    const params: any[] = [chapterId, currentVerseNumber];
+    const params: (string | number)[] = [chapterId, currentVerseNumber];
     const result = await databaseManager.executeQuery<LocalVerse>(
       query,
       params
@@ -693,7 +693,7 @@ export class LocalDataService {
 
   async getRandomVerses(count = 5, chapterId?: string): Promise<LocalVerse[]> {
     let query = 'SELECT * FROM verses';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (chapterId) {
       query += ' WHERE chapter_id = ?';
@@ -983,7 +983,7 @@ export class LocalDataService {
         LEFT JOIN verse_texts vt ON v.id = vt.verse_id
       `;
 
-      const params: any[] = [chapterId];
+      const params: (string | number)[] = [chapterId];
 
       // Add WHERE clause for chapter filter first
       query += ` WHERE v.chapter_id = ?`;
