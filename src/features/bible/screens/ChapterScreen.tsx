@@ -426,14 +426,15 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
                 chapter.mediaAvailability ===
                   MediaAvailabilityStatus.PARTIAL) &&
               chapter.versesMarked
-          ) && (
-            <PlayButton
-              type='book'
-              id={book.id}
-              size='large'
-              onPress={handlePlayFromFirstChapter}
-            />
-          )}
+          ) &&
+            firstChapterWithVersesMarked && (
+              <PlayButton
+                type='chapter'
+                id={`${firstChapterWithVersesMarked.book_id}-${firstChapterWithVersesMarked.id}`}
+                size='large'
+                onPress={handlePlayFromFirstChapter}
+              />
+            )}
         </View>
       </View>
       <View style={styles.content}>{renderContent()}</View>

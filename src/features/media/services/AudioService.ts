@@ -373,6 +373,9 @@ export class AudioService {
         error: null,
       });
       this.stopProgressTracking();
+
+      // Clear the current track when stopping
+      this.currentTrack = null;
     } catch (error) {
       logger.error('Failed to stop audio:', error);
     }
@@ -536,6 +539,9 @@ export class AudioService {
       }
     }
 
+    // Clear the current track when unloading
+    this.currentTrack = null;
+
     this.setState({
       isLoaded: false,
       isPlaying: false,
@@ -582,6 +588,9 @@ export class AudioService {
       }
       this.player = null;
     }
+
+    // Clear the current track when force stopping
+    this.currentTrack = null;
 
     this.state = {
       isLoaded: false,

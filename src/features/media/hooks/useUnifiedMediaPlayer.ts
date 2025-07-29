@@ -99,18 +99,11 @@ export const useUnifiedMediaPlayer = (
   const { state: storeState, actions: storeActions } = useMediaPlayer();
   const { onError } = options;
 
-  // Local state for audio service state
+  // Initialize audio service state with current AudioService state
   const [audioServiceState, setAudioServiceState] = useState<AudioServiceState>(
-    {
-      isLoaded: false,
-      isPlaying: false,
-      isLoading: false,
-      error: null,
-      duration: 0,
-      position: 0,
-      volume: 1.0,
-      playbackRate: 1.0,
-      isMuted: false,
+    () => {
+      // Get the current state from AudioService to avoid initialization mismatch
+      return audioService.getState();
     }
   );
 
@@ -119,6 +112,32 @@ export const useUnifiedMediaPlayer = (
   // Subscribe to audio service events
   useEffect(() => {
     if (!isInitialized.current) {
+      // Initialize state synchronization on first mount
+      const currentAudioState = audioService.getState();
+      const currentAudioTrack = audioService.getCurrentTrack();
+
+      // If AudioService has a track but store doesn't, restore it
+      if (currentAudioTrack && !storeState.currentTrack) {
+        const trackToRestore: MediaPlayerTrack = {
+          id: currentAudioTrack.id,
+          title: currentAudioTrack.title,
+          subtitle: currentAudioTrack.subtitle || '',
+          duration: currentAudioState.duration,
+          currentTime: currentAudioState.position,
+          ...(currentAudioTrack.url && { url: currentAudioTrack.url }),
+        };
+        storeActions.setCurrentTrack(trackToRestore);
+      }
+
+      // Sync playing state if there's a mismatch
+      if (currentAudioState.isPlaying !== storeState.isPlaying) {
+        if (currentAudioState.isPlaying) {
+          storeActions.play();
+        } else {
+          storeActions.pause();
+        }
+      }
+
       const unsubscribe = audioService.subscribe(event => {
         switch (event.type) {
           case 'stateChanged':
