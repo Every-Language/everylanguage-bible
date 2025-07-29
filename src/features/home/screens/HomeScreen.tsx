@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useOnboarding } from '@/shared/context/OnboardingContext';
+import { useTheme } from '@/shared/hooks';
+import { useOnboarding } from '@/shared/hooks';
 import { TopBar } from '@/shared/components/TopBar';
 import { MenuModal } from '@/shared/components/MenuModal';
 import { SlideUpModal } from '@/shared/components/ui/SlideUpModal';

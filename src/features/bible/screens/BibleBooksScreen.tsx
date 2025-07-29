@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,11 +9,11 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useTranslations } from '@/shared/context/LocalizationContext';
-import { useSync } from '@/shared/context/SyncContext';
+import { useTheme } from '@/shared/hooks';
+import { useTranslations } from '@/shared/hooks';
+import { useSync } from '@/shared/hooks';
 import { BookGrid } from '../components/BookGrid';
-import { useBibleBooks } from '../hooks/useBibleBooks';
+import { useBooksQuery } from '../hooks/useBibleQueries';
 import type { Book } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 import { logger } from '@/shared/utils/logger';
@@ -28,18 +28,72 @@ export const BibleBooksScreen: React.FC = () => {
   const t = useTranslations();
   const navigation = useNavigation<BibleBooksScreenNavigationProp>();
   const { syncNow, isSyncing } = useSync();
-  const { books, loading, error, selectedBook, selectBook, refreshBooks } =
-    useBibleBooks();
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [searchQuery] = useState('');
+  const [sortBy] = useState<'name' | 'book_number' | 'global_order'>(
+    'global_order'
+  );
+  const [sortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // TanStack Query hooks
+  const {
+    data: books = [],
+    isLoading: booksLoading,
+    error: booksError,
+    refetch: refetchBooks,
+    isRefetching,
+  } = useBooksQuery();
+
+  // Filter and sort books
+  const filteredAndSortedBooks = useMemo(() => {
+    let filtered = [...books];
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(book =>
+        book.name.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'book_number':
+          aValue = a.book_number;
+          bValue = b.book_number;
+          break;
+        case 'global_order':
+        default:
+          aValue = a.global_order || 0;
+          bValue = b.global_order || 0;
+          break;
+      }
+
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [books, searchQuery, sortBy, sortOrder]);
 
   const handleBookSelect = (book: Book) => {
-    selectBook(book);
+    setSelectedBook(book);
     // Navigate to chapters screen using React Navigation
     navigation.navigate('BibleChapters', { book });
   };
 
   const handleRefresh = async () => {
     try {
-      await refreshBooks();
+      await refetchBooks();
     } catch (error) {
       logger.error('Failed to refresh books:', error);
     }
@@ -53,7 +107,7 @@ export const BibleBooksScreen: React.FC = () => {
     }
   };
 
-  if (loading && !isSyncing) {
+  if (booksLoading && !isRefetching) {
     return (
       <View
         style={[
@@ -73,21 +127,35 @@ export const BibleBooksScreen: React.FC = () => {
     );
   }
 
-  if (error && books.length === 0) {
+  // Show sync button if no data after 3 retry attempts or if there's an error
+  const shouldShowSyncButton =
+    (booksError && filteredAndSortedBooks.length === 0) ||
+    (!booksLoading && !isRefetching && filteredAndSortedBooks.length === 0);
+
+  if (shouldShowSyncButton) {
     return (
       <ScrollView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
         contentContainerStyle={styles.centered}
         refreshControl={
           <RefreshControl
-            refreshing={loading || isSyncing}
+            refreshing={booksLoading || isSyncing || isRefetching}
             onRefresh={handleRefresh}
             tintColor={theme.colors.text}
           />
         }>
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: theme.colors.text }]}>
-            {error}
+            {booksError instanceof Error
+              ? booksError.message
+              : 'No Bible data available'}
+          </Text>
+          <Text
+            style={[
+              styles.syncDescription,
+              { color: theme.colors.textSecondary },
+            ]}>
+            Download Bible content to start reading
           </Text>
           <TouchableOpacity
             style={[
@@ -98,9 +166,9 @@ export const BibleBooksScreen: React.FC = () => {
             <Text
               style={[
                 styles.retryButtonText,
-                { color: theme.colors.background },
+                { color: theme.colors.textInverse },
               ]}>
-              Refresh
+              Retry
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -113,9 +181,9 @@ export const BibleBooksScreen: React.FC = () => {
             <Text
               style={[
                 styles.syncButtonText,
-                { color: theme.colors.background },
+                { color: theme.colors.textInverse },
               ]}>
-              {isSyncing ? 'Syncing...' : 'Sync Data'}
+              {isSyncing ? 'Syncing...' : 'Download Bible Data'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -127,13 +195,13 @@ export const BibleBooksScreen: React.FC = () => {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <BookGrid
-        books={books}
+        books={filteredAndSortedBooks}
         selectedBook={selectedBook}
         onBookSelect={handleBookSelect}
-        loading={loading || isSyncing}
+        loading={booksLoading || isSyncing}
         refreshControl={
           <RefreshControl
-            refreshing={loading || isSyncing}
+            refreshing={booksLoading || isSyncing || isRefetching}
             onRefresh={handleRefresh}
             tintColor={theme.colors.text}
           />
@@ -166,6 +234,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 24,
+  },
+  syncDescription: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
   },
   retryButton: {
     paddingHorizontal: 24,

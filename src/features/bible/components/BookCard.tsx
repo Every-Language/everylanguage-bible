@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import type { Book } from '../types';
 
 interface BookCardProps {

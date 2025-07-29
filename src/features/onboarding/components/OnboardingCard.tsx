@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { getContrastTextColor } from '../utils/colorUtils';
 
 interface OnboardingCardProps {

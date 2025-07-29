@@ -58,17 +58,7 @@ export function useChapterQueue(
   const [error, setError] = useState<string | null>(null);
 
   // Memoize the options to prevent infinite re-renders
-  const memoizedOptions = useMemo(
-    () => initialOptions,
-    [
-      initialOptions.languageEntityId,
-      initialOptions.mediaType,
-      initialOptions.includeDeleted,
-      initialOptions.sortBy,
-      initialOptions.sortDirection,
-      initialOptions,
-    ]
-  );
+  const memoizedOptions = useMemo(() => initialOptions, [initialOptions]);
 
   const fetchChapterAudioInfo = useCallback(
     async (options: ChapterQueueOptions = {}) => {
@@ -242,17 +232,7 @@ export function useAudioAvailabilityStats(
   const [error, setError] = useState<string | null>(null);
 
   // Memoize the options to prevent infinite re-renders
-  const memoizedOptions = useMemo(
-    () => options,
-    [
-      options.languageEntityId,
-      options.mediaType,
-      options.includeDeleted,
-      options.sortBy,
-      options.sortDirection,
-      options,
-    ]
-  );
+  const memoizedOptions = useMemo(() => options, [options]);
 
   const fetchStats = useCallback(async () => {
     try {

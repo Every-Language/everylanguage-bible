@@ -9,8 +9,9 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useTheme } from '@/shared/hooks';
+import { useMediaPlayer } from '@/shared/hooks';
+import { PlayButton } from '@/shared/components';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { useBackgroundDownloads } from '../hooks/useBackgroundDownloads';
 import { logger } from '@/shared/utils/logger';
@@ -512,25 +513,12 @@ export const BackgroundDownloadsScreen: React.FC = () => {
                   )}
                   {download.status === 'completed' &&
                     isAudioFile(download.fileName) && (
-                      <TouchableOpacity
-                        style={styles.actionIcon}
-                        onPress={() => handlePlayAudio(download)}>
-                        <MaterialIcons
-                          name={
-                            mediaState.currentTrack?.id === download.id &&
-                            mediaState.isPlaying
-                              ? 'pause'
-                              : 'play-arrow'
-                          }
-                          size={20}
-                          color={
-                            mediaState.currentTrack?.id === download.id &&
-                            mediaState.isPlaying
-                              ? theme.colors.success
-                              : theme.colors.primary
-                          }
-                        />
-                      </TouchableOpacity>
+                      <PlayButton
+                        type='verse'
+                        id={download.id}
+                        size='small'
+                        onPress={() => handlePlayAudio(download)}
+                      />
                     )}
                   {download.status !== 'completed' && (
                     <TouchableOpacity

@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocation } from '@/shared/hooks/useLocation';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { logger } from '@/shared/utils/logger';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 

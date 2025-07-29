@@ -8,3 +8,4 @@ export { TopBar } from './TopBar';
 export { PermissionsManager } from './PermissionsManager';
 export { LocationDisplay } from './LocationDisplay';
 export { LocationExample } from './LocationExample';
+export { PlayButton } from './ui/PlayButton';

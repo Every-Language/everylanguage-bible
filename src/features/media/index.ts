@@ -1,12 +1,6 @@
 export * from './types';
-export {
-  MediaPlayerProvider,
-  useMediaPlayer,
-} from '@/shared/context/MediaPlayerContext';
-export type {
-  MediaTrack,
-  MediaPlayerState,
-} from '@/shared/context/MediaPlayerContext';
+export { useMediaPlayer } from '@/shared/hooks';
+export type { MediaTrack, MediaPlayerState } from './types';
 
 // Audio Service exports
 export { audioService, AudioService } from './services';

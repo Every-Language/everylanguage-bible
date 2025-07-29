@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useTranslations } from '@/shared/context/LocalizationContext';
+import { useTheme } from '@/shared/hooks';
+import { useTranslations } from '@/shared/hooks';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { DownloadItem as DownloadItemType, DownloadStatus } from '../types';
 
@@ -105,7 +105,15 @@ export const DownloadItem: React.FC<DownloadItemProps> = ({
 
     return (
       <View
-        style={[styles.progressBar, { backgroundColor: theme.colors.border }]}>
+        style={[
+          styles.progressBar,
+          {
+            backgroundColor:
+              theme.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.2)'
+                : 'rgba(0, 0, 0, 0.15)',
+          },
+        ]}>
         <View
           style={[
             styles.progressFill,

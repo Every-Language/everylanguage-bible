@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Animated } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { DatabaseStatusCard } from '../components/DatabaseStatusCard';
 import { OnboardingCard } from '../components/OnboardingCard';
 import { useDatabaseStatus } from '../hooks/useDatabaseStatus';

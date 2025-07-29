@@ -1,108 +1,81 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { bibleService } from '../services/bibleService';
-import { useSync } from '@/shared/context/SyncContext';
-import type { Chapter, ChaptersState, ChapterWithMetadata } from '../types';
+import { useSync } from '@/shared/hooks';
+import type { Chapter, ChapterWithMetadata } from '../types';
 import { chapterQueueService } from '@/features/media/services/ChapterQueueService';
+import { logger } from '@/shared/utils/logger';
+
+// Query Keys
+const chapterQueryKeys = {
+  all: ['chapters'] as const,
+  book: (bookId: string) => [...chapterQueryKeys.all, 'book', bookId] as const,
+  versesMarked: (chapterIds: string[]) =>
+    [...chapterQueryKeys.all, 'verses-marked', chapterIds] as const,
+} as const;
 
 export const useChapters = (bookId: string | null) => {
   const { isInitialized, hasLocalData } = useSync();
-  const [state, setState] = useState<ChaptersState>({
-    chapters: [],
-    loading: false,
-    error: null,
-    selectedChapter: null,
+  const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
+
+  // Main chapters query
+  const {
+    data: chapters = [],
+    isLoading: chaptersLoading,
+    error: chaptersError,
+    refetch: fetchChapters,
+  } = useQuery({
+    queryKey: chapterQueryKeys.book(bookId || ''),
+    queryFn: () => bibleService.fetchChaptersByBookId(bookId!),
+    enabled: !!isInitialized && !!hasLocalData && !!bookId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
-  const [versesMarkedMap, setVersesMarkedMap] = useState<Map<string, boolean>>(
-    new Map()
-  );
 
-  // Fetch chapters from the service
-  const fetchChapters = async (id: string) => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
-
-    try {
-      const chapters = await bibleService.fetchChaptersByBookId(id);
-
-      setState(prev => ({
-        ...prev,
-        chapters,
-        loading: false,
-      }));
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to fetch chapters',
-      }));
-    }
-  };
-
-  // Select a chapter
-  const selectChapter = (chapter: Chapter) => {
-    setState(prev => ({ ...prev, selectedChapter: chapter }));
-  };
-
-  // Clear selection
-  const clearSelection = () => {
-    setState(prev => ({ ...prev, selectedChapter: null }));
-  };
-
-  // Reset state when bookId changes
-  useEffect(() => {
-    setState({
-      chapters: [],
-      loading: false,
-      error: null,
-      selectedChapter: null,
-    });
-    setVersesMarkedMap(new Map());
-  }, [bookId]);
-
-  // Fetch chapters when bookId changes and database is ready
-  useEffect(() => {
-    if (isInitialized && hasLocalData && bookId) {
-      fetchChapters(bookId);
-    } else if (isInitialized && !hasLocalData) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error:
-          'No data available. Please check your internet connection and try syncing.',
-      }));
-    }
-  }, [isInitialized, hasLocalData, bookId]);
-
-  // Calculate versesMarked for all chapters
-  useEffect(() => {
-    const calculateVersesMarked = async () => {
-      if (state.chapters.length === 0) return;
-
+  // Verses marked query for all chapters
+  const {
+    data: versesMarkedMap = new Map<string, boolean>(),
+    isLoading: versesMarkedLoading,
+  } = useQuery({
+    queryKey: chapterQueryKeys.versesMarked(chapters.map(c => c.id)),
+    queryFn: async () => {
       const newVersesMarkedMap = new Map<string, boolean>();
 
       await Promise.all(
-        state.chapters.map(async chapter => {
+        chapters.map(async chapter => {
           try {
             const versesMarked = await chapterQueueService.checkVersesMarked(
               chapter.id
             );
             newVersesMarkedMap.set(chapter.id, versesMarked);
-          } catch {
-            // Silently handle error and set versesMarked to false
+          } catch (error) {
+            logger.error(
+              `Failed to check verses marked for chapter ${chapter.id}:`,
+              error
+            );
             newVersesMarkedMap.set(chapter.id, false);
           }
         })
       );
 
-      setVersesMarkedMap(newVersesMarkedMap);
-    };
+      return newVersesMarkedMap;
+    },
+    enabled: chapters.length > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-    calculateVersesMarked();
-  }, [state.chapters]);
+  // Select a chapter
+  const selectChapter = (chapter: Chapter) => {
+    setSelectedChapter(chapter);
+  };
+
+  // Clear selection
+  const clearSelection = () => {
+    setSelectedChapter(null);
+  };
 
   // Memoized chapters with additional computed properties
   const chaptersWithMetadata = useMemo(() => {
-    return state.chapters.map(chapter => ({
+    return chapters.map(chapter => ({
       ...chapter,
       title: `Chapter ${chapter.chapter_number}`,
       verseRange: `1 - ${chapter.total_verses}`,
@@ -111,16 +84,28 @@ export const useChapters = (bookId: string | null) => {
           .mediaAvailability || 'none',
       versesMarked: versesMarkedMap.get(chapter.id) || false,
     })) as ChapterWithMetadata[];
-  }, [state.chapters, versesMarkedMap]);
+  }, [chapters, versesMarkedMap]);
+
+  // Determine loading state
+  const loading = chaptersLoading || versesMarkedLoading || !isInitialized;
+
+  // Determine error state
+  const error =
+    chaptersError?.message ||
+    (!isInitialized
+      ? null
+      : !hasLocalData
+        ? 'No data available. Please check your internet connection and try syncing.'
+        : null);
 
   return {
     chapters: chaptersWithMetadata,
-    loading: state.loading || !isInitialized,
-    error: state.error,
-    selectedChapter: state.selectedChapter,
+    loading,
+    error,
+    selectedChapter,
 
     // Actions
-    fetchChapters: () => (bookId ? fetchChapters(bookId) : Promise.resolve()),
+    fetchChapters: () => (bookId ? fetchChapters() : Promise.resolve()),
     selectChapter,
     clearSelection,
   };

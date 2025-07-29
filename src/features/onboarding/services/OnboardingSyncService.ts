@@ -107,9 +107,9 @@ class OnboardingSyncService {
         logger.error('Bible sync failed during onboarding:', {
           error: bibleError,
           errorType: typeof bibleError,
-          errorConstructor: (bibleError as any)?.constructor?.name,
-          errorMessage: (bibleError as any)?.message || 'No message',
-          errorStack: (bibleError as any)?.stack || 'No stack',
+          errorConstructor: (bibleError as Error)?.constructor?.name,
+          errorMessage: (bibleError as Error)?.message || 'No message',
+          errorStack: (bibleError as Error)?.stack || 'No stack',
         });
       }
 
@@ -144,9 +144,9 @@ class OnboardingSyncService {
         logger.error('Language sync failed during onboarding:', {
           error: languageError,
           errorType: typeof languageError,
-          errorConstructor: (languageError as any)?.constructor?.name,
-          errorMessage: (languageError as any)?.message || 'No message',
-          errorStack: (languageError as any)?.stack || 'No stack',
+          errorConstructor: (languageError as Error)?.constructor?.name,
+          errorMessage: (languageError as Error)?.message || 'No message',
+          errorStack: (languageError as Error)?.stack || 'No stack',
         });
       }
 
@@ -173,9 +173,9 @@ class OnboardingSyncService {
         logger.error('Data verification failed during onboarding:', {
           error: verificationError,
           errorType: typeof verificationError,
-          errorConstructor: (verificationError as any)?.constructor?.name,
-          errorMessage: (verificationError as any)?.message || 'No message',
-          errorStack: (verificationError as any)?.stack || 'No stack',
+          errorConstructor: (verificationError as Error)?.constructor?.name,
+          errorMessage: (verificationError as Error)?.message || 'No message',
+          errorStack: (verificationError as Error)?.stack || 'No stack',
         });
       }
 
@@ -203,9 +203,9 @@ class OnboardingSyncService {
       const errorDetails = {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: (error as Error)?.constructor?.name,
+        errorMessage: (error as Error)?.message || 'No message',
+        errorStack: (error as Error)?.stack || 'No stack',
         // Remove the problematic JSON.stringify that was causing empty objects
         // errorStringified: JSON.stringify(
         //   error,

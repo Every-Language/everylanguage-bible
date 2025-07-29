@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { SlideUpModal } from '@/shared/components/ui/SlideUpModal';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { Button } from '@/shared/components/ui/Button';

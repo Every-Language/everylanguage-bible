@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { onboardingSyncService } from '../services/OnboardingSyncService';
 import type { OnboardingSyncProgress } from '../services/OnboardingSyncService';
 import { logger } from '@/shared/utils/logger';

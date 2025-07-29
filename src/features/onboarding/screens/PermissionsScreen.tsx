@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { PermissionsManager } from '@/shared/components/PermissionsManager';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 
 interface PermissionsScreenProps {
   onComplete: () => void;

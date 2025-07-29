@@ -3,7 +3,7 @@ import { logger } from '../../utils/logger';
 
 export interface DatabaseDebugInfo {
   tables: string[];
-  integrityCheck: any[];
+  integrityCheck: Array<Record<string, unknown>>;
   foreignKeysEnabled: boolean;
   journalMode: string;
   synchronous: string;
@@ -22,7 +22,7 @@ export interface TableSchemaInfo {
     name: string;
     type: string;
     notnull: number;
-    defaultValue: any;
+    defaultValue: unknown;
     pk: number;
   }>;
   indexes: Array<{
@@ -82,7 +82,7 @@ export class DatabaseDebugUtils {
 
       return {
         tables: tables.map(t => t.name),
-        integrityCheck,
+        integrityCheck: integrityCheck as Array<Record<string, unknown>>,
         foreignKeysEnabled: foreignKeys?.foreign_keys === 1,
         journalMode: journalMode?.journal_mode || 'unknown',
         synchronous: synchronous?.synchronous || 'unknown',
@@ -116,14 +116,16 @@ export class DatabaseDebugUtils {
 
       // Get index details
       const indexDetails = await Promise.all(
-        indexes.map(async (index: any) => {
+        indexes.map(async (index: Record<string, unknown>) => {
           const indexColumns = await db.getAllAsync(
-            'PRAGMA index_info(' + index.name + ')'
+            'PRAGMA index_info(' + (index.name as string) + ')'
           );
           return {
-            name: index.name,
-            unique: index.unique,
-            columns: indexColumns.map((col: any) => col.name).filter(Boolean),
+            name: index.name as string,
+            unique: index.unique as number,
+            columns: indexColumns
+              .map((col: Record<string, unknown>) => col.name as string)
+              .filter(Boolean),
           };
         })
       );

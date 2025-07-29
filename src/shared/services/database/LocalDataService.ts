@@ -8,6 +8,7 @@ import type {
 } from './schema';
 import { validateTestament } from '../sync/types';
 import { logger } from '../../utils/logger';
+import { SQLiteBindParams } from 'expo-sqlite';
 
 const databaseManager = DatabaseManager.getInstance();
 
@@ -66,7 +67,7 @@ export class LocalDataService {
 
     let query = 'SELECT * FROM books';
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: SQLiteBindParams = [];
 
     if (filters?.testament) {
       // Validate and normalize testament but don't fail on unknown values
@@ -111,7 +112,7 @@ export class LocalDataService {
 
   async getBooksCount(testament?: 'OT' | 'NT'): Promise<number> {
     let query = 'SELECT COUNT(*) as count FROM books';
-    const params: any[] = [];
+    const params: SQLiteBindParams = [];
 
     if (testament) {
       query += ' WHERE testament = ?';

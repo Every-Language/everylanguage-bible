@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useTranslations } from '@/shared/context/LocalizationContext';
+import { useTheme } from '@/shared/hooks';
+import { useTranslations } from '@/shared/hooks';
 import { HomeTab } from '../types';
 
 interface HomeTabNavigatorProps {
@@ -16,7 +16,7 @@ export const HomeTabNavigator: React.FC<HomeTabNavigatorProps> = ({
   const { theme } = useTheme();
   const t = useTranslations();
 
-  const tabs: HomeTab[] = ['Bible', 'Playlists'];
+  const tabs: HomeTab[] = ['Bible', 'Playlists', 'AudioQueue'];
 
   return (
     <View

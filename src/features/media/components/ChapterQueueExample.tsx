@@ -20,8 +20,8 @@ import type {
   LocalMediaFileVerse,
 } from '@/shared/services/database/schema';
 import { useBackgroundDownloads } from '@/features/downloads/hooks/useBackgroundDownloads';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useTheme } from '@/shared/hooks';
+import { useMediaPlayer } from '@/shared/hooks';
 import { logger } from '@/shared/utils/logger';
 import { isAudioFile } from '@/features/downloads/utils/fileUtils';
 import { formatTime, formatDuration } from '../utils/audioUtils';

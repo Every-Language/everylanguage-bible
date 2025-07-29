@@ -124,7 +124,8 @@ export class PermissionsService {
   async requestNotificationPermissions(): Promise<PermissionStatus> {
     try {
       if (!Device.isDevice) {
-        throw new Error('Notifications are not supported on simulators');
+        logger.warn('Notifications are not supported on simulators');
+        return { granted: false, canAskAgain: false, status: 'denied' };
       }
 
       const { status } = await Notifications.requestPermissionsAsync();

@@ -21,7 +21,7 @@ export { VersesScreen } from './screens/VersesScreen';
 export { bibleService } from './services/bibleService';
 
 // Bible hooks
-export { useBibleBooks } from './hooks/useBibleBooks';
+export { useBooksQuery } from './hooks/useBibleQueries';
 export { useChapters } from './hooks/useChapters';
 export { useVerses } from './hooks/useVerses';
 

@@ -13,18 +13,23 @@ import type {
   // NativeStackNavigationProp,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
-import { useTheme } from '../../../shared/context/ThemeContext';
-import { useChapters } from '../hooks/useChapters';
+import { useTheme } from '@/shared/hooks';
+import { PlayButton } from '@/shared/components';
+import { useChaptersWithMetadata } from '../hooks/useChaptersWithMetadata';
 import { ChapterCard } from '../components/ChapterCard';
-import { useAudioService } from '../../media/hooks/useAudioService';
-import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
-import type { MediaTrack } from '../../../shared/context/MediaPlayerContext';
+
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
+import type { MediaTrack } from '@/shared/store/mediaPlayerStore';
 import type { ChapterWithMetadata } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 
 import { logger } from '@/shared/utils/logger';
 import { MediaAvailabilityStatus } from '@/shared/services/database/LocalDataService';
-import { mediaFilesService } from '@/shared/services/database/MediaFilesService';
+import {
+  useChapterMediaFiles,
+  chapterAudioQueryKeys,
+} from '../../media/hooks/useChapterAudioInfo';
+import { queryClient } from '@/shared/services/query/queryClient';
 
 type ChapterScreenProps = NativeStackScreenProps<
   BibleStackParamList,
@@ -37,9 +42,9 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
 }) => {
   const { theme } = useTheme();
   const { book } = route.params;
-  const { chapters, loading, error } = useChapters(book.id);
-  const { actions: mediaActions } = useAudioService();
-  const { state: mediaState } = useMediaPlayer();
+  const { chapters, loading, error, isRefetching, fetchChapters } =
+    useChaptersWithMetadata(book.id);
+  const { state: mediaState, actions: mediaActions } = useUnifiedMediaPlayer();
 
   const styles = StyleSheet.create({
     container: {
@@ -89,14 +94,7 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
       alignItems: 'center',
       gap: 16,
     },
-    playButton: {
-      backgroundColor: theme.colors.primary,
-      borderRadius: 20,
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+
     content: {
       flex: 1,
     },
@@ -125,15 +123,22 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
     chaptersList: {
       padding: 16,
     },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 40,
+    syncDescription: {
+      fontSize: 14,
+      textAlign: 'center',
+      marginTop: 8,
+      marginBottom: 20,
+      lineHeight: 20,
     },
-    emptyText: {
+    syncButton: {
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+      marginTop: 16,
+    },
+    syncButtonText: {
       fontSize: 16,
-      color: theme.colors.textSecondary,
+      fontWeight: '600',
       textAlign: 'center',
     },
   });
@@ -147,33 +152,41 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
     return count === 1 ? '1 chapter' : `${count} chapters`;
   };
 
-  const createTrackFromChapter = async (
-    chapter: ChapterWithMetadata
-  ): Promise<MediaTrack | null> => {
-    try {
-      // Get media files for this chapter
-      const mediaFiles = await mediaFilesService.getMediaFilesByChapterId(
-        chapter.id
-      );
+  // Hook to get media files for the first chapter with verses marked
+  const firstChapterWithVersesMarked = chapters.find(
+    chapter =>
+      chapter.versesMarked &&
+      (chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE ||
+        chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL)
+  );
 
-      if (!mediaFiles || mediaFiles.length === 0) {
+  const { data: firstChapterMediaFiles } = useChapterMediaFiles(
+    firstChapterWithVersesMarked?.id || ''
+  );
+
+  const createTrackFromChapter = (
+    chapter: ChapterWithMetadata,
+    mediaFiles?: {
+      mediaFiles: Array<{ local_path: string }>;
+      totalDuration: number;
+      hasAudioFiles: boolean;
+    }
+  ): MediaTrack | null => {
+    try {
+      if (!mediaFiles || !mediaFiles.hasAudioFiles) {
         logger.warn('No media files found for chapter:', chapter.id);
         return null;
       }
 
+      const { mediaFiles: files, totalDuration } = mediaFiles;
+
       // Use the first media file for now (could be enhanced to handle multiple files)
-      const mediaFile = mediaFiles[0];
+      const mediaFile = files[0];
 
       if (!mediaFile) {
         logger.warn('No valid media file found for chapter:', chapter.id);
         return null;
       }
-
-      // Calculate total duration from all media files
-      const totalDuration = mediaFiles.reduce(
-        (sum, mf) => sum + (mf.duration_seconds || 0),
-        0
-      );
 
       return {
         id: `${book.id}-${chapter.id}`,
@@ -201,18 +214,13 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
   // handleBackFromVerses no longer needed with React Navigation
 
   const handlePlayFromFirstChapter = async () => {
-    // Play from the first chapter that has verses marked
-    const firstChapterWithVersesMarked = chapters.find(
-      chapter =>
-        chapter.versesMarked &&
-        (chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE ||
-          chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL)
-    );
-
     if (!firstChapterWithVersesMarked) return;
 
     // Create track and start playback
-    const track = await createTrackFromChapter(firstChapterWithVersesMarked);
+    const track = createTrackFromChapter(
+      firstChapterWithVersesMarked,
+      firstChapterMediaFiles
+    );
     if (track) {
       mediaActions.setCurrentTrack(track);
       mediaActions.play();
@@ -242,13 +250,53 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
       return;
     }
 
-    // Create track and start playback
-    const track = await createTrackFromChapter(chapter);
-    if (track) {
-      mediaActions.setCurrentTrack(track);
-      mediaActions.play();
-    } else {
-      logger.warn('Could not create track for chapter:', chapter.id);
+    // Get media files for this specific chapter using TanStack Query
+    try {
+      // Use TanStack Query cache to get media files
+      const mediaFilesData = await queryClient.fetchQuery({
+        queryKey: chapterAudioQueryKeys.audioAvailability(chapter.id),
+        queryFn: async () => {
+          const { mediaFilesService } = await import(
+            '@/shared/services/database/MediaFilesService'
+          );
+          const mediaFiles = await mediaFilesService.getMediaFilesByChapterId(
+            chapter.id
+          );
+
+          const totalDuration = mediaFiles.reduce(
+            (sum, mf) => sum + (mf.duration_seconds || 0),
+            0
+          );
+          const totalFileSize = mediaFiles.reduce(
+            (sum, mf) => sum + (mf.file_size || 0),
+            0
+          );
+
+          return {
+            mediaFiles,
+            totalDuration,
+            totalFileSize,
+            hasAudioFiles: mediaFiles.length > 0,
+          };
+        },
+        staleTime: 2 * 60 * 1000, // 2 minutes
+      });
+
+      if (!mediaFilesData.hasAudioFiles) {
+        logger.warn('No media files found for chapter:', chapter.id);
+        return;
+      }
+
+      // Create track and start playback
+      const track = createTrackFromChapter(chapter, mediaFilesData);
+      if (track) {
+        mediaActions.setCurrentTrack(track);
+        mediaActions.play();
+      } else {
+        logger.warn('Could not create track for chapter:', chapter.id);
+      }
+    } catch (error) {
+      logger.error('Error getting media files for chapter:', error);
     }
   };
 
@@ -285,28 +333,43 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
       );
     }
 
-    if (error) {
+    // Show sync button if no data after 3 retry attempts or if there's an error
+    const shouldShowSyncButton =
+      (error && chapters.length === 0) ||
+      (!loading && !isRefetching && chapters.length === 0);
+
+    if (shouldShowSyncButton) {
       return (
         <View style={styles.errorContainer}>
           <MaterialIcons
-            name='error-outline'
-            size={48}
-            color={theme.colors.error}
-          />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      );
-    }
-
-    if (chapters.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <MaterialIcons
-            name='library-books'
+            name='cloud-download'
             size={48}
             color={theme.colors.textSecondary}
           />
-          <Text style={styles.emptyText}>No chapters found for this book</Text>
+          <Text style={styles.errorText}>
+            {error || 'No chapters available for this book'}
+          </Text>
+          <Text
+            style={[
+              styles.syncDescription,
+              { color: theme.colors.textSecondary },
+            ]}>
+            Download Bible content to view chapters
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.syncButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={fetchChapters}>
+            <Text
+              style={[
+                styles.syncButtonText,
+                { color: theme.colors.textInverse },
+              ]}>
+              Retry
+            </Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -353,15 +416,12 @@ export const ChapterScreen: React.FC<ChapterScreenProps> = ({
                   MediaAvailabilityStatus.PARTIAL) &&
               chapter.versesMarked
           ) && (
-            <TouchableOpacity
-              style={styles.playButton}
-              onPress={handlePlayFromFirstChapter}>
-              <MaterialIcons
-                name='play-arrow'
-                size={24}
-                color={theme.colors.textInverse}
-              />
-            </TouchableOpacity>
+            <PlayButton
+              type='book'
+              id={book.id}
+              size='large'
+              onPress={handlePlayFromFirstChapter}
+            />
           )}
         </View>
       </View>

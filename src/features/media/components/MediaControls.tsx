@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { useAudioService } from '@/features/media/hooks/useAudioService';
 import { formatTime } from '@/features/media/utils/audioUtils';
 
@@ -75,7 +75,12 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
         <View
           style={[
             styles.progressBar,
-            { backgroundColor: theme.colors.border },
+            {
+              backgroundColor:
+                theme.mode === 'dark'
+                  ? 'rgba(255, 255, 255, 0.2)'
+                  : 'rgba(0, 0, 0, 0.15)',
+            },
           ]}>
           <View
             style={[

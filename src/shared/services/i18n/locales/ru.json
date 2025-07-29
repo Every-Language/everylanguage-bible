@@ -41,7 +41,8 @@
   },
   "tabs": {
     "bible": "Bible",
-    "playlists": "Playlists"
+    "playlists": "Playlists",
+    "audio queue": "Аудио Очередь"
   },
   "bible": {
     "oldTestament": "Old Testament",

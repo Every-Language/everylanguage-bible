@@ -72,19 +72,6 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   const [isProcessing, setIsProcessing] = useState(false);
   const refreshIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Initialize the background download service
-
-  const initialize = useCallback(async () => {
-    try {
-      await downloadService.initialize();
-      setIsInitialized(true);
-      refreshDownloads();
-      startRefreshInterval();
-    } catch (error) {
-      logger.error('Failed to initialize background downloads:', error);
-    }
-  }, []);
-
   // Refresh downloads data
   const refreshDownloads = useCallback(() => {
     if (!downloadService.initialized) return;
@@ -148,6 +135,18 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
       refreshDownloads();
     }, 3000); // Refresh every 3 seconds instead of every second to reduce re-renders
   }, [refreshDownloads]);
+
+  // Initialize background downloads
+  const initialize = useCallback(async () => {
+    try {
+      await downloadService.initialize();
+      setIsInitialized(true);
+      refreshDownloads();
+      startRefreshInterval();
+    } catch (error) {
+      logger.error('Failed to initialize background downloads:', error);
+    }
+  }, [refreshDownloads, startRefreshInterval]);
 
   // Stop refresh interval
   const stopRefreshInterval = useCallback(() => {

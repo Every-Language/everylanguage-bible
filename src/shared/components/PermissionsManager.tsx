@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { usePermissions } from '@/shared/hooks/usePermissions';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { logger } from '@/shared/utils/logger';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 

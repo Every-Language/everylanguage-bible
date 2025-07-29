@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { DatabaseInitProgress } from '@/shared/services/database/DatabaseManager';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
@@ -85,7 +85,12 @@ export const DatabaseStatusCard: React.FC<DatabaseStatusCardProps> = ({
                   <View
                     style={[
                       styles.progressBar,
-                      { backgroundColor: theme.colors.border },
+                      {
+                        backgroundColor:
+                          theme.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.2)'
+                            : 'rgba(0, 0, 0, 0.15)',
+                      },
                     ]}>
                     <View
                       style={[

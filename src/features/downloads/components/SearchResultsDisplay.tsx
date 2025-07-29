@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 
 interface SearchResultsDisplayProps {
   isOnline: boolean;

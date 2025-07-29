@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AppState } from 'react-native';
 import { backgroundSyncService } from '../services/sync/BackgroundSyncService';
 import { bibleSync } from '../services/sync/bible/BibleSyncService';
-import { useSync } from '../context/SyncContext';
+import { useSync } from '@/shared/hooks';
 import { BackgroundTaskStatus } from '../services/sync/BackgroundSyncService';
 import { logger } from '../utils/logger';
 

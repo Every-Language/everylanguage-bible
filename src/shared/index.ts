@@ -10,12 +10,6 @@ export { SlideUpModal } from './components/ui/SlideUpModal';
 // Export constants
 export * from './constants/theme';
 
-// Export contexts
-export * from './context/ThemeContext';
-export * from './context/LocalizationContext';
-export * from './context/SyncContext';
-export * from './context/OnboardingContext';
-
 // Export types
 export * from './types/auth';
 export * from './types/theme';

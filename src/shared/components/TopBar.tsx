@@ -7,7 +7,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { SyncStatusPill } from './SyncStatusPill';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import {

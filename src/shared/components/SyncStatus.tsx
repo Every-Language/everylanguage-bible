@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useSync } from '@/shared/context/SyncContext';
+import { useTheme } from '@/shared/hooks';
+import { useSync } from '@/shared/hooks';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { useBackgroundSync } from '@/shared/hooks/useBackgroundSync';
 import { logger } from '@/shared/utils/logger';

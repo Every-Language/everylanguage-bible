@@ -1,15 +1,10 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-} from 'react-native';
+import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useSync } from '@/shared/context/SyncContext';
+import { useTheme } from '@/shared/hooks';
+import { useSync } from '@/shared/hooks/useSyncFromStore';
 import { useBackgroundSync } from '@/shared/hooks/useBackgroundSync';
+import { useNetworkState } from '@/shared/hooks/useNetworkState';
 
 interface SyncStatusPillProps {
   onPress?: () => void;
@@ -17,16 +12,10 @@ interface SyncStatusPillProps {
 
 export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ onPress }) => {
   const { theme } = useTheme();
-  const {
-    isSyncing,
-    syncProgress,
-    isConnected,
-    connectionType,
-    hasLocalData,
-    isInitialized,
-  } = useSync();
+  const { isSyncing, syncProgress, hasLocalData, isInitialized } = useSync();
 
   const { hasRemoteChanges } = useBackgroundSync();
+  const { isConnected, connectionType } = useNetworkState();
 
   const getConnectionIcon = (): keyof typeof MaterialIcons.glyphMap => {
     if (!isConnected) return 'cloud-off';
@@ -86,99 +75,55 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ onPress }) => {
   };
 
   const getStatusColor = () => {
-    if (!isInitialized) return theme.colors.textSecondary;
-
-    if (isSyncing) return theme.colors.primary;
-
-    // Only check for remote changes if database is initialized
-    if (isInitialized && hasRemoteChanges) return theme.colors.warning;
-
+    if (!isInitialized || isSyncing) return theme.colors.primary;
     if (!hasLocalData) return theme.colors.error;
-
-    if (!isConnected) return theme.colors.textSecondary;
-
+    if (!isConnected) return theme.colors.error;
+    if (hasRemoteChanges) return theme.colors.warning;
     return theme.colors.success;
   };
-
-  const getPillBackgroundColor = () => {
-    if (!isInitialized) return theme.colors.surface;
-
-    if (isSyncing) return theme.colors.surfaceVariant;
-
-    // Only check for remote changes if database is initialized
-    if (isInitialized && hasRemoteChanges) return theme.colors.surfaceVariant;
-
-    if (!hasLocalData) return theme.colors.surfaceVariant;
-
-    if (!isConnected) return theme.colors.surface;
-
-    return theme.colors.surfaceVariant;
-  };
-
-  const statusIcon = getStatusIcon();
 
   return (
     <TouchableOpacity
       style={[
         styles.container,
         {
-          backgroundColor: getPillBackgroundColor(),
+          backgroundColor: theme.colors.surfaceVariant,
+          borderColor: getStatusColor(),
         },
       ]}
       onPress={onPress}
       disabled={!onPress}>
-      <View style={styles.content}>
+      <MaterialIcons
+        name={getConnectionIcon()}
+        size={16}
+        color={getStatusColor()}
+      />
+      <Text style={[styles.text, { color: getStatusColor() }]}>
+        {getStatusText()}
+      </Text>
+      {getStatusIcon() && (
         <MaterialIcons
-          name={getConnectionIcon()}
-          size={12}
+          name={getStatusIcon()!}
+          size={16}
           color={getStatusColor()}
         />
-
-        {isSyncing && (
-          <ActivityIndicator
-            size='small'
-            color={theme.colors.primary}
-            style={styles.spinner}
-          />
-        )}
-
-        {statusIcon && !isSyncing && (
-          <MaterialIcons
-            name={statusIcon}
-            size={12}
-            color={getStatusColor()}
-            style={styles.statusIcon}
-          />
-        )}
-
-        <Text style={[styles.statusText, { color: getStatusColor() }]}>
-          {getStatusText()}
-        </Text>
-      </View>
+      )}
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 60,
-  },
-  content: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
     gap: 4,
   },
-  spinner: {
-    marginRight: 2,
-  },
-  statusIcon: {
-    marginRight: 2,
-  },
-  statusText: {
-    fontSize: 11,
+  text: {
+    fontSize: 12,
     fontWeight: '500',
   },
 });

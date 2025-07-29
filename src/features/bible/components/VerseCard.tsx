@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useTheme } from '@/shared/hooks';
+import { PlayButton } from '@/shared/components';
 import type { Verse } from '../types';
-import { COLOR_VARIATIONS } from '@/shared/constants/theme';
+
 import type { LocalVerseText } from '../../../shared/services/database/schema';
 import type { TextVersion } from '../../languages/types';
 
@@ -28,12 +28,6 @@ export const VerseCard: React.FC<VerseCardProps> = ({
   chapterId,
 }) => {
   const { theme } = useTheme();
-  const { state: mediaState } = useMediaPlayer();
-
-  // Check if this verse is currently playing
-  const isCurrentlyPlaying =
-    mediaState.currentTrack?.id === `${bookId}-${chapterId}-${verse.id}` &&
-    mediaState.isPlaying;
 
   const styles = StyleSheet.create({
     verseCard: {
@@ -41,11 +35,6 @@ export const VerseCard: React.FC<VerseCardProps> = ({
       borderRadius: 12,
       padding: 16,
       marginBottom: 12,
-      // Add border when playing
-      borderWidth: isCurrentlyPlaying ? 2 : 0,
-      borderColor: isCurrentlyPlaying
-        ? theme.colors.primary
-        : COLOR_VARIATIONS.TRANSPARENT,
     },
     verseHeader: {
       flexDirection: 'row',
@@ -75,16 +64,7 @@ export const VerseCard: React.FC<VerseCardProps> = ({
     verseActionButton: {
       padding: 4,
     },
-    playButton: {
-      backgroundColor: isCurrentlyPlaying
-        ? theme.colors.success
-        : theme.colors.primary,
-      borderRadius: 14,
-      width: 28,
-      height: 28,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+
     verseContent: {
       fontSize: 16,
       lineHeight: 24,
@@ -124,15 +104,12 @@ export const VerseCard: React.FC<VerseCardProps> = ({
             </TouchableOpacity>
           )}
           {onPlay && (
-            <TouchableOpacity
-              style={styles.playButton}
-              onPress={handlePlayPress}>
-              <MaterialIcons
-                name={isCurrentlyPlaying ? 'pause' : 'play-arrow'}
-                size={18}
-                color={theme.colors.textInverse}
-              />
-            </TouchableOpacity>
+            <PlayButton
+              type='verse'
+              id={`${bookId}-${chapterId}-${verse.id}`}
+              size='small'
+              onPress={handlePlayPress}
+            />
           )}
         </View>
       </View>

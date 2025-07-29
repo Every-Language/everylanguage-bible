@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useTheme } from '@/shared/hooks';
+import { useMediaPlayer } from '@/shared/hooks';
 import { useCurrentVersions } from '@/features/languages/hooks/useLanguageSelection';
 
 import type { ViewStyle } from 'react-native';

@@ -4,6 +4,77 @@ import { logger } from '@/shared/utils/logger';
 import { FileDownloadProgress } from '../hooks/useDownloadProgress';
 import MediaFilesVersesSyncService from '@/shared/services/sync/media/MediaFilesVersesSyncService';
 
+// Type definitions for search results
+export interface MediaSearchResult {
+  id?: string;
+  remote_id?: string;
+  file_id?: string;
+  language_entity_id?: string;
+  language_id?: string;
+  audio_version_id?: string;
+  sequence_id?: string;
+  sequence?: string;
+  media_type?: string;
+  type?: string;
+  remote_path?: string;
+  file_path?: string;
+  file_size?: number;
+  size?: number;
+  duration_seconds?: number;
+  duration?: number;
+  upload_status?: string;
+  status?: string;
+  publish_status?: string;
+  check_status?: string;
+  version?: number;
+  chapter_id?: string;
+  chapter?: string;
+  verses?: string;
+  start_verse_id?: string;
+  start_verse?: string;
+  end_verse_id?: string;
+  end_verse?: string;
+  [key: string]: unknown;
+}
+
+export interface ExtractedMediaData {
+  id: string;
+  language_entity_id: string;
+  sequence_id: string;
+  media_type: string;
+  remote_path: string;
+  file_size: number;
+  duration_seconds: number;
+  upload_status: string;
+  publish_status: string;
+  check_status: string;
+  version: number;
+  chapter_id: string | null;
+  verses: string;
+  start_verse_id: string | null;
+  end_verse_id: string | null;
+}
+
+export interface MediaFileData {
+  id: string;
+  language_entity_id: string;
+  sequence_id: string;
+  media_type: string;
+  remote_path: string;
+  file_size: number;
+  duration_seconds: number;
+  upload_status: string;
+  publish_status: string;
+  check_status: string;
+  version: number;
+  chapter_id: string | null;
+  verses: string;
+  start_verse_id: string | null;
+  end_verse_id: string | null;
+  local_path: string;
+  deleted_at?: string | null;
+}
+
 export interface DownloadToMediaOptions {
   languageEntityId?: string;
   mediaType?: string;
@@ -48,8 +119,8 @@ export class DownloadToMediaService {
    */
   async addCompletedDownloadToMedia(
     completedFile: FileDownloadProgress,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    originalSearchResult: any,
+
+    originalSearchResult: MediaSearchResult,
     options: DownloadToMediaOptions = {}
   ): Promise<MediaFileCreationResult> {
     try {
@@ -116,8 +187,8 @@ export class DownloadToMediaService {
       }
 
       // Extract data from the original search result with fallbacks
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const extractDataWithFallbacks = (searchResult: any) => {
+
+      const extractDataWithFallbacks = (searchResult: MediaSearchResult) => {
         // Generate a unique ID if none exists
         const fallbackId =
           searchResult.id ||
@@ -453,8 +524,8 @@ export class DownloadToMediaService {
    */
   async addCompletedDownloadsToMedia(
     completedFiles: FileDownloadProgress[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    originalSearchResults: any[],
+
+    originalSearchResults: MediaSearchResult[],
     options: DownloadToMediaOptions = {}
   ): Promise<{
     success: boolean;
@@ -573,20 +644,18 @@ export class DownloadToMediaService {
    */
   async debugMediaFileCreation(
     completedFile: FileDownloadProgress,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    originalSearchResult: any,
+
+    originalSearchResult: MediaSearchResult,
     options: DownloadToMediaOptions = {}
   ): Promise<{
     isValid: boolean;
     issues: string[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    extractedData: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mediaFileData: any;
+    extractedData: ExtractedMediaData | null;
+    mediaFileData: MediaFileData | null;
   }> {
     const issues: string[] = [];
-    let extractedData: any = null;
-    let mediaFileData: any = null;
+    let extractedData: ExtractedMediaData | null = null;
+    let mediaFileData: MediaFileData | null = null;
 
     try {
       // Check search result
@@ -596,7 +665,7 @@ export class DownloadToMediaService {
       }
 
       // Extract data
-      const extractDataWithFallbacks = (searchResult: any) => {
+      const extractDataWithFallbacks = (searchResult: MediaSearchResult) => {
         // Generate a unique ID if none exists
         const fallbackId =
           searchResult.id ||
@@ -667,6 +736,11 @@ export class DownloadToMediaService {
       }
 
       // Create media file data
+      if (!extractedData) {
+        issues.push('Failed to extract data from search result');
+        return { isValid: false, issues, extractedData, mediaFileData };
+      }
+
       const fallbackSequenceId =
         extractedData.sequence_id ||
         `generated_${extractedData.id || completedFile.fileName}_${Date.now()}`;
@@ -677,8 +751,8 @@ export class DownloadToMediaService {
           options.languageEntityId || extractedData.language_entity_id,
         sequence_id: fallbackSequenceId,
         media_type: options.mediaType || extractedData.media_type || 'audio',
-        local_path: completedFile.filePath, // Use the full local path
         remote_path: extractedData.remote_path || completedFile.filePath, // Use original remote path from search result
+        local_path: completedFile.filePath, // Use the full local path
         file_size: extractedData.file_size || 0,
         duration_seconds: extractedData.duration_seconds || 0,
         upload_status:
@@ -694,8 +768,8 @@ export class DownloadToMediaService {
           options.verses ||
           extractedData.verses ||
           this.buildVersesJson(
-            extractedData.start_verse_id,
-            extractedData.end_verse_id
+            extractedData.start_verse_id || undefined,
+            extractedData.end_verse_id || undefined
           ),
         start_verse_id: extractedData.start_verse_id,
         end_verse_id: extractedData.end_verse_id,
@@ -749,7 +823,7 @@ export class DownloadToMediaService {
       fileSize: 1024000,
     };
 
-    const testSearchResult = {
+    const testSearchResult: MediaSearchResult = {
       id: 'test_media_file_123',
       language_entity_id: 'lang_123',
       sequence_id: 'seq_123',

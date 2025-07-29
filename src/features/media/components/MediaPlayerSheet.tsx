@@ -13,8 +13,8 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useAudioService } from '@/features/media/hooks/useAudioService';
+import { useTheme } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
 
 import { MediaControls } from './MediaControls';
 import { TextAndQueueTabs } from './TextAndQueueTabs';
@@ -86,7 +86,7 @@ const BlurredBackground: React.FC<BottomSheetBackgroundProps> = ({
 // Inner content component that has access to useBottomSheet
 const MediaPlayerContent: React.FC = () => {
   const { theme } = useTheme();
-  const { state } = useAudioService();
+  const { state } = useUnifiedMediaPlayer();
   const insets = useSafeAreaInsets();
 
   // Get the animated index from the bottom sheet context
@@ -253,7 +253,7 @@ const MediaPlayerContent: React.FC = () => {
 
 export const MediaPlayerSheet: React.FC = () => {
   const { theme } = useTheme();
-  const { state, actions } = useAudioService();
+  const { state, actions } = useUnifiedMediaPlayer();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
   const isInitializing = useRef(false);
@@ -312,7 +312,7 @@ export const MediaPlayerSheet: React.FC = () => {
       // Only dismiss if there's no current track
       bottomSheetRef.current?.dismiss();
     }
-  }, [state.currentTrack]);
+  }, [state.currentTrack, state.isExpanded]);
 
   // Update sheet position when expanded state changes - with improved logic
   useEffect(() => {

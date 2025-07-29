@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { LocationDisplay } from './LocationDisplay';
 import { useLocation } from '@/shared/hooks/useLocation';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { LocationData } from '@/shared/services/location/LocationService';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 

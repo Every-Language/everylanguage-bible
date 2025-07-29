@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Animated, Dimensions, StyleSheet } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { Button } from './ui/Button';
 import DatabaseManager from '../services/database/DatabaseManager';
 import type { DatabaseInitProgress } from '../services/database/DatabaseManager';
@@ -66,7 +66,15 @@ const ProgressSection: React.FC<{
 }> = ({ theme, progress }) => (
   <View style={styles.progressSection}>
     <View
-      style={[styles.progressBar, { backgroundColor: theme.colors.border }]}>
+      style={[
+        styles.progressBar,
+        {
+          backgroundColor:
+            theme.mode === 'dark'
+              ? 'rgba(255, 255, 255, 0.2)'
+              : 'rgba(0, 0, 0, 0.15)',
+        },
+      ]}>
       <View
         style={[
           styles.progressFill,

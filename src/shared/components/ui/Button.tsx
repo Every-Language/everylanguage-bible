@@ -6,7 +6,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { getButtonStyle, getShadowStyle } from '@/shared/utils/theme';
 
 interface ButtonProps {

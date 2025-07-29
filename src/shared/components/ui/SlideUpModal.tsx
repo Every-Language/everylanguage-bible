@@ -14,7 +14,7 @@ import Animated, {
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { BRAND_COLORS, COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 const getContentPaddingStyle = (insets: { bottom: number }) => ({

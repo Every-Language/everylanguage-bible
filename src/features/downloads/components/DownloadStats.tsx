@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useTranslations } from '@/shared/context/LocalizationContext';
+import { useTheme } from '@/shared/hooks';
+import { useTranslations } from '@/shared/hooks';
 import { DownloadStats as DownloadStatsType } from '../types';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 

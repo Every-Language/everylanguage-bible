@@ -10,8 +10,8 @@ import {
   RefreshControl,
   ScrollView,
 } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useTranslations } from '@/shared/context/LocalizationContext';
+import { useTheme } from '@/shared/hooks';
+import { useTranslations } from '@/shared/hooks';
 import { useDownloads } from '../hooks';
 import { DownloadItem, DownloadStats, UrlDownloadForm } from '../components';
 import { DownloadStatus } from '../types';

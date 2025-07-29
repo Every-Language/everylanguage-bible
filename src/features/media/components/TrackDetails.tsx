@@ -7,8 +7,8 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useTheme } from '@/shared/hooks';
+import { useMediaPlayer } from '@/shared/hooks';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface TrackDetailsProps {

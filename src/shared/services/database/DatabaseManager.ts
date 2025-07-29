@@ -265,10 +265,10 @@ class DatabaseManager {
       logger.error('Failed to create tables:', {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
-        errorCode: (error as any)?.code || 'No code',
+        errorConstructor: (error as Error)?.constructor?.name,
+        errorMessage: (error as Error)?.message || 'No message',
+        errorStack: (error as Error)?.stack || 'No stack',
+        errorCode: (error as Error & { code?: string })?.code || 'No code',
         // Remove the problematic JSON.stringify that was causing empty objects
         // errorStringified: JSON.stringify(
         //   error,

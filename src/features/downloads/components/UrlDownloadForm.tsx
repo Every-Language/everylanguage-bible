@@ -8,8 +8,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useTranslations } from '@/shared/context/LocalizationContext';
+import { useTheme } from '@/shared/hooks';
+import { useTranslations } from '@/shared/hooks';
 import { Theme } from '@/shared/types/theme';
 import { useDownloads } from '../hooks';
 import { urlSigningService } from '../services/urlSigningService';

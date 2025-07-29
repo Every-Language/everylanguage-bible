@@ -7,8 +7,8 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useAudioService } from '../hooks/useAudioService';
+import { useTheme } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '../hooks/useUnifiedMediaPlayer';
 import { MediaTrack } from '../types';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { formatTime } from '../utils/audioUtils';
@@ -35,16 +35,12 @@ export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
   // Increment render count for debugging
   renderCount.current += 1;
 
-  const { state, actions, audioServiceState, isAudioServiceReady } =
-    useAudioService({
-      autoPlay: false,
-      onError: error => {
-        Alert.alert('Audio Error', error);
-      },
-      onLoad: _duration => {
-        // Audio loaded with duration: _duration
-      },
-    });
+  const { state, actions } = useUnifiedMediaPlayer({
+    autoPlay: false,
+    onError: (error: string) => {
+      Alert.alert('Audio Error', error);
+    },
+  });
 
   // Log render count every 10 renders to monitor for infinite loops
   useEffect(() => {
@@ -94,7 +90,7 @@ export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
 
       <View style={styles.statusContainer}>
         <Text style={[styles.statusText, { color: theme.colors.text }]}>
-          Audio Service Ready: {isAudioServiceReady ? 'Yes' : 'No'}
+          Audio Service Ready: {state.isLoaded ? 'Yes' : 'No'}
         </Text>
         <Text style={[styles.statusText, { color: theme.colors.text }]}>
           Is Playing: {state.isPlaying ? 'Yes' : 'No'}
@@ -190,7 +186,7 @@ export const AudioPlayerExample: React.FC<AudioPlayerExampleProps> = ({
           Debug Info:
         </Text>
         <Text style={[styles.debugText, { color: theme.colors.textSecondary }]}>
-          Audio Service State: {JSON.stringify(audioServiceState, null, 2)}
+          Audio Service State: {JSON.stringify(state, null, 2)}
         </Text>
       </View>
     </ScrollView>

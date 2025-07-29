@@ -1,10 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import {
-  useLocalization,
-  useTranslations,
-} from '../context/LocalizationContext';
-import { useTheme } from '../context/ThemeContext';
+import { useLocalization, useTranslations } from '@/shared/hooks';
+import { useTheme } from '@/shared/hooks';
 import type { Theme } from '../types/theme';
 
 interface LocaleSelectorProps {
