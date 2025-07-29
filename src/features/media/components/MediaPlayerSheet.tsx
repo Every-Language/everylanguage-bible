@@ -24,17 +24,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-/**
- * MediaPlayerSheet - A bottom sheet modal for media playback controls
- *
- * Safe Area Considerations:
- * - Uses useSafeAreaInsets to respect device safe areas
- * - Minimum collapsed height includes bottom safe area padding
- * - Controls container has proper bottom padding for safe area
- * - Expanded height accounts for top safe area
- * - MediaControls component handles its own safe area padding
- */
-
 // Fixed height allocations for expanded view
 const EXPANDED_TRACK_DETAILS_HEIGHT = SCREEN_HEIGHT * 0.15; // 15% of screen height
 const EXPANDED_TABS_HEIGHT = SCREEN_HEIGHT * 0.7; // 70% of screen height
@@ -293,7 +282,7 @@ export const MediaPlayerSheet: React.FC = () => {
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [state.currentTrack]);
+  }, [state.currentTrack, state.isExpanded]);
 
   // Update sheet position when expanded state changes
   useEffect(() => {

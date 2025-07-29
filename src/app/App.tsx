@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StatusBar, StyleSheet } from 'react-native';
+import { StatusBar, StyleSheet, Platform } from 'react-native';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
 import { ThemeProvider, useTheme } from '@/shared/context/ThemeContext';
 import { LocalizationProvider } from '@/shared/context/LocalizationContext';
 import { SyncProvider, useSync } from '@/shared/context/SyncContext';
@@ -22,7 +23,10 @@ const StatusBarWrapper: React.FC = () => {
   return (
     <StatusBar
       barStyle={theme.mode === 'dark' ? 'light-content' : 'dark-content'}
-      backgroundColor={theme.colors.background}
+      backgroundColor={
+        Platform.OS === 'android' ? theme.colors.background : undefined
+      }
+      translucent={false}
     />
   );
 };
@@ -81,7 +85,11 @@ const MainContent: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.colors.background },
+        ]}>
         <ActivityIndicator size='large' color={theme.colors.primary} />
         <Text
           style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
@@ -94,7 +102,11 @@ const MainContent: React.FC = () => {
   // Error state
   if (error) {
     return (
-      <View style={styles.errorContainer}>
+      <View
+        style={[
+          styles.errorContainer,
+          { backgroundColor: theme.colors.background },
+        ]}>
         <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
           Initialization Failed
         </Text>
@@ -121,8 +133,12 @@ const MainContent: React.FC = () => {
     return <OnboardingScreen onComplete={handleOnboardingComplete} />;
   }
 
-  // Show main app
-  return <HomeScreen />;
+  // Show main app - wrap in NavigationContainer
+  return (
+    <NavigationContainer>
+      <HomeScreen />
+    </NavigationContainer>
+  );
 };
 
 const App: React.FC = () => {

@@ -140,16 +140,43 @@ export const createLanguageHierarchySlice: StateCreator<
         }
       }
 
-      // No cache available, need to sync first (slower)
-      logger.log('No cached language data, performing initial sync...');
-      const freshHierarchy = await languageService.getLanguageHierarchy();
-      const hierarchyNodes = buildHierarchyNodes(freshHierarchy);
+      // No cache available - start with empty state and sync in background
+      logger.log('No cached language data, starting background sync...');
 
       set({
-        languageHierarchy: hierarchyNodes,
+        languageHierarchy: [],
         isLoadingHierarchy: false,
         hierarchyError: null,
       });
+
+      // Trigger sync in background (non-blocking)
+      languageService
+        .syncInBackground()
+        .then(async () => {
+          // After sync completes, reload the hierarchy
+          try {
+            const freshHierarchy =
+              await languageService.getLanguageHierarchyFromCache();
+            const hierarchyNodes = buildHierarchyNodes(freshHierarchy);
+            set({
+              languageHierarchy: hierarchyNodes,
+              hierarchyError: null,
+            });
+            logger.log('Language hierarchy loaded after background sync');
+          } catch (error) {
+            logger.error('Error loading hierarchy after sync:', error);
+            set({
+              hierarchyError: 'Failed to load language hierarchy after sync',
+            });
+          }
+        })
+        .catch((error: any) => {
+          logger.error('Background sync failed:', error);
+          set({
+            hierarchyError:
+              'Failed to sync language data. Please check your internet connection.',
+          });
+        });
     } catch (error) {
       logger.error('Error loading language hierarchy:', error);
       set({

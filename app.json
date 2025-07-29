@@ -10,11 +10,17 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.everylanguage.elbible",
       "infoPlist": {
-        "UIBackgroundModes": ["background-fetch", "background-processing"]
+        "UIBackgroundModes": ["background-fetch", "background-processing"],
+        "UIStatusBarStyle": "UIStatusBarStyleLightContent",
+        "UIViewControllerBasedStatusBarAppearance": false
       }
     },
     "android": {
-      "package": "com.everylanguage.elbible"
+      "package": "com.everylanguage.elbible",
+      "statusBar": {
+        "barStyle": "light-content",
+        "backgroundColor": "#070707"
+      }
     },
     "web": {},
     "plugins": [

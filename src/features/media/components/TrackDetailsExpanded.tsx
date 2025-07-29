@@ -19,42 +19,11 @@ interface TrackDetailsProps {
 export const TrackDetails: React.FC<TrackDetailsProps> = ({
   viewMode,
   onViewModeChange,
-  isExpanded,
 }) => {
   const { theme } = useTheme();
   const { state } = useMediaPlayer();
 
   if (!state.currentTrack) return null;
-
-  if (!isExpanded) {
-    // Collapsed state: inline layout with title/subtitle on left, language on right
-    return (
-      <View style={styles.collapsedContainer}>
-        <View style={styles.collapsedTrackInfo}>
-          <Text
-            style={[styles.collapsedTitle, { color: theme.colors.text }]}
-            numberOfLines={1}>
-            {state.currentTrack.title}
-          </Text>
-          <Text
-            style={[
-              styles.collapsedSubtitle,
-              { color: theme.colors.textSecondary },
-            ]}
-            numberOfLines={1}>
-            {state.currentTrack.subtitle}
-          </Text>
-        </View>
-        <Text
-          style={[
-            styles.collapsedLanguage,
-            { color: theme.colors.textSecondary },
-          ]}>
-          ENGLISH - BSB
-        </Text>
-      </View>
-    );
-  }
 
   // Expanded state: full layout with album art and toggles
   return (
@@ -135,34 +104,6 @@ export const TrackDetails: React.FC<TrackDetailsProps> = ({
 };
 
 const styles = StyleSheet.create({
-  // Collapsed state styles
-  collapsedContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  collapsedTrackInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  collapsedTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  collapsedSubtitle: {
-    fontSize: 14,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-  collapsedLanguage: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'right',
-  },
-
-  // Expanded state styles
   expandedContainer: {
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 20 : StatusBar.currentHeight || 0 + 20,
