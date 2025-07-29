@@ -8,7 +8,7 @@ const CURRENT_DATABASE_VERSION = 5; // Increment when schema changes
 // Enhanced error types for better error handling
 export interface DatabaseErrorDetails {
   query?: string;
-  params?: unknown[] | undefined;
+  params?: SQLiteBindParams | undefined;
   originalError?: unknown;
 }
 
@@ -640,9 +640,21 @@ class DatabaseManager {
             'Migrating media_files_verses table to remove foreign key constraint and update start_time_seconds to REAL'
           );
 
+          // Check if media_files_verses_new table already exists and drop it
+          const newTableExists = await this.db.getFirstAsync<{ name: string }>(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='media_files_verses_new'"
+          );
+
+          if (newTableExists) {
+            logger.info(
+              'media_files_verses_new table already exists, dropping it first...'
+            );
+            await this.db.execAsync('DROP TABLE media_files_verses_new');
+          }
+
           // Create new table without the verse_id foreign key constraint and with REAL start_time_seconds
           await this.db.execAsync(`
-            CREATE TABLE IF NOT EXISTS media_files_verses_new (
+            CREATE TABLE media_files_verses_new (
               id TEXT PRIMARY KEY,
               media_file_id TEXT NOT NULL,
               verse_id TEXT NOT NULL,

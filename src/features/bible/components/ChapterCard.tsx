@@ -111,16 +111,18 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
         </Text>
       </View>
       <View style={styles.availabilityIcons}>
-        {/* Cloud icon - shows if content is available in cloud */}
-        {isCloudAvailable && (
-          <View style={styles.availabilityIcon}>
-            <MaterialIcons
-              name='cloud'
-              size={16}
-              color={theme.colors.textSecondary}
-            />
-          </View>
-        )}
+        {/* Cloud icon - shows if content is available in cloud and audio is not complete */}
+        {isCloudAvailable &&
+          (chapter.mediaAvailability === MediaAvailabilityStatus.NONE ||
+            chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL) && (
+            <View style={styles.availabilityIcon}>
+              <MaterialIcons
+                name='cloud'
+                size={16}
+                color={theme.colors.textSecondary}
+              />
+            </View>
+          )}
         {/* Media availability icons */}
         {chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE && (
           <View style={styles.availabilityIcon}>

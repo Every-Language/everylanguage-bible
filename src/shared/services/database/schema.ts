@@ -628,16 +628,30 @@ export const migrateMediaFilesTable = async (
       );
     }
 
-    // Check if foreign key constraints exist (legacy migration)
-    const hasForeignKeys = tableInfo.some(
-      (column: any) =>
-        column.name === 'language_entity_id' || column.name === 'chapter_id'
+    // Check if foreign key constraints exist by looking at the table creation SQL
+    const tableSql = await db.getFirstAsync<{ sql: string }>(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='media_files'"
     );
+
+    // Check if the table has foreign key constraints in its definition
+    const hasForeignKeys = tableSql?.sql?.includes('FOREIGN KEY') || false;
 
     if (hasForeignKeys) {
       logger.info(
         'Migrating media_files table to remove foreign key constraints...'
       );
+
+      // Check if media_files_new table already exists and drop it
+      const newTableExists = await db.getFirstAsync<{ name: string }>(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='media_files_new'"
+      );
+
+      if (newTableExists) {
+        logger.info(
+          'media_files_new table already exists, dropping it first...'
+        );
+        await db.execAsync('DROP TABLE media_files_new');
+      }
 
       // Check current table data before migration
       const rowCount = await db.getFirstAsync<{ count: number }>(
@@ -645,10 +659,41 @@ export const migrateMediaFilesTable = async (
       );
       logger.info(`Current media_files table has ${rowCount?.count || 0} rows`);
 
+      // Check for duplicate IDs in the current table
+      const duplicateIds = await db.getAllAsync(`
+        SELECT id, COUNT(*) as count 
+        FROM media_files 
+        GROUP BY id 
+        HAVING COUNT(*) > 1
+      `);
+
+      if (duplicateIds && duplicateIds.length > 0) {
+        logger.warn('Found duplicate IDs in media_files table:', duplicateIds);
+
+        // Remove duplicates by keeping only the first occurrence of each ID
+        logger.info('Removing duplicate records...');
+        await db.execAsync(`
+          DELETE FROM media_files 
+          WHERE rowid NOT IN (
+            SELECT MIN(rowid) 
+            FROM media_files 
+            GROUP BY id
+          )
+        `);
+
+        // Check row count after removing duplicates
+        const newRowCount = await db.getFirstAsync<{ count: number }>(
+          'SELECT COUNT(*) as count FROM media_files'
+        );
+        logger.info(
+          `After removing duplicates: ${newRowCount?.count || 0} rows`
+        );
+      }
+
       // Create new table without foreign keys
       logger.info('Creating new media_files table without foreign keys...');
       await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS media_files_new (
+        CREATE TABLE media_files_new (
           id TEXT PRIMARY KEY,
           language_entity_id TEXT NOT NULL,
           sequence_id TEXT NOT NULL,
@@ -679,10 +724,12 @@ export const migrateMediaFilesTable = async (
       `);
 
       // Verify data was copied correctly
-      const newRowCount = await db.getFirstAsync<{ count: number }>(
+      const finalRowCount = await db.getFirstAsync<{ count: number }>(
         'SELECT COUNT(*) as count FROM media_files_new'
       );
-      logger.info(`New media_files table has ${newRowCount?.count || 0} rows`);
+      logger.info(
+        `New media_files table has ${finalRowCount?.count || 0} rows`
+      );
 
       // Drop old table and rename new table
       logger.info('Dropping old table and renaming new table...');
@@ -714,11 +761,6 @@ export const migrateMediaFilesTable = async (
       errorMessage: (error as any)?.message || 'No message',
       errorStack: (error as any)?.stack || 'No stack',
       errorCode: (error as any)?.code || 'No code',
-      // Remove the problematic JSON.stringify that was causing empty objects
-      // errorStringified: JSON.stringify(
-      //   error,
-      //   Object.getOwnPropertyNames(error || {})
-      // ),
     });
 
     // Try to get more SQLite-specific error information
