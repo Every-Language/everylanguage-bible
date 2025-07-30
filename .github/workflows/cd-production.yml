@@ -109,7 +109,7 @@ jobs:
           
           if [ "$INPUT_PLATFORM" = "all" ] || [ "$INPUT_PLATFORM" = "$PLATFORM" ] || [ -z "$INPUT_PLATFORM" ]; then
             echo "📱 Submitting $PLATFORM app to store..."
-            eas submit --platform $PLATFORM --profile production --non-interactive --wait
+            eas submit --platform $PLATFORM --profile production --latest --non-interactive --wait
           else
             echo "⏭️ Skipping store submission for $PLATFORM"
           fi

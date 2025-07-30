@@ -10,7 +10,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.everylanguage.elbible",
       "infoPlist": {
-        "UIBackgroundModes": ["background-fetch", "background-processing"],
+        "UIBackgroundModes": ["audio", "fetch"],
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
         "UIViewControllerBasedStatusBarAppearance": false
       }
