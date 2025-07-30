@@ -183,7 +183,7 @@ export const createLanguageHierarchySlice: StateCreator<
             });
           }
         })
-        .catch((error: any) => {
+        .catch((error: unknown) => {
           logger.error('Background sync failed:', error);
           set({
             hierarchyError:
