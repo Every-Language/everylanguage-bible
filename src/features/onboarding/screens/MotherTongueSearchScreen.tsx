@@ -4,42 +4,26 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
-  FlatList,
   SafeAreaView,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/hooks';
 import { useNetworkForAction } from '@/shared/hooks/useNetworkState';
 import { NoInternetModal, SyncProgressModal } from '@/shared/components';
 import { logger } from '@/shared/utils/logger';
+import { LanguageHierarchyBrowser } from '@/features/languages/components';
+import { useCurrentVersions } from '@/features/languages/hooks';
+import {
+  AudioVersion,
+  TextVersion,
+  LanguageEntity,
+} from '@/features/languages/types';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface MotherTongueSearchScreenProps {
   onBack: () => void;
   onComplete: () => void;
 }
-
-interface Language {
-  id: string;
-  name: string;
-  nativeName: string;
-  code: string;
-}
-
-const sampleLanguages: Language[] = [
-  { id: '1', name: 'English', nativeName: 'English', code: 'en' },
-  { id: '2', name: 'Spanish', nativeName: 'Español', code: 'es' },
-  { id: '3', name: 'French', nativeName: 'Français', code: 'fr' },
-  { id: '4', name: 'German', nativeName: 'Deutsch', code: 'de' },
-  { id: '5', name: 'Portuguese', nativeName: 'Português', code: 'pt' },
-  { id: '6', name: 'Russian', nativeName: 'Русский', code: 'ru' },
-  { id: '7', name: 'Chinese', nativeName: '中文', code: 'zh' },
-  { id: '8', name: 'Japanese', nativeName: '日本語', code: 'ja' },
-  { id: '9', name: 'Korean', nativeName: '한국어', code: 'ko' },
-  { id: '10', name: 'Arabic', nativeName: 'العربية', code: 'ar' },
-  { id: '11', name: 'Hindi', nativeName: 'हिन्दी', code: 'hi' },
-  { id: '12', name: 'Italian', nativeName: 'Italiano', code: 'it' },
-];
 
 export const MotherTongueSearchScreen: React.FC<
   MotherTongueSearchScreenProps
@@ -47,18 +31,20 @@ export const MotherTongueSearchScreen: React.FC<
   const { theme } = useTheme();
   const { isOnline, isChecking, ensureNetworkAvailable, retryAndExecute } =
     useNetworkForAction();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(
-    null
-  );
+
+  // Language selection state
+  const {
+    currentAudioVersion,
+    currentTextVersion,
+    setAudioVersion,
+    setTextVersion,
+  } = useCurrentVersions();
+
+  // Modal states
   const [showNoInternetModal, setShowNoInternetModal] = useState(false);
   const [showSyncProgressModal, setShowSyncProgressModal] = useState(false);
-
-  const filteredLanguages = sampleLanguages.filter(
-    lang =>
-      lang.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lang.nativeName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [showAudioVersionBrowser, setShowAudioVersionBrowser] = useState(false);
+  const [showTextVersionBrowser, setShowTextVersionBrowser] = useState(false);
 
   // Debug logging for network state
   useEffect(() => {
@@ -84,12 +70,45 @@ export const MotherTongueSearchScreen: React.FC<
     }
   }, [isOnline, isChecking]);
 
-  const handleLanguageSelect = (language: Language) => {
-    setSelectedLanguage(language);
+  const handleAudioVersionPress = () => {
+    if (!isOnline) {
+      setShowNoInternetModal(true);
+      return;
+    }
+    setShowAudioVersionBrowser(true);
+  };
+
+  const handleTextVersionPress = () => {
+    if (!isOnline) {
+      setShowNoInternetModal(true);
+      return;
+    }
+    setShowTextVersionBrowser(true);
+  };
+
+  const handleAudioVersionSelect = (
+    _version: AudioVersion | TextVersion,
+    _type: 'audio' | 'text'
+  ) => {
+    setAudioVersion(_version as AudioVersion);
+    setShowAudioVersionBrowser(false);
+  };
+
+  const handleTextVersionSelect = (
+    _version: AudioVersion | TextVersion,
+    _type: 'audio' | 'text'
+  ) => {
+    setTextVersion(_version as TextVersion);
+    setShowTextVersionBrowser(false);
+  };
+
+  const handleLanguageSelect = (_language: LanguageEntity) => {
+    // This would be handled by the LanguageHierarchyBrowser
+    // We don't need to do anything here as the browser will show available versions
   };
 
   const handleContinue = async () => {
-    if (selectedLanguage) {
+    if (currentAudioVersion && currentTextVersion) {
       try {
         // Ensure network is available before proceeding
         await ensureNetworkAvailable(() => {
@@ -118,78 +137,95 @@ export const MotherTongueSearchScreen: React.FC<
     }
   };
 
-  const handleDebugNetworkCheck = async () => {
-    logger.debug('MotherTongueSearchScreen: Debug network check triggered');
-    try {
-      await retryAndExecute(() => {
-        logger.debug('MotherTongueSearchScreen: Debug check successful');
-      });
-    } catch (error) {
-      logger.debug('MotherTongueSearchScreen: Debug check failed:', error);
-    }
-  };
-
-  const handleTestEndpoints = async () => {
-    logger.debug('MotherTongueSearchScreen: Testing individual endpoints...');
-    const { networkService } = await import(
-      '@/shared/services/network/NetworkService'
-    );
-
-    const endpoints = [
-      'https://httpbin.org/get',
-      'https://jsonplaceholder.typicode.com/posts/1',
-      'https://api.github.com/zen',
-      'https://www.cloudflare.com/cdn-cgi/trace',
-      'https://www.google.com/favicon.ico',
-    ];
-
-    for (const endpoint of endpoints) {
-      try {
-        const result = await networkService.testSingleEndpoint(endpoint);
-        logger.debug(
-          `MotherTongueSearchScreen: ${endpoint} - ${result.isOnline ? 'SUCCESS' : 'FAILED'} (${result.latency}ms)`,
-          result.error || ''
-        );
-      } catch (error) {
-        logger.debug(`MotherTongueSearchScreen: ${endpoint} - ERROR:`, error);
-      }
-    }
-  };
-
   const handleGetStarted = () => {
     // Navigate to home screen when sync is complete
     onComplete();
   };
 
-  const renderLanguageItem = ({ item }: { item: Language }) => (
-    <TouchableOpacity
-      style={[
-        styles.languageItem,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor:
-            selectedLanguage?.id === item.id
-              ? theme.colors.primary
-              : theme.colors.border,
-        },
-      ]}
-      onPress={() => handleLanguageSelect(item)}>
-      <View style={styles.languageInfo}>
-        <Text style={[styles.languageName, { color: theme.colors.text }]}>
-          {item.name}
-        </Text>
-        <Text
-          style={[styles.nativeName, { color: theme.colors.textSecondary }]}>
-          {item.nativeName}
-        </Text>
-      </View>
-      {selectedLanguage?.id === item.id && (
-        <View
-          style={[styles.checkmark, { backgroundColor: theme.colors.primary }]}
-        />
-      )}
-    </TouchableOpacity>
-  );
+  const canContinue = currentAudioVersion && currentTextVersion;
+
+  const renderVersionCard = (
+    type: 'audio' | 'text',
+    currentVersion: AudioVersion | TextVersion | null,
+    onPress: () => void,
+    isSelected: boolean
+  ) => {
+    const isAudio = type === 'audio';
+    const icon = isAudio ? 'volume-high' : 'book';
+    const title = isAudio ? 'Audio Version' : 'Text Version';
+    const subtitle = isAudio
+      ? 'Select your preferred audio Bible'
+      : 'Select your preferred text Bible';
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.versionCard,
+          {
+            backgroundColor: theme.colors.surface,
+          },
+        ]}
+        onPress={onPress}
+        activeOpacity={0.7}>
+        <View style={styles.cardHeader}>
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: theme.colors.surfaceVariant },
+            ]}>
+            <Ionicons name={icon} size={24} color={theme.colors.primary} />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
+              {title}
+            </Text>
+            <Text
+              style={[
+                styles.cardSubtitle,
+                { color: theme.colors.textSecondary },
+              ]}>
+              {subtitle}
+            </Text>
+          </View>
+          <View style={styles.cardActions}>
+            {isSelected ? (
+              <View style={[styles.statusIcon, styles.statusIconSelected]}>
+                <MaterialIcons name='check' size={16} color='white' />
+              </View>
+            ) : (
+              <View style={[styles.statusIcon, styles.statusIconUnselected]}>
+                <MaterialIcons name='close' size={16} color='white' />
+              </View>
+            )}
+            <Ionicons
+              name='chevron-forward'
+              size={20}
+              color={theme.colors.textSecondary}
+            />
+          </View>
+        </View>
+
+        {currentVersion && (
+          <View style={styles.selectedVersionInfo}>
+            <Text
+              style={[
+                styles.selectedVersionName,
+                { color: theme.colors.text },
+              ]}>
+              {currentVersion.name}
+            </Text>
+            <Text
+              style={[
+                styles.selectedVersionLanguage,
+                { color: theme.colors.textSecondary },
+              ]}>
+              {currentVersion.languageName}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView
@@ -208,104 +244,92 @@ export const MotherTongueSearchScreen: React.FC<
           </Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.colors.text }]}>
-          Select Your Mother Tongue
+          Select Your Bible Versions
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          Choose your preferred language for the app
+          Choose your preferred text and audio versions
         </Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.searchContainer}
-        onPress={() => {
-          // Only show modal if there's no internet connection
-          if (!isOnline) {
-            setShowNoInternetModal(true);
-          }
-        }}
-        activeOpacity={0.7}>
-        <View style={styles.searchInputContainer}>
-          <TextInput
+      <View style={styles.content}>
+        {/* Network Status Warning */}
+        {!isOnline && (
+          <View
             style={[
-              styles.searchInput,
-              {
-                backgroundColor: theme.colors.surface,
-                color: isOnline
-                  ? theme.colors.text
-                  : theme.colors.textSecondary,
-                borderColor: isOnline
-                  ? theme.colors.border
-                  : theme.colors.error,
-              },
-            ]}
-            placeholder={
-              isOnline ? 'Search languages...' : 'No internet connection'
-            }
-            placeholderTextColor={theme.colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            editable={isOnline}
-          />
-          {!isOnline && (
+              styles.networkWarning,
+              { backgroundColor: theme.colors.error + '20' },
+            ]}>
             <MaterialIcons
               name='wifi-off'
               size={20}
               color={theme.colors.error}
-              style={styles.searchIcon}
             />
+            <Text
+              style={[
+                styles.networkWarningText,
+                { color: theme.colors.error },
+              ]}>
+              Internet connection required to select versions
+            </Text>
+          </View>
+        )}
+
+        {/* Version Selection Cards */}
+        <View style={styles.cardsContainer}>
+          {renderVersionCard(
+            'text',
+            currentTextVersion,
+            handleTextVersionPress,
+            !!currentTextVersion
+          )}
+
+          {renderVersionCard(
+            'audio',
+            currentAudioVersion,
+            handleAudioVersionPress,
+            !!currentAudioVersion
           )}
         </View>
-      </TouchableOpacity>
 
-      <FlatList
-        data={filteredLanguages}
-        renderItem={renderLanguageItem}
-        keyExtractor={item => item.id}
-        style={styles.languageList}
-        showsVerticalScrollIndicator={false}
-      />
+        {/* Progress Indicator */}
+        <View style={styles.progressContainer}>
+          <Text
+            style={[
+              styles.progressText,
+              { color: theme.colors.textSecondary },
+            ]}>
+            {currentTextVersion && currentAudioVersion
+              ? 'Both versions selected ✓'
+              : `${currentTextVersion ? 1 : 0} of 2 versions selected`}
+          </Text>
+        </View>
+
+        {/* Helpful Comment */}
+        <View style={styles.helpTextContainer}>
+          <MaterialIcons
+            name='info-outline'
+            size={16}
+            color={theme.colors.textSecondary}
+          />
+          <Text
+            style={[styles.helpText, { color: theme.colors.textSecondary }]}>
+            You can change or add other versions later in the app settings
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.footer}>
-        {/* Debug button - remove in production */}
-        <TouchableOpacity
-          style={[
-            styles.debugButton,
-            { backgroundColor: theme.colors.warning },
-          ]}
-          onPress={handleDebugNetworkCheck}>
-          <Text
-            style={[
-              styles.debugButtonText,
-              { color: theme.colors.textInverse },
-            ]}>
-            Debug: Check Network ({isOnline ? 'Online' : 'Offline'})
-          </Text>
-        </TouchableOpacity>
-
-        {/* Debug endpoint test button - remove in production */}
-        <TouchableOpacity
-          style={[styles.debugButton, { backgroundColor: theme.colors.info }]}
-          onPress={handleTestEndpoints}>
-          <Text
-            style={[
-              styles.debugButtonText,
-              { color: theme.colors.textInverse },
-            ]}>
-            Debug: Test Endpoints
-          </Text>
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={[
             styles.continueButton,
             {
-              backgroundColor: selectedLanguage
+              backgroundColor: canContinue
                 ? theme.colors.primary
                 : theme.colors.interactiveDisabled,
             },
           ]}
           onPress={handleContinue}
-          disabled={!selectedLanguage}>
+          disabled={!canContinue}>
           <Text
             style={[
               styles.continueButtonText,
@@ -316,6 +340,7 @@ export const MotherTongueSearchScreen: React.FC<
         </TouchableOpacity>
       </View>
 
+      {/* Modals */}
       <NoInternetModal
         visible={showNoInternetModal && !isOnline}
         onRetry={handleRetryConnection}
@@ -327,6 +352,26 @@ export const MotherTongueSearchScreen: React.FC<
         onClose={() => setShowSyncProgressModal(false)}
         onGetStarted={handleGetStarted}
       />
+
+      {/* Language Hierarchy Browser for Text Versions */}
+      <LanguageHierarchyBrowser
+        visible={showTextVersionBrowser}
+        onClose={() => setShowTextVersionBrowser(false)}
+        onLanguageSelect={handleLanguageSelect}
+        onVersionSelect={handleTextVersionSelect}
+        mode='browse'
+        title='Select Text Version'
+      />
+
+      {/* Language Hierarchy Browser for Audio Versions */}
+      <LanguageHierarchyBrowser
+        visible={showAudioVersionBrowser}
+        onClose={() => setShowAudioVersionBrowser(false)}
+        onLanguageSelect={handleLanguageSelect}
+        onVersionSelect={handleAudioVersionSelect}
+        mode='browse'
+        title='Select Audio Version'
+      />
     </SafeAreaView>
   );
 };
@@ -336,13 +381,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 20,
-    paddingBottom: 10,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    alignItems: 'center',
   },
   backButton: {
-    marginBottom: 20,
+    position: 'absolute',
+    left: 20,
+    top: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    zIndex: 1,
   },
   backIcon: {
     marginRight: 8,
@@ -352,85 +402,152 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 12,
+    textAlign: 'center',
+    marginTop: 40,
+    paddingHorizontal: 10,
+    lineHeight: 30,
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 22,
-  },
-  searchContainer: {
+    textAlign: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 20,
   },
-  searchInputContainer: {
-    position: 'relative',
-  },
-  searchInput: {
-    height: 50,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingRight: 50,
-    fontSize: 16,
-    borderWidth: 1,
-  },
-  searchIcon: {
-    position: 'absolute',
-    right: 16,
-    top: 15,
-  },
-  languageList: {
+  content: {
     flex: 1,
     paddingHorizontal: 20,
+    justifyContent: 'flex-start',
+    paddingTop: 10,
   },
-  languageItem: {
+  networkWarning: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 2,
+    marginBottom: 24,
+    gap: 12,
   },
-  languageInfo: {
+  networkWarningText: {
+    fontSize: 14,
+    fontWeight: '500',
     flex: 1,
   },
-  languageName: {
-    fontSize: 16,
+  cardsContainer: {
+    gap: 16,
+    marginBottom: 32,
+  },
+  versionCard: {
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 18,
     fontWeight: '600',
     marginBottom: 4,
   },
-  nativeName: {
+  cardSubtitle: {
     fontSize: 14,
+    lineHeight: 20,
   },
-  checkmark: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  footer: {
-    padding: 20,
-    paddingTop: 10,
-  },
-  continueButton: {
-    height: 50,
-    borderRadius: 12,
+  statusIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  continueButtonText: {
+  statusIconSelected: {
+    backgroundColor: COLOR_VARIATIONS.SUCCESS,
+  },
+  statusIconUnselected: {
+    backgroundColor: COLOR_VARIATIONS.ERROR,
+  },
+  selectedVersionInfo: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLOR_VARIATIONS.BLACK_10,
+  },
+  selectedVersionName: {
     fontSize: 16,
     fontWeight: '600',
+    marginBottom: 2,
   },
-  debugButton: {
-    height: 50,
-    borderRadius: 12,
+  selectedVersionLanguage: {
+    fontSize: 14,
+  },
+  progressContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  progressText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  helpTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  helpText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    flex: 1,
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  continueButton: {
+    height: 56,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  debugButtonText: {
-    fontSize: 16,
+  continueButtonText: {
+    fontSize: 18,
     fontWeight: '600',
   },
 });
