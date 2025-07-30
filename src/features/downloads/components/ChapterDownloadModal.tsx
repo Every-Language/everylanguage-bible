@@ -211,7 +211,8 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
             failedCount: failedFiles.length,
             totalCount: totalFiles,
           });
-          // Add any completion-specific logic here
+          // Reset download state when background downloads complete
+          setIsDownloading(false);
         },
         onMediaFileAdded: (mediaFileId, fileName) => {
           logger.info('Media file added to local database:', {
@@ -228,7 +229,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
           // Add any media file error logic here
         },
       }),
-    [validMediaFiles, chapterId]
+    [validMediaFiles, chapterId, setIsDownloading]
   );
 
   // Set completion callback when component mounts - only run once
@@ -316,6 +317,9 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
       setCurrentBatchId(`chapter_${chapterId}_${Date.now()}`);
       logger.info('Added files to background download queue:', downloadIds);
 
+      // Don't set isDownloading to false here since downloads are happening in background
+      // The download completion callback will handle resetting the state
+
       // Show success message and close modal
       setTimeout(() => {
         onClose();
@@ -324,7 +328,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
       const errorMsg = (error as Error).message;
       logger.error('Download batch error:', errorMsg);
       setDownloadError(errorMsg);
-    } finally {
+      // Only reset isDownloading on error
       setIsDownloading(false);
     }
   }, [
@@ -490,40 +494,29 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
           )}
 
           <View style={styles.buttonContainer}>
-            {/* Download button - only show when files are found */}
-            {canDownload && (
+            {/* Download button - only show when files are found and not downloading */}
+            {canDownload && !isDownloading && (
               <TouchableOpacity
                 style={[
                   styles.downloadButton,
                   {
-                    backgroundColor: isDownloadDisabled
-                      ? theme.colors.border
-                      : theme.colors.success,
+                    backgroundColor: theme.colors.success,
                   },
-                  isDownloadDisabled
-                    ? styles.downloadButtonDisabled
-                    : styles.downloadButtonEnabled,
+                  styles.downloadButtonEnabled,
                 ]}
                 onPress={handleDownload}
-                disabled={isDownloadDisabled}>
-                {isDownloadDisabled ? (
-                  <ActivityIndicator
-                    size='small'
-                    color={theme.colors.textInverse}
-                  />
-                ) : (
-                  <MaterialIcons
-                    name='cloud-download'
-                    size={20}
-                    color={theme.colors.textInverse}
-                  />
-                )}
+                disabled={false}>
+                <MaterialIcons
+                  name='cloud-download'
+                  size={20}
+                  color={theme.colors.textInverse}
+                />
                 <Text
                   style={[
                     styles.downloadButtonText,
                     { color: theme.colors.textInverse },
                   ]}>
-                  {isDownloadDisabled ? 'Downloading...' : 'Download Files'}
+                  Download Files
                 </Text>
               </TouchableOpacity>
             )}
@@ -601,9 +594,6 @@ const styles = StyleSheet.create({
   },
   downloadButtonEnabled: {
     opacity: 1,
-  },
-  downloadButtonDisabled: {
-    opacity: 0.6,
   },
   downloadButtonText: {
     fontSize: 16,
