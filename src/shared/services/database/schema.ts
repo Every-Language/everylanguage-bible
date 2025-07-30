@@ -597,20 +597,20 @@ export const migrateMediaFilesTable = async (
     // Check current table schema
     const tableInfo = await db.getAllAsync('PRAGMA table_info(media_files)');
     logger.info('Current media_files table schema:', {
-      columns: tableInfo.map((col: any) => ({
-        name: col.name,
-        type: col.type,
-        notnull: col.notnull,
-        pk: col.pk,
+      columns: (tableInfo as Array<Record<string, unknown>>).map(col => ({
+        name: col['name'] as string,
+        type: col['type'] as string,
+        notnull: col['notnull'] as number,
+        pk: col['pk'] as number,
       })),
     });
 
     // Check if start_verse_id and end_verse_id columns exist
-    const hasStartVerseId = tableInfo.some(
-      (col: any) => col.name === 'start_verse_id'
+    const hasStartVerseId = (tableInfo as Array<Record<string, unknown>>).some(
+      col => col['name'] === 'start_verse_id'
     );
-    const hasEndVerseId = tableInfo.some(
-      (col: any) => col.name === 'end_verse_id'
+    const hasEndVerseId = (tableInfo as Array<Record<string, unknown>>).some(
+      col => col['name'] === 'end_verse_id'
     );
 
     // Add missing columns if they don't exist
@@ -628,16 +628,30 @@ export const migrateMediaFilesTable = async (
       );
     }
 
-    // Check if foreign key constraints exist (legacy migration)
-    const hasForeignKeys = tableInfo.some(
-      (column: any) =>
-        column.name === 'language_entity_id' || column.name === 'chapter_id'
+    // Check if foreign key constraints exist by looking at the table creation SQL
+    const tableSql = await db.getFirstAsync<{ sql: string }>(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='media_files'"
     );
+
+    // Check if the table has foreign key constraints in its definition
+    const hasForeignKeys = tableSql?.sql?.includes('FOREIGN KEY') || false;
 
     if (hasForeignKeys) {
       logger.info(
         'Migrating media_files table to remove foreign key constraints...'
       );
+
+      // Check if media_files_new table already exists and drop it
+      const newTableExists = await db.getFirstAsync<{ name: string }>(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='media_files_new'"
+      );
+
+      if (newTableExists) {
+        logger.info(
+          'media_files_new table already exists, dropping it first...'
+        );
+        await db.execAsync('DROP TABLE media_files_new');
+      }
 
       // Check current table data before migration
       const rowCount = await db.getFirstAsync<{ count: number }>(
@@ -645,10 +659,41 @@ export const migrateMediaFilesTable = async (
       );
       logger.info(`Current media_files table has ${rowCount?.count || 0} rows`);
 
+      // Check for duplicate IDs in the current table
+      const duplicateIds = await db.getAllAsync(`
+        SELECT id, COUNT(*) as count 
+        FROM media_files 
+        GROUP BY id 
+        HAVING COUNT(*) > 1
+      `);
+
+      if (duplicateIds && duplicateIds.length > 0) {
+        logger.warn('Found duplicate IDs in media_files table:', duplicateIds);
+
+        // Remove duplicates by keeping only the first occurrence of each ID
+        logger.info('Removing duplicate records...');
+        await db.execAsync(`
+          DELETE FROM media_files 
+          WHERE rowid NOT IN (
+            SELECT MIN(rowid) 
+            FROM media_files 
+            GROUP BY id
+          )
+        `);
+
+        // Check row count after removing duplicates
+        const newRowCount = await db.getFirstAsync<{ count: number }>(
+          'SELECT COUNT(*) as count FROM media_files'
+        );
+        logger.info(
+          `After removing duplicates: ${newRowCount?.count || 0} rows`
+        );
+      }
+
       // Create new table without foreign keys
       logger.info('Creating new media_files table without foreign keys...');
       await db.execAsync(`
-        CREATE TABLE IF NOT EXISTS media_files_new (
+        CREATE TABLE media_files_new (
           id TEXT PRIMARY KEY,
           language_entity_id TEXT NOT NULL,
           sequence_id TEXT NOT NULL,
@@ -679,10 +724,12 @@ export const migrateMediaFilesTable = async (
       `);
 
       // Verify data was copied correctly
-      const newRowCount = await db.getFirstAsync<{ count: number }>(
+      const finalRowCount = await db.getFirstAsync<{ count: number }>(
         'SELECT COUNT(*) as count FROM media_files_new'
       );
-      logger.info(`New media_files table has ${newRowCount?.count || 0} rows`);
+      logger.info(
+        `New media_files table has ${finalRowCount?.count || 0} rows`
+      );
 
       // Drop old table and rename new table
       logger.info('Dropping old table and renaming new table...');
@@ -694,12 +741,20 @@ export const migrateMediaFilesTable = async (
         'PRAGMA table_info(media_files)'
       );
       logger.info('Final media_files table schema:', {
-        columns: finalTableInfo.map((col: any) => ({
-          name: col.name,
-          type: col.type,
-          notnull: col.notnull,
-          pk: col.pk,
-        })),
+        columns: finalTableInfo.map((col: unknown) => {
+          const typedCol = col as {
+            name: string;
+            type: string;
+            notnull: number;
+            pk: number;
+          };
+          return {
+            name: typedCol.name,
+            type: typedCol.type,
+            notnull: typedCol.notnull,
+            pk: typedCol.pk,
+          };
+        }),
       });
 
       logger.info('Successfully migrated media_files table');
@@ -710,22 +765,17 @@ export const migrateMediaFilesTable = async (
     logger.error('Error migrating media_files table:', {
       error: error,
       errorType: typeof error,
-      errorConstructor: (error as any)?.constructor?.name,
-      errorMessage: (error as any)?.message || 'No message',
-      errorStack: (error as any)?.stack || 'No stack',
-      errorCode: (error as any)?.code || 'No code',
-      // Remove the problematic JSON.stringify that was causing empty objects
-      // errorStringified: JSON.stringify(
-      //   error,
-      //   Object.getOwnPropertyNames(error || {})
-      // ),
+      errorConstructor: (error as Error)?.constructor?.name,
+      errorMessage: (error as Error)?.message || 'No message',
+      errorStack: (error as Error)?.stack || 'No stack',
+      errorCode: (error as { code?: string })?.code || 'No code',
     });
 
     // Try to get more SQLite-specific error information
     try {
       if (db) {
         const pragmaResult = await db.getAllAsync('PRAGMA integrity_check');
-        logger.error('Database integrity check result:', pragmaResult);
+        logger.info('Database integrity check result:', pragmaResult);
       }
     } catch (integrityError) {
       logger.error('Failed to run integrity check:', integrityError);

@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useAudioService } from '@/features/media/hooks/useAudioService';
+import { useTheme } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
 import { formatTime } from '@/features/media/utils/audioUtils';
 
 interface MediaControlsProps {
@@ -16,7 +16,7 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
   compact = false,
 }) => {
   const { theme } = useTheme();
-  const { state, actions } = useAudioService();
+  const { state, actions } = useUnifiedMediaPlayer();
   const insets = useSafeAreaInsets();
 
   const handlePlayPause = async () => {
@@ -28,18 +28,13 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
   };
 
   const handleSkipBack = async () => {
-    await actions.seekTo(
-      Math.max(0, (state.currentTrack?.currentTime || 0) - 10)
-    );
+    await actions.seekTo(Math.max(0, (state.position || 0) - 10));
   };
 
   const handleSkipForward = async () => {
     if (state.currentTrack) {
       await actions.seekTo(
-        Math.min(
-          state.currentTrack.duration,
-          state.currentTrack.currentTime + 10
-        )
+        Math.min(state.duration, (state.position || 0) + 10)
       );
     }
   };
@@ -56,8 +51,8 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
     return `${state.playbackRate}x`;
   };
 
-  const progressPercentage = state.currentTrack?.duration
-    ? (state.currentTrack.currentTime / state.currentTrack.duration) * 100
+  const progressPercentage = state.duration
+    ? (state.position / state.duration) * 100
     : 0;
 
   if (!state.currentTrack) return null;
@@ -75,7 +70,7 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
         <View
           style={[
             styles.progressBar,
-            { backgroundColor: theme.colors.border },
+            { backgroundColor: theme.colors.surfaceOverlay },
           ]}>
           <View
             style={[
@@ -92,10 +87,10 @@ export const MediaControls: React.FC<MediaControlsProps> = ({
       {/* Time Display under seekbar */}
       <View style={styles.timeDisplayContainer}>
         <Text style={[styles.timeText, { color: theme.colors.textSecondary }]}>
-          {formatTime(state.currentTrack.currentTime)}
+          {formatTime(state.position)}
         </Text>
         <Text style={[styles.timeText, { color: theme.colors.textSecondary }]}>
-          {formatTime(state.currentTrack.duration)}
+          {formatTime(state.duration)}
         </Text>
       </View>
 

@@ -5,3 +5,7 @@ export { SyncProgressModal } from './SyncProgressModal';
 export { SyncStatus } from './SyncStatus';
 export { SyncStatusPill } from './SyncStatusPill';
 export { TopBar } from './TopBar';
+export { PermissionsManager } from './PermissionsManager';
+export { LocationDisplay } from './LocationDisplay';
+export { LocationExample } from './LocationExample';
+export { PlayButton } from './ui/PlayButton';

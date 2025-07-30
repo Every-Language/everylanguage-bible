@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { useAuthContext } from './AuthProvider';
+import { useAuthContext } from '@/shared/hooks';
 import { logger } from '../../../shared/utils/logger';
-import { useTheme, Button, createThemedStyles, getInputStyle } from '@/shared';
-import { useTranslations } from '@/shared/context/LocalizationContext';
+import { useTheme } from '@/shared/hooks';
+import { Button, createThemedStyles, getInputStyle } from '@/shared';
+import { useTranslations } from '@/shared/hooks';
 
 const themedStyles = createThemedStyles({
   container: theme => ({
@@ -63,7 +64,7 @@ export function AuthForm({ mode, onModeChange }: AuthFormProps) {
       }
     } catch (error) {
       // Error handling is done in the hook
-      logger.auth('Auth error:', error);
+      logger.error('Auth error:', error);
     }
   };
 

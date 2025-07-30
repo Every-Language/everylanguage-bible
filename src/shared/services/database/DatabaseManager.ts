@@ -1,15 +1,22 @@
 import * as SQLite from 'expo-sqlite';
+import { SQLiteBindParams } from 'expo-sqlite';
 import { DATABASE_NAME, createTables, dropTables } from './schema';
 import { logger } from '../../utils/logger';
 
 const CURRENT_DATABASE_VERSION = 5; // Increment when schema changes
 
 // Enhanced error types for better error handling
+export interface DatabaseErrorDetails {
+  query?: string;
+  params?: SQLiteBindParams | undefined;
+  originalError?: unknown;
+}
+
 export class DatabaseError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: DatabaseErrorDetails
   ) {
     super(message);
     this.name = 'DatabaseError';
@@ -128,12 +135,13 @@ class DatabaseManager {
           this.db = await SQLite.openDatabaseAsync(DATABASE_NAME);
           logger.info('Database opened successfully');
         } catch (dbError: unknown) {
+          const error = dbError as Error;
           logger.error('Failed to open database:', {
             error: dbError,
             errorType: typeof dbError,
-            errorConstructor: (dbError as any)?.constructor?.name,
-            errorMessage: (dbError as any)?.message || 'No message',
-            errorStack: (dbError as any)?.stack || 'No stack',
+            errorConstructor: error?.constructor?.name,
+            errorMessage: error?.message || 'No message',
+            errorStack: error?.stack || 'No stack',
             databaseName: DATABASE_NAME,
           });
           throw dbError;
@@ -189,12 +197,13 @@ class DatabaseManager {
         lastError = error as Error;
 
         // Enhanced error logging
+        const err = error as Error;
         logger.error(`Database initialization attempt ${attempt} failed:`, {
           error: error,
           errorType: typeof error,
-          errorConstructor: (error as any)?.constructor?.name,
-          errorMessage: (error as any)?.message || 'No message',
-          errorStack: (error as any)?.stack || 'No stack',
+          errorConstructor: err?.constructor?.name,
+          errorMessage: err?.message || 'No message',
+          errorStack: err?.stack || 'No stack',
           // Remove the problematic JSON.stringify that was causing empty objects
           // errorStringified: JSON.stringify(
           //   error,
@@ -207,9 +216,9 @@ class DatabaseManager {
 
         this.updateProgress({
           stage: 'error',
-          message: `Initialization failed: ${(lastError as any)?.message || 'Unknown error'}`,
+          message: `Initialization failed: ${(lastError as Error)?.message || 'Unknown error'}`,
           progress: 0,
-          error: (lastError as any)?.message || 'Unknown error',
+          error: (lastError as Error)?.message || 'Unknown error',
         });
 
         if (attempt < this.maxRetries) {
@@ -223,7 +232,7 @@ class DatabaseManager {
     // All retries failed
     this.initializationPromise = null;
     throw new DatabaseError(
-      `Database initialization failed after ${this.maxRetries} attempts: ${(lastError as any)?.message || 'Unknown error'}`,
+      `Database initialization failed after ${this.maxRetries} attempts: ${(lastError as Error)?.message || 'Unknown error'}`,
       'INIT_FAILED',
       { originalError: lastError }
     );
@@ -256,10 +265,10 @@ class DatabaseManager {
       logger.error('Failed to create tables:', {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
-        errorCode: (error as any)?.code || 'No code',
+        errorConstructor: (error as Error)?.constructor?.name,
+        errorMessage: (error as Error)?.message || 'No message',
+        errorStack: (error as Error)?.stack || 'No stack',
+        errorCode: (error as Error & { code?: string })?.code || 'No code',
         // Remove the problematic JSON.stringify that was causing empty objects
         // errorStringified: JSON.stringify(
         //   error,
@@ -423,7 +432,8 @@ class DatabaseManager {
         'PRAGMA table_info(sync_metadata)'
       );
       const hasLastVersionCheck = tableInfo.some(
-        (col: any) => col.name === 'last_version_check'
+        (col: unknown) =>
+          (col as { name: string }).name === 'last_version_check'
       );
 
       if (!hasLastVersionCheck) {
@@ -465,7 +475,8 @@ class DatabaseManager {
         );
 
         const hasAvailableVersions = languageTableInfo.some(
-          (col: any) => col.name === 'has_available_versions'
+          (col: unknown) =>
+            (col as { name: string }).name === 'has_available_versions'
         );
 
         if (!hasAvailableVersions) {
@@ -505,7 +516,7 @@ class DatabaseManager {
         );
 
         const hasIsAvailable = versionsTableInfo.some(
-          (col: any) => col.name === 'is_available'
+          (col: unknown) => (col as { name: string }).name === 'is_available'
         );
 
         if (!hasIsAvailable) {
@@ -631,9 +642,21 @@ class DatabaseManager {
             'Migrating media_files_verses table to remove foreign key constraint and update start_time_seconds to REAL'
           );
 
+          // Check if media_files_verses_new table already exists and drop it
+          const newTableExists = await this.db.getFirstAsync<{ name: string }>(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='media_files_verses_new'"
+          );
+
+          if (newTableExists) {
+            logger.info(
+              'media_files_verses_new table already exists, dropping it first...'
+            );
+            await this.db.execAsync('DROP TABLE media_files_verses_new');
+          }
+
           // Create new table without the verse_id foreign key constraint and with REAL start_time_seconds
           await this.db.execAsync(`
-            CREATE TABLE IF NOT EXISTS media_files_verses_new (
+            CREATE TABLE media_files_verses_new (
               id TEXT PRIMARY KEY,
               media_file_id TEXT NOT NULL,
               verse_id TEXT NOT NULL,
@@ -839,7 +862,10 @@ class DatabaseManager {
   }
 
   // Enhanced query methods with automatic initialization
-  async executeQuery<T = any>(query: string, params?: any[]): Promise<T[]> {
+  async executeQuery<T = Record<string, unknown>>(
+    query: string,
+    params?: SQLiteBindParams
+  ): Promise<T[]> {
     const db = await this.getDatabase();
     try {
       const result = await db.getAllAsync<T>(query, params || []);
@@ -853,15 +879,18 @@ class DatabaseManager {
     }
   }
 
-  async executeSingleQuery<T = any>(
+  async executeSingleQuery<T = Record<string, unknown>>(
     query: string,
-    params: any[] = []
+    params: SQLiteBindParams = []
   ): Promise<T | null> {
     const db = await this.getDatabase();
     return db.getFirstAsync<T>(query, params);
   }
 
-  async executeRaw(query: string, params?: any[]): Promise<any> {
+  async executeRaw(
+    query: string,
+    params?: SQLiteBindParams
+  ): Promise<SQLite.SQLiteRunResult> {
     const db = await this.getDatabase();
     try {
       const result = await db.runAsync(query, params || []);
@@ -875,7 +904,7 @@ class DatabaseManager {
     }
   }
 
-  async execSingle(query: string, params?: any[]): Promise<void> {
+  async execSingle(query: string, params?: SQLiteBindParams): Promise<void> {
     const db = await this.getDatabase();
     try {
       await db.runAsync(query, params || []);

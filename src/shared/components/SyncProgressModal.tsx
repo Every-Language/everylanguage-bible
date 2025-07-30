@@ -8,15 +8,17 @@ import {
   Animated,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 import { bibleSync } from '@/shared/services/sync/bible/BibleSyncService';
 import { languageSync } from '@/shared/services/sync/language/LanguageSyncService';
-import { localDataService } from '@/shared/services/database/LocalDataService';
-import DatabaseManager from '@/shared/services/database/DatabaseManager';
+import {
+  useDataAvailabilityQuery,
+  useDataCountsQuery,
+  useLanguageTablesCountsQuery,
+} from '@/shared/hooks';
 import { logger } from '@/shared/utils/logger';
-
-const databaseManager = DatabaseManager.getInstance();
 
 interface SyncProgressModalProps {
   visible: boolean;
@@ -45,6 +47,11 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
     isComplete: false,
   });
 
+  // TanStack Query hooks for data status
+  const { data: hasData = false } = useDataAvailabilityQuery();
+  const { data: dataCounts } = useDataCountsQuery();
+  const { data: languageTablesCounts } = useLanguageTablesCountsQuery();
+
   // Start rotation animation when sync is in progress
   useEffect(() => {
     if (visible && !progress.isComplete) {
@@ -52,14 +59,14 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
     } else {
       stopRotationAnimation();
     }
-  }, [visible, progress.isComplete]);
+  }, [visible, progress.isComplete]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Perform real sync operations
   useEffect(() => {
     if (visible && !progress.isComplete) {
       performRealSync();
     }
-  }, [visible, progress.isComplete]);
+  }, [visible, progress.isComplete]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startRotationAnimation = () => {
     rotationAnim.setValue(0);
@@ -86,7 +93,8 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
         isComplete: false,
       });
 
-      const hasData = await localDataService.isDataAvailable();
+      // Use TanStack Query data instead of direct service call
+      // hasData is already available from useDataAvailabilityQuery hook
 
       // Step 2: Check for updates
       setProgress({
@@ -169,41 +177,26 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
   const verifyAllTablesHaveData = async () => {
     try {
       const requiredTables = [
-        // Bible content tables
-        { name: 'books', checkFn: () => localDataService.getBooksCount() },
+        // Bible content tables - use TanStack Query data
+        { name: 'books', checkFn: () => dataCounts?.booksCount || 0 },
         {
           name: 'chapters',
-          checkFn: () => localDataService.getChaptersCount(),
+          checkFn: () => dataCounts?.chaptersCount || 0,
         },
-        { name: 'verses', checkFn: () => localDataService.getVersesCount() },
+        { name: 'verses', checkFn: () => dataCounts?.versesCount || 0 },
 
         // Language tables - check if they exist and have data
         {
           name: 'language_entities_cache',
-          checkFn: async () => {
-            const result = await databaseManager.executeQuery<{
-              count: number;
-            }>('SELECT COUNT(*) as count FROM language_entities_cache');
-            return result[0]?.count || 0;
-          },
+          checkFn: () => languageTablesCounts?.languageEntitiesCount || 0,
         },
         {
           name: 'available_versions_cache',
-          checkFn: async () => {
-            const result = await databaseManager.executeQuery<{
-              count: number;
-            }>('SELECT COUNT(*) as count FROM available_versions_cache');
-            return result[0]?.count || 0;
-          },
+          checkFn: () => languageTablesCounts?.availableVersionsCount || 0,
         },
         {
           name: 'user_saved_versions',
-          checkFn: async () => {
-            const result = await databaseManager.executeQuery<{
-              count: number;
-            }>('SELECT COUNT(*) as count FROM user_saved_versions');
-            return result[0]?.count || 0;
-          },
+          checkFn: () => languageTablesCounts?.userSavedVersionsCount || 0,
         },
       ];
 
@@ -298,7 +291,7 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
               <View
                 style={[
                   styles.progressBar,
-                  { backgroundColor: theme.colors.border },
+                  { backgroundColor: theme.colors.surfaceOverlay },
                 ]}>
                 <View
                   style={[
@@ -360,7 +353,7 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLOR_VARIATIONS.BLACK_50,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -370,7 +363,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
     shadowOffset: {
       width: 0,
       height: 2,

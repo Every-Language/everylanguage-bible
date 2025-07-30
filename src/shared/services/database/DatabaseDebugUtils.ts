@@ -3,7 +3,7 @@ import { logger } from '../../utils/logger';
 
 export interface DatabaseDebugInfo {
   tables: string[];
-  integrityCheck: any[];
+  integrityCheck: Array<Record<string, unknown>>;
   foreignKeysEnabled: boolean;
   journalMode: string;
   synchronous: string;
@@ -22,7 +22,7 @@ export interface TableSchemaInfo {
     name: string;
     type: string;
     notnull: number;
-    defaultValue: any;
+    defaultValue: unknown;
     pk: number;
   }>;
   indexes: Array<{
@@ -82,7 +82,7 @@ export class DatabaseDebugUtils {
 
       return {
         tables: tables.map(t => t.name),
-        integrityCheck,
+        integrityCheck: integrityCheck as Array<Record<string, unknown>>,
         foreignKeysEnabled: foreignKeys?.foreign_keys === 1,
         journalMode: journalMode?.journal_mode || 'unknown',
         synchronous: synchronous?.synchronous || 'unknown',
@@ -116,38 +116,61 @@ export class DatabaseDebugUtils {
 
       // Get index details
       const indexDetails = await Promise.all(
-        indexes.map(async (index: any) => {
+        indexes.map(async (index: Record<string, unknown>) => {
           const indexColumns = await db.getAllAsync(
-            'PRAGMA index_info(' + index.name + ')'
+            'PRAGMA index_info(' + (index.name as string) + ')'
           );
           return {
-            name: index.name,
-            unique: index.unique,
-            columns: indexColumns.map((col: any) => col.name).filter(Boolean),
+            name: index.name as string,
+            unique: index.unique as number,
+            columns: indexColumns
+              .map((col: Record<string, unknown>) => col.name as string)
+              .filter(Boolean),
           };
         })
       );
 
       return {
         name: tableName,
-        columns: columns.map((col: any) => ({
-          name: col.name,
-          type: col.type,
-          notnull: col.notnull,
-          defaultValue: col.dflt_value,
-          pk: col.pk,
-        })),
+        columns: columns.map((col: unknown) => {
+          const typedCol = col as {
+            name: string;
+            type: string;
+            notnull: number;
+            dflt_value: unknown;
+            pk: number;
+          };
+          return {
+            name: typedCol.name,
+            type: typedCol.type,
+            notnull: typedCol.notnull,
+            defaultValue: typedCol.dflt_value,
+            pk: typedCol.pk,
+          };
+        }),
         indexes: indexDetails,
-        foreignKeys: foreignKeys.map((fk: any) => ({
-          id: fk.id,
-          seq: fk.seq,
-          table: fk.table,
-          from: fk.from,
-          to: fk.to,
-          onUpdate: fk.on_update,
-          onDelete: fk.on_delete,
-          match: fk.match,
-        })),
+        foreignKeys: foreignKeys.map((fk: unknown) => {
+          const typedFk = fk as {
+            id: number;
+            seq: number;
+            table: string;
+            from: string;
+            to: string;
+            on_update: string;
+            on_delete: string;
+            match: string;
+          };
+          return {
+            id: typedFk.id,
+            seq: typedFk.seq,
+            table: typedFk.table,
+            from: typedFk.from,
+            to: typedFk.to,
+            onUpdate: typedFk.on_update,
+            onDelete: typedFk.on_delete,
+            match: typedFk.match,
+          };
+        }),
       };
     } catch (error) {
       logger.error(`Failed to get schema info for table ${tableName}:`, error);
@@ -159,7 +182,7 @@ export class DatabaseDebugUtils {
    * Log comprehensive error information for debugging
    */
   static logDetailedError(
-    error: any,
+    error: unknown,
     context: string = 'Database operation'
   ): void {
     logger.error(`${context} failed:`, {
@@ -215,17 +238,23 @@ export class DatabaseDebugUtils {
   /**
    * Get SQLite error details from error object
    */
-  static extractSqliteErrorDetails(error: any): {
+  static extractSqliteErrorDetails(error: unknown): {
     code?: string;
     message?: string;
     extendedCode?: number;
     sql?: string;
   } {
+    const typedError = error as {
+      code?: string;
+      message?: string;
+      extendedCode?: number;
+      sql?: string;
+    };
     return {
-      code: error?.code,
-      message: error?.message,
-      extendedCode: error?.extendedCode,
-      sql: error?.sql,
+      code: typedError?.code,
+      message: typedError?.message,
+      extendedCode: typedError?.extendedCode,
+      sql: typedError?.sql,
     };
   }
 }

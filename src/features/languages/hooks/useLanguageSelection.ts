@@ -58,9 +58,12 @@ export const useLanguageSelection = (): UseLanguageSelectionReturn => {
     [store]
   );
 
-  const loadLanguageHierarchy = useCallback(async () => {
-    await store.loadLanguageHierarchy();
-  }, [store]);
+  const loadLanguageHierarchy = useCallback(
+    async (retryCount?: number) => {
+      await store.loadLanguageHierarchy(retryCount);
+    },
+    [store]
+  );
 
   const loadAvailableVersions = useCallback(
     async (languageId: string) => {
@@ -235,7 +238,7 @@ export const useLanguageHierarchy = () => {
     isLoadingHierarchy,
     isSearching,
     hierarchyError,
-    loadLanguageHierarchy,
+    loadLanguageHierarchy: loadHierarchy,
     expandLanguageNode,
     collapseLanguageNode,
     navigateToLanguage,
@@ -244,6 +247,13 @@ export const useLanguageHierarchy = () => {
     searchLanguages,
     clearSearch,
   } = useLanguageSelectionStore();
+
+  const loadLanguageHierarchy = useCallback(
+    async (retryCount?: number) => {
+      await loadHierarchy(retryCount);
+    },
+    [loadHierarchy]
+  );
 
   const toggleNodeExpansion = useCallback(
     (nodeId: string) => {

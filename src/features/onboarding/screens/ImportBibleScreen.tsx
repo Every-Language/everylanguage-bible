@@ -9,10 +9,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { onboardingSyncService } from '../services/OnboardingSyncService';
 import type { OnboardingSyncProgress } from '../services/OnboardingSyncService';
 import { logger } from '@/shared/utils/logger';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface ImportBibleScreenProps {
   onBack: () => void;
@@ -95,7 +96,10 @@ const sampleBibleVersions: BibleVersion[] = [
   },
 ];
 
-const getCheckboxStyle = (theme: any, isSelected: boolean) => ({
+const getCheckboxStyle = (
+  theme: { colors: { primary: string; border: string } },
+  isSelected: boolean
+) => ({
   backgroundColor: isSelected ? theme.colors.primary : 'transparent',
   borderColor: isSelected ? theme.colors.primary : theme.colors.border,
 });
@@ -458,7 +462,7 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: COLOR_VARIATIONS.BLACK_10,
     overflow: 'hidden',
     marginBottom: 8,
     width: '100%',
@@ -478,7 +482,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     textAlign: 'center',
-    color: '#ff4444',
+    color: COLOR_VARIATIONS.ERROR_RED,
   },
   footer: {
     padding: 20,

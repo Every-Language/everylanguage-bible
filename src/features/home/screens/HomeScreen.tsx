@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useOnboarding } from '@/shared/context/OnboardingContext';
+import { useTheme } from '@/shared/hooks';
+import { useOnboarding } from '@/shared/hooks';
 import { TopBar } from '@/shared/components/TopBar';
 import { MenuModal } from '@/shared/components/MenuModal';
 import { SlideUpModal } from '@/shared/components/ui/SlideUpModal';
@@ -85,58 +85,60 @@ export const HomeScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-      {/* Main App Content */}
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: theme.colors.background },
-        ]}>
-        <TopBar
-          showLanguageSelection={true}
-          onMenuPress={handleMenuPress}
-          onAudioVersionPress={handleAudioVersionPress}
-          onTextVersionPress={handleTextVersionPress}
-        />
-
-        <HomeTabNavigator activeTab={activeTab} onTabPress={switchTab} />
-
-        <HomeContainer activeTab={activeTab} />
-
-        {/* Media Player Sheet */}
-        <MediaPlayerSheet />
-
-        {/* Development Reset Button - Remove in production */}
-        <TouchableOpacity
+    <>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+        {/* Main App Content */}
+        <View
           style={[
-            styles.resetButton,
-            { backgroundColor: theme.colors.primary },
-          ]}
-          onPress={resetOnboarding}>
-          <Text
-            style={[
-              styles.resetButtonText,
-              { color: theme.colors.textInverse },
-            ]}>
-            Reset Onboarding
-          </Text>
-        </TouchableOpacity>
-      </View>
+            styles.container,
+            { backgroundColor: theme.colors.background },
+          ]}>
+          <TopBar
+            showLanguageSelection={true}
+            onMenuPress={handleMenuPress}
+            onAudioVersionPress={handleAudioVersionPress}
+            onTextVersionPress={handleTextVersionPress}
+          />
 
-      {/* Menu Modal - rendered outside main content to appear on top */}
+          <HomeTabNavigator activeTab={activeTab} onTabPress={switchTab} />
+
+          <HomeContainer activeTab={activeTab} />
+
+          {/* Media Player Sheet */}
+          <MediaPlayerSheet />
+
+          {/* Development Reset Button - Remove in production */}
+          <TouchableOpacity
+            style={[
+              styles.resetButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={resetOnboarding}>
+            <Text
+              style={[
+                styles.resetButtonText,
+                { color: theme.colors.textInverse },
+              ]}>
+              Reset Onboarding
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+
+      {/* Menu Modal - rendered outside SafeAreaView to appear on top */}
       <MenuModal
         visible={showMenuModal}
         onClose={handleMenuClose}
         onProfilePress={handleProfilePress}
       />
 
-      {/* Profile/Auth Modal */}
+      {/* Profile/Auth Modal - rendered outside SafeAreaView for full screen backdrop */}
       <SlideUpModal visible={showProfileModal} onClose={handleModalClose}>
         {user ? <ProfileScreen onClose={handleModalClose} /> : <AuthScreen />}
       </SlideUpModal>
 
-      {/* Language Selection Modals */}
+      {/* Language Selection Modals - rendered outside SafeAreaView for full screen backdrop */}
       <VersionSelectionModal
         visible={showAudioVersionModal}
         onClose={() => setShowAudioVersionModal(false)}
@@ -156,7 +158,7 @@ export const HomeScreen: React.FC = () => {
         onVersionSelect={handleTextVersionSelect}
         title='Select Text Version'
       />
-    </SafeAreaView>
+    </>
   );
 };
 

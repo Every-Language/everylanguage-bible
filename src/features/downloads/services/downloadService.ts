@@ -23,12 +23,12 @@ const BACKGROUND_TASK_NAME = 'background-download-task';
 export interface DownloadServiceOptions {
   priority?: number;
   batchId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   retryOnFailure?: boolean;
   maxRetries?: number;
   addToMediaFiles?: boolean;
-  originalSearchResults?: any[];
-  mediaFileOptions?: any;
+  originalSearchResults?: Record<string, unknown>[];
+  mediaFileOptions?: Record<string, unknown>;
   fileSize?: number | undefined;
   onProgress?: (progress: DownloadProgress) => void;
   onComplete?: (item: DownloadItem) => void;
@@ -505,7 +505,8 @@ export class DownloadService {
             // Find the matching search result for this download
             const originalSearchResult =
               originalSearchResults.find(
-                (result: any) => result.remote_path === updatedDownload.filePath
+                (result: Record<string, unknown>) =>
+                  result['remote_path'] === updatedDownload.filePath
               ) || originalSearchResults[0];
 
             const mediaResult =

@@ -7,8 +7,9 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useTheme } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface TrackDetailsProps {
   viewMode: 'text' | 'queue';
@@ -21,7 +22,7 @@ export const TrackDetails: React.FC<TrackDetailsProps> = ({
   onViewModeChange,
 }) => {
   const { theme } = useTheme();
-  const { state } = useMediaPlayer();
+  const { state } = useUnifiedMediaPlayer();
 
   if (!state.currentTrack) return null;
 
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: COLOR_VARIATIONS.WHITE_10,
   },
   toggleButton: {
     paddingHorizontal: 24,

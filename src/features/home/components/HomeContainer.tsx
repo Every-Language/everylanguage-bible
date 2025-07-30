@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { BibleContainerScreen } from '@/features/bible';
 import { PlaylistsScreen } from '@/features/playlists';
+import { ChapterQueueExample } from '@/features/media/components/ChapterQueueExample';
 import { HomeTab } from '../types';
 
 interface HomeContainerProps {
@@ -18,6 +19,8 @@ export const HomeContainer: React.FC<HomeContainerProps> = ({ activeTab }) => {
         return <BibleContainerScreen />;
       case 'Playlists':
         return <PlaylistsScreen />;
+      case 'AudioQueue':
+        return <ChapterQueueExample />;
       default:
         return <BibleContainerScreen />;
     }

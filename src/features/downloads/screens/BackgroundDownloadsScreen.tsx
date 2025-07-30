@@ -9,16 +9,18 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useMediaPlayer } from '@/shared/context/MediaPlayerContext';
+import { useTheme } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
+import { PlayButton } from '@/shared/components';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { useBackgroundDownloads } from '../hooks/useBackgroundDownloads';
 import { logger } from '@/shared/utils/logger';
 import { formatFileSize, isAudioFile } from '../utils/fileUtils';
-import { audioService } from '@/features/media/services/AudioService';
+import { PersistentDownloadItem } from '../services/persistentDownloadStore';
 
 export const BackgroundDownloadsScreen: React.FC = () => {
   const { theme } = useTheme();
-  const { state: mediaState, actions: mediaActions } = useMediaPlayer();
+  const { state: mediaState, actions: mediaActions } = useUnifiedMediaPlayer();
   const {
     downloads,
     stats,
@@ -124,12 +126,11 @@ export const BackgroundDownloadsScreen: React.FC = () => {
   const canContinueDownloads = hasPendingDownloads || hasFailedDownloads;
 
   // Handle playing/pausing audio file
-  const handlePlayAudio = async (download: any) => {
+  const handlePlayAudio = async (download: PersistentDownloadItem) => {
     try {
       // If this is the current track and it's playing, pause it
       if (mediaState.currentTrack?.id === download.id && mediaState.isPlaying) {
-        await audioService.pause();
-        mediaActions.pause();
+        await mediaActions.pause();
         // logger.info('Paused audio file:', download.fileName);
         return;
       }
@@ -139,8 +140,7 @@ export const BackgroundDownloadsScreen: React.FC = () => {
         mediaState.currentTrack?.id === download.id &&
         !mediaState.isPlaying
       ) {
-        await audioService.play();
-        mediaActions.play();
+        await mediaActions.play();
         // logger.info('Resumed audio file:', download.fileName);
         return;
       }
@@ -161,15 +161,11 @@ export const BackgroundDownloadsScreen: React.FC = () => {
         url: download.localPath,
       };
 
-      // Set the current track in the media player first
-      mediaActions.setCurrentTrack(track);
+      // Set the current track and auto-play - this will automatically stop any currently playing audio
+      await mediaActions.setCurrentTrack(track);
+      await mediaActions.play();
 
-      // Load and play the audio - this will automatically stop any currently playing audio
-      await audioService.loadAudio(track);
-      await audioService.play();
-
-      // Expand the media player
-      mediaActions.expand();
+      // Keep the media player in collapsed state - user can expand manually if needed
 
       // logger.info('Started playing audio file:', download.fileName);
     } catch {
@@ -227,6 +223,23 @@ export const BackgroundDownloadsScreen: React.FC = () => {
       default:
         return status;
     }
+  };
+
+  const getDownloadItemStyle = (download: PersistentDownloadItem) => {
+    const isCurrentlyPlaying =
+      mediaState.currentTrack?.id === download.id && mediaState.isPlaying;
+    return [
+      styles.downloadItem,
+      {
+        backgroundColor: theme.colors.surface,
+        borderColor: isCurrentlyPlaying
+          ? theme.colors.success
+          : COLOR_VARIATIONS.BLACK_10,
+      },
+      isCurrentlyPlaying
+        ? styles.downloadItemPlaying
+        : styles.downloadItemNormal,
+    ];
   };
 
   if (!isInitialized) {
@@ -327,8 +340,10 @@ export const BackgroundDownloadsScreen: React.FC = () => {
               backgroundColor: canContinueDownloads
                 ? theme.colors.success
                 : theme.colors.textSecondary,
-              opacity: canContinueDownloads ? 1 : 0.5,
             },
+            canContinueDownloads
+              ? styles.actionButtonEnabled
+              : styles.actionButtonDisabled,
           ]}
           onPress={handleContinueDownloads}
           disabled={!canContinueDownloads || isProcessing}>
@@ -433,24 +448,7 @@ export const BackgroundDownloadsScreen: React.FC = () => {
           </View>
         ) : (
           downloads.map(download => (
-            <View
-              key={download.id}
-              style={[
-                styles.downloadItem,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor:
-                    mediaState.currentTrack?.id === download.id &&
-                    mediaState.isPlaying
-                      ? theme.colors.success
-                      : 'rgba(0, 0, 0, 0.1)',
-                  borderWidth:
-                    mediaState.currentTrack?.id === download.id &&
-                    mediaState.isPlaying
-                      ? 2
-                      : 1,
-                },
-              ]}>
+            <View key={download.id} style={getDownloadItemStyle(download)}>
               <View style={styles.downloadHeader}>
                 <MaterialIcons
                   name={getStatusIcon(download.status)}
@@ -508,25 +506,12 @@ export const BackgroundDownloadsScreen: React.FC = () => {
                   )}
                   {download.status === 'completed' &&
                     isAudioFile(download.fileName) && (
-                      <TouchableOpacity
-                        style={styles.actionIcon}
-                        onPress={() => handlePlayAudio(download)}>
-                        <MaterialIcons
-                          name={
-                            mediaState.currentTrack?.id === download.id &&
-                            mediaState.isPlaying
-                              ? 'pause'
-                              : 'play-arrow'
-                          }
-                          size={20}
-                          color={
-                            mediaState.currentTrack?.id === download.id &&
-                            mediaState.isPlaying
-                              ? theme.colors.success
-                              : theme.colors.primary
-                          }
-                        />
-                      </TouchableOpacity>
+                      <PlayButton
+                        type='verse'
+                        id={download.id}
+                        size='small'
+                        onPress={() => handlePlayAudio(download)}
+                      />
                     )}
                   {download.status !== 'completed' && (
                     <TouchableOpacity
@@ -618,7 +603,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   title: {
     fontSize: 20,
@@ -637,7 +622,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   statItem: {
     flex: 1,
@@ -656,7 +641,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   actionButton: {
     flexDirection: 'row',
@@ -671,6 +656,12 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  actionButtonEnabled: {
+    opacity: 1,
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
   },
 
   downloadsList: {
@@ -697,7 +688,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderColor: COLOR_VARIATIONS.BLACK_10,
+  },
+  downloadItemNormal: {
+    borderWidth: 1,
+  },
+  downloadItemPlaying: {
+    borderWidth: 2,
   },
   downloadHeader: {
     flexDirection: 'row',

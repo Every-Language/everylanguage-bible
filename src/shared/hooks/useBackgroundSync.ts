@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AppState } from 'react-native';
 import { backgroundSyncService } from '../services/sync/BackgroundSyncService';
 import { bibleSync } from '../services/sync/bible/BibleSyncService';
-import { useSync } from '../context/SyncContext';
+import { useSync } from '@/shared/hooks';
 import { BackgroundTaskStatus } from '../services/sync/BackgroundSyncService';
 import { logger } from '../utils/logger';
 
@@ -15,7 +15,7 @@ export interface BackgroundSyncState {
 }
 
 export const useBackgroundSync = () => {
-  const { isInitialized } = useSync();
+  const { isInitialized, refreshHasLocalData } = useSync();
   const [state, setState] = useState<BackgroundSyncState>({
     isRegistered: false,
     status: BackgroundTaskStatus.DENIED,
@@ -89,7 +89,11 @@ export const useBackgroundSync = () => {
     const handleAppStateChange = (nextAppState: string) => {
       if (nextAppState === 'active') {
         // Check for updates when app becomes active
-        setTimeout(checkForChanges, 1000); // Small delay to ensure app is fully active
+        setTimeout(async () => {
+          await checkForChanges();
+          // Also refresh hasLocalData state to ensure accuracy
+          await refreshHasLocalData();
+        }, 1000); // Small delay to ensure app is fully active
       }
     };
 
@@ -102,7 +106,7 @@ export const useBackgroundSync = () => {
       clearInterval(interval);
       appStateSubscription?.remove();
     };
-  }, [isInitialized]);
+  }, [isInitialized, refreshHasLocalData]);
 
   const enableBackgroundSync = async (): Promise<boolean> => {
     try {

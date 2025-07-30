@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, FlatList, StyleSheet, RefreshControlProps } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { BookCard } from './BookCard';
 import type { Book } from '../types';
 

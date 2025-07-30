@@ -87,7 +87,7 @@ export class InitializationService {
         name: 'Language Selection Store',
         execute: () => initializeCombinedLanguageSelectionStore(),
         required: false,
-        timeout: 5000,
+        timeout: 15000, // Increased timeout for language sync operations
       },
       {
         name: 'Background Sync',

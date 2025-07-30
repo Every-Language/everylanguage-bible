@@ -8,9 +8,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
-import { useDownloads } from '../hooks/useDownloads';
 import { NetworkStatusDisplay } from './NetworkStatusDisplay';
 import { SearchResultsDisplay } from './SearchResultsDisplay';
 import { DownloadProgressDisplay } from './DownloadProgressDisplay';
@@ -21,6 +20,20 @@ import { useBackgroundDownloads } from '../hooks/useBackgroundDownloads';
 import { logger } from '@/shared/utils/logger';
 import { formatFileSize } from '../utils/fileUtils';
 import { createDownloadCompletionCallback } from '../utils/downloadUtils';
+import {
+  useNetworkState,
+  useNetworkForAction,
+} from '@/shared/hooks/useNetworkState';
+import { queryClient } from '@/shared/services/query/queryClient';
+import { bibleQueryKeys } from '@/features/bible/hooks/useBibleQueries';
+import { mediaFilesQueryKeys } from '@/features/media/hooks/useMediaFilesQueries';
+
+// Query Keys for chapter audio info (for invalidation)
+const chapterAudioInfoQueryKeys = {
+  all: ['chapter-audio-info'] as const,
+  byChapter: (chapterId: string) =>
+    [...chapterAudioInfoQueryKeys.all, 'chapter', chapterId] as const,
+} as const;
 
 interface ChapterDownloadModalProps {
   visible: boolean;
@@ -51,20 +64,20 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
-  const { downloadFile } = useDownloads();
 
   // Custom hooks for state management
   const {
     isOnline,
-    isCheckingOnline,
-    hasCheckedOnline,
-    searchError: networkError,
-    isConnected,
-    connectionType,
-    isInternetReachable,
-    checkOnlineCapabilities,
-    retryInternetCheck,
+    isChecking,
+    lastChecked,
+    error: networkError,
   } = useNetworkCapabilities();
+
+  const { isConnected, connectionType, isInternetReachable } =
+    useNetworkState();
+
+  // New network hook for actions
+  const { ensureNetworkAvailable, retryAndExecute } = useNetworkForAction();
 
   const {
     isSearching,
@@ -79,18 +92,13 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     completedFiles,
     failedFiles,
     downloadError,
-    initializeDownloadProgress,
-    updateFileProgress,
     setDownloadError,
     setDownloadCompletionCallback,
   } = useDownloadProgress();
 
   // Background downloads hook
-  const {
-    isInitialized: backgroundInitialized,
-    isProcessing: backgroundProcessing,
-    addBatchToBackgroundQueue,
-  } = useBackgroundDownloads();
+  const { isProcessing: backgroundProcessing, addBatchToBackgroundQueue } =
+    useBackgroundDownloads();
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
@@ -110,65 +118,121 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     }));
   }, [validMediaFiles]);
 
-  // Download completion callback using utility function
-  const handleDownloadCompletion = useCallback(
-    createDownloadCompletionCallback({
-      showSuccessNotification: true,
-      showErrorNotification: true,
-      autoCloseModal: false, // Set to true if you want auto-close
-      refreshDownloads: true,
-      // Media file integration
-      addToMediaFiles: true,
-      originalSearchResults: validMediaFiles,
-      mediaFileOptions: {
-        chapterId: chapterId,
-        mediaType: 'audio',
-        uploadStatus: 'completed',
-        publishStatus: 'published',
-        checkStatus: 'checked',
-        version: 1,
-      },
-      onSuccess: () => {
-        logger.info('All downloads completed successfully');
-        // Add any success-specific logic here
-      },
-      onError: failedFiles => {
-        logger.warn('Some downloads failed', {
-          failedCount: failedFiles.length,
-          failedFiles: failedFiles.map(f => ({
-            fileName: f.fileName,
-            error: f.error,
-          })),
-        });
-        // Add any error-specific logic here
-      },
-      onComplete: (completedFiles, failedFiles, totalFiles) => {
-        logger.info('Download session completed', {
-          completedCount: completedFiles.length,
-          failedCount: failedFiles.length,
-          totalCount: totalFiles,
-        });
-        // Add any completion-specific logic here
-      },
-      onMediaFileAdded: (mediaFileId, fileName) => {
-        logger.info('Media file added to local database:', {
-          mediaFileId,
-          fileName,
-        });
-        // Add any media file added logic here
-      },
-      onMediaFileError: (fileName, error) => {
-        logger.error('Failed to add media file to local database:', {
-          fileName,
-          error,
-        });
-        // Add any media file error logic here
-      },
-    }),
-    [validMediaFiles, chapterId]
+  // Download completion callback using utility function - stabilize dependencies
+  const handleDownloadCompletion = useMemo(
+    () =>
+      createDownloadCompletionCallback({
+        showSuccessNotification: true,
+        showErrorNotification: true,
+        autoCloseModal: false, // Set to true if you want auto-close
+        refreshDownloads: true,
+        // Media file integration
+        addToMediaFiles: true,
+        originalSearchResults: validMediaFiles,
+        mediaFileOptions: {
+          chapterId: chapterId,
+          mediaType: 'audio',
+          uploadStatus: 'completed',
+          publishStatus: 'published',
+          checkStatus: 'checked',
+          version: 1,
+        },
+        onSuccess: () => {
+          logger.info('All downloads completed successfully');
+
+          // Invalidate TanStack Query caches to update chapter data
+          try {
+            // Invalidate chapter-specific queries
+            queryClient.invalidateQueries({
+              queryKey: bibleQueryKeys.chapter(chapterId),
+            });
+
+            // Invalidate verses queries for this chapter
+            queryClient.invalidateQueries({
+              queryKey: bibleQueryKeys.verses(chapterId),
+            });
+
+            // Invalidate verses with texts queries for this chapter
+            queryClient.invalidateQueries({
+              queryKey: bibleQueryKeys.versesWithTexts(chapterId),
+            });
+
+            // Invalidate verse texts queries for this chapter
+            queryClient.invalidateQueries({
+              queryKey: bibleQueryKeys.verseTexts(chapterId),
+            });
+
+            // Invalidate media files queries for this chapter
+            queryClient.invalidateQueries({
+              queryKey: mediaFilesQueryKeys.byChapter(chapterId),
+            });
+
+            // Invalidate audio availability queries for this chapter
+            queryClient.invalidateQueries({
+              queryKey: mediaFilesQueryKeys.audioAvailability(chapterId),
+            });
+
+            // Invalidate all media files list queries to refresh any filtered views
+            queryClient.invalidateQueries({
+              queryKey: mediaFilesQueryKeys.all,
+            });
+
+            // Invalidate chapter audio info queries for this chapter
+            queryClient.invalidateQueries({
+              queryKey: chapterAudioInfoQueryKeys.byChapter(chapterId),
+            });
+
+            // Invalidate all chapter audio info queries to refresh any related views
+            queryClient.invalidateQueries({
+              queryKey: chapterAudioInfoQueryKeys.all,
+            });
+
+            logger.info(
+              'TanStack Query caches invalidated for chapter:',
+              chapterId
+            );
+          } catch (error) {
+            logger.error('Failed to invalidate TanStack Query caches:', error);
+          }
+        },
+        onError: failedFiles => {
+          logger.warn('Some downloads failed', {
+            failedCount: failedFiles.length,
+            failedFiles: failedFiles.map(f => ({
+              fileName: f.fileName,
+              error: f.error,
+            })),
+          });
+          // Add any error-specific logic here
+        },
+        onComplete: (completedFiles, failedFiles, totalFiles) => {
+          logger.info('Download session completed', {
+            completedCount: completedFiles.length,
+            failedCount: failedFiles.length,
+            totalCount: totalFiles,
+          });
+          // Reset download state when background downloads complete
+          setIsDownloading(false);
+        },
+        onMediaFileAdded: (mediaFileId, fileName) => {
+          logger.info('Media file added to local database:', {
+            mediaFileId,
+            fileName,
+          });
+          // Add any media file added logic here
+        },
+        onMediaFileError: (fileName, error) => {
+          logger.error('Failed to add media file to local database:', {
+            fileName,
+            error,
+          });
+          // Add any media file error logic here
+        },
+      }),
+    [validMediaFiles, chapterId, setIsDownloading]
   );
 
-  // Set completion callback when component mounts
+  // Set completion callback when component mounts - only run once
   useEffect(() => {
     setDownloadCompletionCallback(handleDownloadCompletion);
 
@@ -176,7 +240,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     return () => {
       setDownloadCompletionCallback(null);
     };
-  }, [setDownloadCompletionCallback, handleDownloadCompletion]);
+  }, [handleDownloadCompletion, setDownloadCompletionCallback]); // Add setDownloadCompletionCallback as dependency
 
   // Memoized values
   const searchError = useMemo(
@@ -195,16 +259,14 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
 
   // Check online capabilities and search for media files
   const handleOnlineCapabilitiesCheck = useCallback(async () => {
-    const isOnlineCapable = await checkOnlineCapabilities();
-    if (isOnlineCapable) {
-      await searchMediaFiles(chapterId, versionId);
+    try {
+      await ensureNetworkAvailable(async () => {
+        await searchMediaFiles(chapterId, versionId);
+      });
+    } catch (error) {
+      logger.warn('Online capabilities check failed:', error);
     }
-  }, [checkOnlineCapabilities, searchMediaFiles, chapterId, versionId]);
-
-  // Initialize download progress for all files
-  const handleInitializeDownloadProgress = useCallback(() => {
-    initializeDownloadProgress(searchResults, chapterId);
-  }, [initializeDownloadProgress, searchResults, chapterId]);
+  }, [ensureNetworkAvailable, searchMediaFiles, chapterId, versionId]);
 
   // Download all files
   const handleDownload = useCallback(async () => {
@@ -255,6 +317,9 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
       setCurrentBatchId(`chapter_${chapterId}_${Date.now()}`);
       logger.info('Added files to background download queue:', downloadIds);
 
+      // Don't set isDownloading to false here since downloads are happening in background
+      // The download completion callback will handle resetting the state
+
       // Show success message and close modal
       setTimeout(() => {
         onClose();
@@ -263,22 +328,19 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
       const errorMsg = (error as Error).message;
       logger.error('Download batch error:', errorMsg);
       setDownloadError(errorMsg);
-    } finally {
+      // Only reset isDownloading on error
       setIsDownloading(false);
     }
   }, [
     searchResults,
-    backgroundInitialized,
     addBatchToBackgroundQueue,
-    downloadFile,
-    updateFileProgress,
     setDownloadError,
-    handleInitializeDownloadProgress,
     chapterId,
     book.name,
     chapterTitle,
     onClose,
-  ]);
+    validMediaFiles,
+  ]); // Remove unnecessary dependencies: backgroundInitialized, downloadFile, handleInitializeDownloadProgress, updateFileProgress
 
   // Check online capabilities when modal becomes visible
   useEffect(() => {
@@ -291,15 +353,24 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
       });
       handleOnlineCapabilitiesCheck();
     }
-  }, [visible, handleOnlineCapabilitiesCheck]);
+  }, [
+    visible,
+    handleOnlineCapabilitiesCheck,
+    isConnected,
+    connectionType,
+    isInternetReachable,
+  ]);
 
   // Handle retry internet check
   const handleRetryInternetCheck = useCallback(async () => {
-    const isOnlineCapable = await retryInternetCheck();
-    if (isOnlineCapable) {
-      await searchMediaFiles(chapterId, versionId);
+    try {
+      await retryAndExecute(async () => {
+        await searchMediaFiles(chapterId, versionId);
+      });
+    } catch (error) {
+      logger.warn('Retry internet check failed:', error);
     }
-  }, [retryInternetCheck, searchMediaFiles, chapterId, versionId]);
+  }, [retryAndExecute, searchMediaFiles, chapterId, versionId]);
 
   return (
     <Modal
@@ -390,7 +461,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
           {/* Search Results Display */}
           <SearchResultsDisplay
             isOnline={isOnline}
-            isCheckingOnline={isCheckingOnline}
+            isCheckingOnline={isChecking}
             isSearching={isSearching}
             searchResults={searchResults}
             searchError={searchError}
@@ -412,8 +483,8 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
           {!isOnline && (
             <NetworkStatusDisplay
               isOnline={isOnline}
-              isCheckingOnline={isCheckingOnline}
-              hasCheckedOnline={hasCheckedOnline}
+              isCheckingOnline={isChecking}
+              hasCheckedOnline={lastChecked !== null}
               isConnected={isConnected}
               connectionType={connectionType}
               isInternetReachable={isInternetReachable}
@@ -423,38 +494,29 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
           )}
 
           <View style={styles.buttonContainer}>
-            {/* Download button - only show when files are found */}
-            {canDownload && (
+            {/* Download button - only show when files are found and not downloading */}
+            {canDownload && !isDownloading && (
               <TouchableOpacity
                 style={[
                   styles.downloadButton,
                   {
-                    backgroundColor: isDownloadDisabled
-                      ? theme.colors.border
-                      : theme.colors.success,
-                    opacity: isDownloadDisabled ? 0.6 : 1,
+                    backgroundColor: theme.colors.success,
                   },
+                  styles.downloadButtonEnabled,
                 ]}
                 onPress={handleDownload}
-                disabled={isDownloadDisabled}>
-                {isDownloadDisabled ? (
-                  <ActivityIndicator
-                    size='small'
-                    color={theme.colors.textInverse}
-                  />
-                ) : (
-                  <MaterialIcons
-                    name='cloud-download'
-                    size={20}
-                    color={theme.colors.textInverse}
-                  />
-                )}
+                disabled={false}>
+                <MaterialIcons
+                  name='cloud-download'
+                  size={20}
+                  color={theme.colors.textInverse}
+                />
                 <Text
                   style={[
                     styles.downloadButtonText,
                     { color: theme.colors.textInverse },
                   ]}>
-                  {isDownloadDisabled ? 'Downloading...' : 'Download Files'}
+                  Download Files
                 </Text>
               </TouchableOpacity>
             )}
@@ -529,6 +591,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     gap: 8,
+  },
+  downloadButtonEnabled: {
+    opacity: 1,
   },
   downloadButtonText: {
     fontSize: 16,

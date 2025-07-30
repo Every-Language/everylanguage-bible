@@ -21,11 +21,11 @@ export interface UseBackgroundDownloadsReturn {
   addToBackgroundQueue: (
     filePath: string,
     fileName: string,
-    options?: any
+    options?: Record<string, unknown>
   ) => Promise<string>;
   addBatchToBackgroundQueue: (
     files: Array<{ filePath: string; fileName: string; fileSize?: number }>,
-    options?: any
+    options?: Record<string, unknown>
   ) => Promise<string[]>;
   cancelDownload: (downloadId: string) => Promise<void>;
   pauseDownload: (downloadId: string) => Promise<void>;
@@ -72,18 +72,6 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   const [isProcessing, setIsProcessing] = useState(false);
   const refreshIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Initialize the background download service
-  const initialize = useCallback(async () => {
-    try {
-      await downloadService.initialize();
-      setIsInitialized(true);
-      refreshDownloads();
-      startRefreshInterval();
-    } catch (error) {
-      logger.error('Failed to initialize background downloads:', error);
-    }
-  }, []);
-
   // Refresh downloads data
   const refreshDownloads = useCallback(() => {
     if (!downloadService.initialized) return;
@@ -94,15 +82,44 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
       const currentStats = downloadService.getStats();
       const processing = downloadService.processing;
 
-      setDownloads(allDownloads);
-      setQueueItems(queueItems);
-      setStats({
-        ...currentStats,
-        lastUpdated: new Date(),
-        totalRetries: 0, // This would need to be calculated from downloads
-        averageDownloadTime: 0, // This would need to be calculated from downloads
+      // Only update state if there are actual changes
+      setDownloads(prevDownloads => {
+        // Check if downloads have actually changed
+        if (JSON.stringify(prevDownloads) === JSON.stringify(allDownloads)) {
+          return prevDownloads; // Return same reference to prevent re-render
+        }
+        return allDownloads;
       });
-      setIsProcessing(processing);
+
+      setQueueItems(prevQueueItems => {
+        // Check if queue items have actually changed
+        if (JSON.stringify(prevQueueItems) === JSON.stringify(queueItems)) {
+          return prevQueueItems; // Return same reference to prevent re-render
+        }
+        return queueItems;
+      });
+
+      setStats(prevStats => {
+        const newStats = {
+          ...currentStats,
+          lastUpdated: new Date(),
+          totalRetries: 0, // This would need to be calculated from downloads
+          averageDownloadTime: 0, // This would need to be calculated from downloads
+        };
+
+        // Check if stats have actually changed
+        if (JSON.stringify(prevStats) === JSON.stringify(newStats)) {
+          return prevStats; // Return same reference to prevent re-render
+        }
+        return newStats;
+      });
+
+      setIsProcessing(prevProcessing => {
+        if (prevProcessing === processing) {
+          return prevProcessing; // Return same value to prevent re-render
+        }
+        return processing;
+      });
     } catch (error) {
       logger.error('Error refreshing downloads:', error);
     }
@@ -116,8 +133,20 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
 
     refreshIntervalRef.current = setInterval(() => {
       refreshDownloads();
-    }, 1000); // Refresh every second
+    }, 3000); // Refresh every 3 seconds instead of every second to reduce re-renders
   }, [refreshDownloads]);
+
+  // Initialize background downloads
+  const initialize = useCallback(async () => {
+    try {
+      await downloadService.initialize();
+      setIsInitialized(true);
+      refreshDownloads();
+      startRefreshInterval();
+    } catch (error) {
+      logger.error('Failed to initialize background downloads:', error);
+    }
+  }, [refreshDownloads, startRefreshInterval]);
 
   // Stop refresh interval
   const stopRefreshInterval = useCallback(() => {
@@ -139,7 +168,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
     async (
       filePath: string,
       fileName: string,
-      options: any = {}
+      options: Record<string, unknown> = {}
     ): Promise<string> => {
       try {
         const downloadId = await downloadService.addToQueue(
@@ -161,7 +190,7 @@ export const useBackgroundDownloads = (): UseBackgroundDownloadsReturn => {
   const addBatchToBackgroundQueue = useCallback(
     async (
       files: Array<{ filePath: string; fileName: string; fileSize?: number }>,
-      options: any = {}
+      options: Record<string, unknown> = {}
     ): Promise<string[]> => {
       try {
         const downloadIds = await downloadService.addBatchToQueue(

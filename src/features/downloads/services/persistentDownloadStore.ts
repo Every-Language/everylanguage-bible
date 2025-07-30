@@ -17,7 +17,7 @@ export interface PersistentDownloadItem extends DownloadItem {
   lastRetryTime?: Date;
   priority: number;
   batchId: string | undefined;
-  metadata: Record<string, any> | undefined;
+  metadata: Record<string, unknown> | undefined;
 }
 
 export interface DownloadQueueItem {
@@ -79,6 +79,7 @@ export class PersistentDownloadStore {
 
         for (const [id, download] of Object.entries(downloads)) {
           // Convert date strings back to Date objects
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const downloadItem = download as any;
           downloadItem.createdAt = new Date(downloadItem.createdAt);
           downloadItem.completedAt = downloadItem.completedAt
@@ -101,9 +102,9 @@ export class PersistentDownloadStore {
       const queueData = await AsyncStorage.getItem(DOWNLOAD_QUEUE_KEY);
       if (queueData) {
         const queue = JSON.parse(queueData);
-        this.downloadQueue = queue.map((item: any) => ({
+        this.downloadQueue = queue.map((item: Record<string, unknown>) => ({
           ...item,
-          addedAt: new Date(item.addedAt),
+          addedAt: new Date(item['addedAt'] as string),
         }));
         logger.info(
           `Loaded ${this.downloadQueue.length} items from download queue`

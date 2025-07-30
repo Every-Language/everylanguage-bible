@@ -2,6 +2,26 @@ import DatabaseManager from './DatabaseManager';
 import type { LocalMediaFileVerse } from './schema';
 import { logger } from '../../utils/logger';
 
+interface MediaFileVerseWithRelatedData {
+  id: string;
+  media_file_id: string;
+  verse_id: string;
+  start_time_seconds: number;
+  created_at: string;
+  updated_at: string;
+  synced_at: string;
+  language_entity_id: string;
+  sequence_id: string;
+  media_type: string;
+  local_path: string;
+  remote_path: string;
+  file_size: number;
+  duration_seconds: number;
+  verse_number: number;
+  chapter_number: number;
+  book_name: string;
+}
+
 const databaseManager = DatabaseManager.getInstance();
 
 export class MediaFilesVersesService {
@@ -206,7 +226,7 @@ export class MediaFilesVersesService {
    */
   async getMediaFilesVersesWithRelatedData(
     mediaFileId?: string
-  ): Promise<any[]> {
+  ): Promise<MediaFileVerseWithRelatedData[]> {
     try {
       let query = `
         SELECT 

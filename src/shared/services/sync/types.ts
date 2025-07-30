@@ -70,7 +70,7 @@ export const validateTestament = (value: string | null): string | null => {
   }
 
   const knownValues = ['OT', 'NT', 'old', 'new'] as const;
-  const isKnown = knownValues.includes(value as any);
+  const isKnown = knownValues.includes(value as (typeof knownValues)[number]);
 
   if (!isKnown) {
     logger.warn(`Unknown testament: ${value}. Using as-is.`);

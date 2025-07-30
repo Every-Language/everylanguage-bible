@@ -7,8 +7,9 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { SyncStatusPill } from './SyncStatusPill';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import {
   AudioVersionSelector,
   TextVersionSelector,
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+    borderBottomColor: COLOR_VARIATIONS.BLACK_10,
   },
   leftSection: {
     flex: 1,

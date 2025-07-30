@@ -15,7 +15,7 @@ export class VerseTextSyncError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: unknown
   ) {
     super(message);
     this.name = 'VerseTextSyncError';
@@ -68,11 +68,15 @@ class VerseTextSyncService implements BaseSyncService {
     });
 
     if (this.isSyncing) {
-      logger.warn('VerseTextSync - Sync already in progress, throwing error');
-      throw new VerseTextSyncError(
-        'Verse text sync is already in progress',
-        'SYNC_IN_PROGRESS'
+      logger.info(
+        'VerseTextSync - Sync already in progress, skipping this request'
       );
+      return {
+        success: true,
+        tableName: 'verse_texts',
+        recordsSynced: 0,
+        warning: 'Verse text sync is already in progress',
+      };
     }
 
     this.isSyncing = true;
@@ -241,7 +245,7 @@ class VerseTextSyncService implements BaseSyncService {
         WHERE v.chapter_id = ? AND vt.publish_status = 'published'
       `;
 
-      const params: any[] = [chapterId];
+      const params: (string | number)[] = [chapterId];
 
       if (textVersionId) {
         query += ` AND vt.text_version_id = ?`;

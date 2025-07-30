@@ -57,7 +57,7 @@ export interface LanguageSelectionActions {
   loadSavedVersions: () => Promise<void>;
 
   // Language hierarchy navigation
-  loadLanguageHierarchy: () => Promise<void>;
+  loadLanguageHierarchy: (retryCount?: number) => Promise<void>;
   expandLanguageNode: (nodeId: string) => void;
   collapseLanguageNode: (nodeId: string) => void;
   navigateToLanguage: (language: LanguageEntity) => void;
@@ -100,7 +100,7 @@ export interface UseLanguageSelectionReturn {
   ) => Promise<void>;
   navigateToLanguage: (language: LanguageEntity) => void;
   searchLanguages: (query: string) => void;
-  loadLanguageHierarchy: () => Promise<void>;
+  loadLanguageHierarchy: (retryCount?: number) => Promise<void>;
   loadAvailableVersions: (languageId: string) => Promise<void>;
   syncWithCloud: () => Promise<void>;
 }

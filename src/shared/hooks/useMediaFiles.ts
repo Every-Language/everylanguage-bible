@@ -1,135 +1,105 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import {
-  mediaFilesService,
+  useMediaFilesQuery,
+  useMediaFileQuery,
+  useMediaFilesByChapterQuery,
+  useMediaFilesByLanguageQuery,
+  useMediaFilesByUploadStatusQuery,
+  useMediaFilesByPublishStatusQuery,
+} from '../../features/media/hooks/useMediaFilesQueries';
+import {
   MediaFileFilters,
   MediaFileSort,
+  mediaFilesService,
 } from '../services/database/MediaFilesService';
 import { LocalMediaFile } from '../services/database/schema';
 
+/**
+ * Hook to fetch media files with optional filtering
+ * Now uses TanStack Query for better caching and performance
+ */
 export const useMediaFiles = (
   filters: MediaFileFilters = {},
   sort?: MediaFileSort
 ) => {
-  const [mediaFiles, setMediaFiles] = useState<LocalMediaFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadMediaFiles = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const files = await mediaFilesService.getMediaFiles(filters, sort);
-      setMediaFiles(files);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load media files'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, sort]);
-
-  useEffect(() => {
-    loadMediaFiles();
-  }, [loadMediaFiles]);
-
-  const refresh = useCallback(() => {
-    loadMediaFiles();
-  }, [loadMediaFiles]);
+  const {
+    data: mediaFiles = [],
+    isLoading: loading,
+    error,
+    refetch: refresh,
+  } = useMediaFilesQuery(filters, sort);
 
   return {
     mediaFiles,
     loading,
-    error,
+    error: error?.message || null,
     refresh,
   };
 };
 
+/**
+ * Hook to fetch a specific media file by ID
+ * Now uses TanStack Query for better caching and performance
+ */
 export const useMediaFile = (id: string) => {
-  const [mediaFile, setMediaFile] = useState<LocalMediaFile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: mediaFile,
+    isLoading: loading,
+    error,
+    refetch: refresh,
+  } = useMediaFileQuery(id);
 
-  const loadMediaFile = useCallback(async () => {
-    if (!id) {
-      setMediaFile(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      const file = await mediaFilesService.getMediaFileById(id);
-      setMediaFile(file);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load media file'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    loadMediaFile();
-  }, [loadMediaFile]);
-
+  // For mutations, we still use direct service calls since TanStack Query
+  // mutations would require more complex cache invalidation
   const updateMediaFile = useCallback(
     async (updates: Partial<LocalMediaFile>) => {
       if (!id) return;
 
       try {
-        setError(null);
         await mediaFilesService.updateMediaFile(id, updates);
-        setMediaFile(prev => (prev ? { ...prev, ...updates } : null));
+        // Refresh the query to get updated data
+        refresh();
       } catch (err) {
-        setError(
+        throw new Error(
           err instanceof Error ? err.message : 'Failed to update media file'
         );
       }
     },
-    [id]
+    [id, refresh]
   );
 
   const deleteMediaFile = useCallback(async () => {
     if (!id) return;
 
     try {
-      setError(null);
       await mediaFilesService.deleteMediaFile(id);
-      setMediaFile(prev =>
-        prev ? { ...prev, deleted_at: new Date().toISOString() } : null
-      );
+      // Refresh the query to get updated data
+      refresh();
     } catch (err) {
-      setError(
+      throw new Error(
         err instanceof Error ? err.message : 'Failed to delete media file'
       );
     }
-  }, [id]);
+  }, [id, refresh]);
 
   const restoreMediaFile = useCallback(async () => {
     if (!id) return;
 
     try {
-      setError(null);
       await mediaFilesService.restoreMediaFile(id);
-      setMediaFile(prev => (prev ? { ...prev, deleted_at: null } : null));
+      // Refresh the query to get updated data
+      refresh();
     } catch (err) {
-      setError(
+      throw new Error(
         err instanceof Error ? err.message : 'Failed to restore media file'
       );
     }
-  }, [id]);
-
-  const refresh = useCallback(() => {
-    loadMediaFile();
-  }, [loadMediaFile]);
+  }, [id, refresh]);
 
   return {
     mediaFile,
     loading,
-    error,
+    error: error?.message || null,
     updateMediaFile,
     deleteMediaFile,
     restoreMediaFile,
@@ -137,175 +107,82 @@ export const useMediaFile = (id: string) => {
   };
 };
 
+/**
+ * Hook to fetch media files by chapter ID
+ * Now uses TanStack Query for better caching and performance
+ */
 export const useMediaFilesByChapter = (chapterId: string) => {
-  const [mediaFiles, setMediaFiles] = useState<LocalMediaFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadMediaFiles = useCallback(async () => {
-    if (!chapterId) {
-      setMediaFiles([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      const files = await mediaFilesService.getMediaFilesByChapterId(chapterId);
-      setMediaFiles(files);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load media files'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [chapterId]);
-
-  useEffect(() => {
-    loadMediaFiles();
-  }, [loadMediaFiles]);
-
-  const refresh = useCallback(() => {
-    loadMediaFiles();
-  }, [loadMediaFiles]);
+  const {
+    data: mediaFiles = [],
+    isLoading: loading,
+    error,
+    refetch: refresh,
+  } = useMediaFilesByChapterQuery(chapterId);
 
   return {
     mediaFiles,
     loading,
-    error,
+    error: error?.message || null,
     refresh,
   };
 };
 
+/**
+ * Hook to fetch media files by language entity ID
+ * Now uses TanStack Query for better caching and performance
+ */
 export const useMediaFilesByLanguage = (languageEntityId: string) => {
-  const [mediaFiles, setMediaFiles] = useState<LocalMediaFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadMediaFiles = useCallback(async () => {
-    if (!languageEntityId) {
-      setMediaFiles([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      const files =
-        await mediaFilesService.getMediaFilesByLanguageEntityId(
-          languageEntityId
-        );
-      setMediaFiles(files);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load media files'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [languageEntityId]);
-
-  useEffect(() => {
-    loadMediaFiles();
-  }, [loadMediaFiles]);
-
-  const refresh = useCallback(() => {
-    loadMediaFiles();
-  }, [loadMediaFiles]);
+  const {
+    data: mediaFiles = [],
+    isLoading: loading,
+    error,
+    refetch: refresh,
+  } = useMediaFilesByLanguageQuery(languageEntityId);
 
   return {
     mediaFiles,
     loading,
-    error,
+    error: error?.message || null,
     refresh,
   };
 };
 
+/**
+ * Hook to fetch media files by upload status
+ * Now uses TanStack Query for better caching and performance
+ */
 export const useMediaFilesByUploadStatus = (uploadStatus: string) => {
-  const [mediaFiles, setMediaFiles] = useState<LocalMediaFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadMediaFiles = useCallback(async () => {
-    if (!uploadStatus) {
-      setMediaFiles([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      const files =
-        await mediaFilesService.getMediaFilesByUploadStatus(uploadStatus);
-      setMediaFiles(files);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load media files'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [uploadStatus]);
-
-  useEffect(() => {
-    loadMediaFiles();
-  }, [loadMediaFiles]);
-
-  const refresh = useCallback(() => {
-    loadMediaFiles();
-  }, [loadMediaFiles]);
+  const {
+    data: mediaFiles = [],
+    isLoading: loading,
+    error,
+    refetch: refresh,
+  } = useMediaFilesByUploadStatusQuery(uploadStatus);
 
   return {
     mediaFiles,
     loading,
-    error,
+    error: error?.message || null,
     refresh,
   };
 };
 
+/**
+ * Hook to fetch media files by publish status
+ * Now uses TanStack Query for better caching and performance
+ */
 export const useMediaFilesByPublishStatus = (publishStatus: string) => {
-  const [mediaFiles, setMediaFiles] = useState<LocalMediaFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadMediaFiles = useCallback(async () => {
-    if (!publishStatus) {
-      setMediaFiles([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      const files =
-        await mediaFilesService.getMediaFilesByPublishStatus(publishStatus);
-      setMediaFiles(files);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load media files'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [publishStatus]);
-
-  useEffect(() => {
-    loadMediaFiles();
-  }, [loadMediaFiles]);
-
-  const refresh = useCallback(() => {
-    loadMediaFiles();
-  }, [loadMediaFiles]);
+  const {
+    data: mediaFiles = [],
+    isLoading: loading,
+    error,
+    refetch: refresh,
+  } = useMediaFilesByPublishStatusQuery(publishStatus);
 
   return {
     mediaFiles,
     loading,
-    error,
+    error: error?.message || null,
     refresh,
   };
 };

@@ -40,6 +40,7 @@ export class ChapterQueueService {
       logger.info('Getting chapter audio information...', options);
 
       // Get all media files with optional filtering
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const filters: any = {
         media_type: options.mediaType || 'audio',
         include_deleted: options.includeDeleted || false,

@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { DatabaseInitProgress } from '@/shared/services/database/DatabaseManager';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface DatabaseStatusCardProps {
   status: 'checking' | 'ready' | 'error' | 'initializing';
@@ -84,7 +85,7 @@ export const DatabaseStatusCard: React.FC<DatabaseStatusCardProps> = ({
                   <View
                     style={[
                       styles.progressBar,
-                      { backgroundColor: theme.colors.border },
+                      { backgroundColor: theme.colors.surfaceOverlay },
                     ]}>
                     <View
                       style={[
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 20,
     width: '100%',
-    shadowColor: '#000',
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
     shadowOffset: {
       width: 0,
       height: 2,

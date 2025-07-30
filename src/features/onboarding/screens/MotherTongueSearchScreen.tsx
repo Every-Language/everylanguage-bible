@@ -9,9 +9,10 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useNetworkConnectivity } from '@/shared/hooks/useNetworkConnectivity';
+import { useTheme } from '@/shared/hooks';
+import { useNetworkForAction } from '@/shared/hooks/useNetworkState';
 import { NoInternetModal, SyncProgressModal } from '@/shared/components';
+import { logger } from '@/shared/utils/logger';
 
 interface MotherTongueSearchScreenProps {
   onBack: () => void;
@@ -44,7 +45,8 @@ export const MotherTongueSearchScreen: React.FC<
   MotherTongueSearchScreenProps
 > = ({ onBack, onComplete }) => {
   const { theme } = useTheme();
-  const { isConnected, isInternetReachable } = useNetworkConnectivity();
+  const { isOnline, isChecking, ensureNetworkAvailable, retryAndExecute } =
+    useNetworkForAction();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(
     null
@@ -58,34 +60,100 @@ export const MotherTongueSearchScreen: React.FC<
       lang.nativeName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Debug logging for network state
+  useEffect(() => {
+    logger.debug('MotherTongueSearchScreen: Network state debug:', {
+      isOnline,
+      isChecking,
+      timestamp: new Date().toISOString(),
+    });
+  }, [isOnline, isChecking]);
+
   // Check for internet connectivity when component mounts
   useEffect(() => {
-    const hasInternetAccess = isConnected && (isInternetReachable ?? true);
-    if (!hasInternetAccess) {
+    if (!isOnline && !isChecking) {
+      logger.debug(
+        'MotherTongueSearchScreen: No internet detected, showing modal'
+      );
       setShowNoInternetModal(true);
     } else {
+      logger.debug(
+        'MotherTongueSearchScreen: Internet available or checking, hiding modal'
+      );
       setShowNoInternetModal(false);
     }
-  }, [isConnected, isInternetReachable]);
+  }, [isOnline, isChecking]);
 
   const handleLanguageSelect = (language: Language) => {
     setSelectedLanguage(language);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selectedLanguage) {
-      // Show sync progress modal instead of immediately completing
-      setShowSyncProgressModal(true);
+      try {
+        // Ensure network is available before proceeding
+        await ensureNetworkAvailable(() => {
+          // Show sync progress modal instead of immediately completing
+          setShowSyncProgressModal(true);
+        });
+      } catch (error) {
+        logger.debug(
+          'MotherTongueSearchScreen: Network not available for continue action:',
+          error
+        );
+        setShowNoInternetModal(true);
+      }
     }
   };
 
-  const handleRetryConnection = () => {
-    // Re-check internet connection
-    const hasInternetAccess = isConnected && (isInternetReachable ?? true);
-    if (hasInternetAccess) {
-      setShowNoInternetModal(false);
+  const handleRetryConnection = async () => {
+    try {
+      // Use the retry and execute method
+      await retryAndExecute(() => {
+        setShowNoInternetModal(false);
+      });
+    } catch (error) {
+      logger.debug('MotherTongueSearchScreen: Retry failed:', error);
+      // Modal will stay open if retry fails
     }
-    // The useEffect will also re-check and update the modal state
+  };
+
+  const handleDebugNetworkCheck = async () => {
+    logger.debug('MotherTongueSearchScreen: Debug network check triggered');
+    try {
+      await retryAndExecute(() => {
+        logger.debug('MotherTongueSearchScreen: Debug check successful');
+      });
+    } catch (error) {
+      logger.debug('MotherTongueSearchScreen: Debug check failed:', error);
+    }
+  };
+
+  const handleTestEndpoints = async () => {
+    logger.debug('MotherTongueSearchScreen: Testing individual endpoints...');
+    const { networkService } = await import(
+      '@/shared/services/network/NetworkService'
+    );
+
+    const endpoints = [
+      'https://httpbin.org/get',
+      'https://jsonplaceholder.typicode.com/posts/1',
+      'https://api.github.com/zen',
+      'https://www.cloudflare.com/cdn-cgi/trace',
+      'https://www.google.com/favicon.ico',
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const result = await networkService.testSingleEndpoint(endpoint);
+        logger.debug(
+          `MotherTongueSearchScreen: ${endpoint} - ${result.isOnline ? 'SUCCESS' : 'FAILED'} (${result.latency}ms)`,
+          result.error || ''
+        );
+      } catch (error) {
+        logger.debug(`MotherTongueSearchScreen: ${endpoint} - ERROR:`, error);
+      }
+    }
   };
 
   const handleGetStarted = () => {
@@ -151,7 +219,7 @@ export const MotherTongueSearchScreen: React.FC<
         style={styles.searchContainer}
         onPress={() => {
           // Only show modal if there's no internet connection
-          if (!isConnected || !(isInternetReachable ?? true)) {
+          if (!isOnline) {
             setShowNoInternetModal(true);
           }
         }}
@@ -162,35 +230,30 @@ export const MotherTongueSearchScreen: React.FC<
               styles.searchInput,
               {
                 backgroundColor: theme.colors.surface,
-                color:
-                  isConnected && (isInternetReachable ?? true)
-                    ? theme.colors.text
-                    : theme.colors.textSecondary,
-                borderColor:
-                  isConnected && (isInternetReachable ?? true)
-                    ? theme.colors.border
-                    : theme.colors.error,
+                color: isOnline
+                  ? theme.colors.text
+                  : theme.colors.textSecondary,
+                borderColor: isOnline
+                  ? theme.colors.border
+                  : theme.colors.error,
               },
             ]}
             placeholder={
-              isConnected && (isInternetReachable ?? true)
-                ? 'Search languages...'
-                : 'No internet connection'
+              isOnline ? 'Search languages...' : 'No internet connection'
             }
             placeholderTextColor={theme.colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            editable={isConnected && (isInternetReachable ?? true)}
+            editable={isOnline}
           />
-          {!isConnected ||
-            (!(isInternetReachable ?? true) && (
-              <MaterialIcons
-                name='wifi-off'
-                size={20}
-                color={theme.colors.error}
-                style={styles.searchIcon}
-              />
-            ))}
+          {!isOnline && (
+            <MaterialIcons
+              name='wifi-off'
+              size={20}
+              color={theme.colors.error}
+              style={styles.searchIcon}
+            />
+          )}
         </View>
       </TouchableOpacity>
 
@@ -203,6 +266,35 @@ export const MotherTongueSearchScreen: React.FC<
       />
 
       <View style={styles.footer}>
+        {/* Debug button - remove in production */}
+        <TouchableOpacity
+          style={[
+            styles.debugButton,
+            { backgroundColor: theme.colors.warning },
+          ]}
+          onPress={handleDebugNetworkCheck}>
+          <Text
+            style={[
+              styles.debugButtonText,
+              { color: theme.colors.textInverse },
+            ]}>
+            Debug: Check Network ({isOnline ? 'Online' : 'Offline'})
+          </Text>
+        </TouchableOpacity>
+
+        {/* Debug endpoint test button - remove in production */}
+        <TouchableOpacity
+          style={[styles.debugButton, { backgroundColor: theme.colors.info }]}
+          onPress={handleTestEndpoints}>
+          <Text
+            style={[
+              styles.debugButtonText,
+              { color: theme.colors.textInverse },
+            ]}>
+            Debug: Test Endpoints
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[
             styles.continueButton,
@@ -225,10 +317,7 @@ export const MotherTongueSearchScreen: React.FC<
       </View>
 
       <NoInternetModal
-        visible={
-          showNoInternetModal &&
-          (!isConnected || !(isInternetReachable ?? true))
-        }
+        visible={showNoInternetModal && !isOnline}
         onRetry={handleRetryConnection}
         onClose={() => setShowNoInternetModal(false)}
       />
@@ -330,6 +419,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   continueButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  debugButton: {
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  debugButtonText: {
     fontSize: 16,
     fontWeight: '600',
   },

@@ -19,12 +19,15 @@ export interface UseChapterQueueReturn {
     options?: ChapterQueueOptions
   ) => Promise<string[]>;
   getChapterMediaDetails: (chapterId: string) => Promise<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mediaFiles: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mediaFileVerses: any[];
     versesWithTiming: Array<{
       verseId: string;
       startTime: number;
       mediaFileId: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mediaFile: any;
       localPath: string;
     }>;
@@ -55,16 +58,7 @@ export function useChapterQueue(
   const [error, setError] = useState<string | null>(null);
 
   // Memoize the options to prevent infinite re-renders
-  const memoizedOptions = useMemo(
-    () => initialOptions,
-    [
-      initialOptions.languageEntityId,
-      initialOptions.mediaType,
-      initialOptions.includeDeleted,
-      initialOptions.sortBy,
-      initialOptions.sortDirection,
-    ]
-  );
+  const memoizedOptions = useMemo(() => initialOptions, [initialOptions]);
 
   const fetchChapterAudioInfo = useCallback(
     async (options: ChapterQueueOptions = {}) => {
@@ -238,16 +232,7 @@ export function useAudioAvailabilityStats(
   const [error, setError] = useState<string | null>(null);
 
   // Memoize the options to prevent infinite re-renders
-  const memoizedOptions = useMemo(
-    () => options,
-    [
-      options.languageEntityId,
-      options.mediaType,
-      options.includeDeleted,
-      options.sortBy,
-      options.sortDirection,
-    ]
-  );
+  const memoizedOptions = useMemo(() => options, [options]);
 
   const fetchStats = useCallback(async () => {
     try {

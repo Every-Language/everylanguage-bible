@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { localDataService } from '../../../shared/services/database/LocalDataService';
-import type { Verse, VersesState, VersesWithTextState } from '../types';
+import { queryClient } from '../../../shared/services/query/queryClient';
+import type { Verse } from '../types';
 import type {
   VerseFilters,
   VerseSort,
@@ -8,110 +10,127 @@ import type {
 import { useCurrentVersions } from '../../languages/hooks';
 import { logger } from '../../../shared/utils/logger';
 
+// Query Keys
+const verseQueryKeys = {
+  all: ['verses'] as const,
+  chapter: (chapterId: string) =>
+    [...verseQueryKeys.all, 'chapter', chapterId] as const,
+  chapterWithFilters: (
+    chapterId: string,
+    filters?: VerseFilters,
+    sort?: VerseSort
+  ) =>
+    [...verseQueryKeys.chapter(chapterId), 'filters', filters, sort] as const,
+  range: (chapterId: string, startVerse: number, endVerse: number) =>
+    [
+      ...verseQueryKeys.chapter(chapterId),
+      'range',
+      startVerse,
+      endVerse,
+    ] as const,
+  adjacent: (
+    chapterId: string,
+    verseNumber: number,
+    direction: 'prev' | 'next'
+  ) =>
+    [
+      ...verseQueryKeys.chapter(chapterId),
+      'adjacent',
+      verseNumber,
+      direction,
+    ] as const,
+  withTexts: (chapterId: string, textVersionId?: string) =>
+    [
+      ...verseQueryKeys.chapter(chapterId),
+      'with-texts',
+      textVersionId,
+    ] as const,
+} as const;
+
 export const useVerses = (
   chapterId: string,
   filters?: VerseFilters,
   sort?: VerseSort
 ) => {
-  const [state, setState] = useState<VersesState>({
-    verses: [],
-    loading: false,
-    error: null,
-    selectedVerse: null,
+  const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
+
+  // Main verses query
+  const {
+    data: verses = [],
+    isLoading: loading,
+    error,
+    refetch: refreshVerses,
+  } = useQuery({
+    queryKey: verseQueryKeys.chapterWithFilters(chapterId, filters, sort),
+    queryFn: () => localDataService.getVersesForUI(chapterId, filters, sort),
+    enabled: !!chapterId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const loadVerses = async () => {
-    if (!chapterId) {
-      setState(prev => ({ ...prev, verses: [], loading: false }));
-      return;
-    }
-
-    setState(prev => ({ ...prev, loading: true, error: null }));
-
-    try {
-      const verses = await localDataService.getVersesForUI(
-        chapterId,
-        filters,
-        sort
-      );
-      setState(prev => ({
-        ...prev,
-        verses,
-        loading: false,
-        error: null,
-      }));
-    } catch (error) {
-      logger.error('Failed to load verses:', error);
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Failed to load verses',
-      }));
-    }
-  };
-
-  const selectVerse = (verse: Verse | null) => {
-    setState(prev => ({ ...prev, selectedVerse: verse }));
-  };
-
-  const getVerseRange = async (startVerse: number, endVerse: number) => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
-
-    try {
+  // Verse range mutation
+  const verseRangeMutation = useMutation({
+    mutationFn: async ({
+      startVerse,
+      endVerse,
+    }: {
+      startVerse: number;
+      endVerse: number;
+    }) => {
       const verses = await localDataService.getVerseRange(
         chapterId,
         startVerse,
         endVerse
       );
-      const transformedVerses = verses.map(verse =>
+      return verses.map(verse =>
         localDataService.transformVerseToUIFormat(verse)
       );
-
-      setState(prev => ({
-        ...prev,
-        verses: transformedVerses,
-        loading: false,
-        error: null,
-      }));
-    } catch (error) {
-      logger.error('Failed to load verse range:', error);
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error:
-          error instanceof Error ? error.message : 'Failed to load verse range',
-      }));
-    }
-  };
-
-  const getAdjacentVerse = async (
-    currentVerseNumber: number,
-    direction: 'prev' | 'next'
-  ) => {
-    try {
-      const verse = await localDataService.getAdjacentVerse(
-        chapterId,
-        currentVerseNumber,
-        direction
+    },
+    onSuccess: transformedVerses => {
+      // Update the cache with the new verse range
+      queryClient.setQueryData(
+        verseQueryKeys.chapterWithFilters(chapterId, filters, sort),
+        transformedVerses
       );
-      return verse ? localDataService.transformVerseToUIFormat(verse) : null;
-    } catch (error) {
-      logger.error('Failed to get adjacent verse:', error);
-      return null;
-    }
-  };
+    },
+    onError: error => {
+      logger.error('Failed to load verse range:', error);
+    },
+  });
 
-  const refreshVerses = () => {
-    loadVerses();
-  };
+  // Adjacent verse query
+  const getAdjacentVerse = useCallback(
+    async (currentVerseNumber: number, direction: 'prev' | 'next') => {
+      try {
+        const verse = await localDataService.getAdjacentVerse(
+          chapterId,
+          currentVerseNumber,
+          direction
+        );
+        return verse ? localDataService.transformVerseToUIFormat(verse) : null;
+      } catch (error) {
+        logger.error('Failed to get adjacent verse:', error);
+        return null;
+      }
+    },
+    [chapterId]
+  );
 
-  // Load verses when chapterId, filters, or sort changes
-  useEffect(() => {
-    loadVerses();
-  }, [chapterId, JSON.stringify(filters), JSON.stringify(sort)]);
+  const selectVerse = useCallback((verse: Verse | null) => {
+    setSelectedVerse(verse);
+  }, []);
+
+  const getVerseRange = useCallback(
+    async (startVerse: number, endVerse: number) => {
+      verseRangeMutation.mutate({ startVerse, endVerse });
+    },
+    [verseRangeMutation]
+  );
 
   return {
-    ...state,
+    verses,
+    loading: loading || verseRangeMutation.isPending,
+    error: error?.message || verseRangeMutation.error?.message || null,
+    selectedVerse,
     selectVerse,
     getVerseRange,
     getAdjacentVerse,
@@ -119,67 +138,35 @@ export const useVerses = (
   };
 };
 
-// ✅ NEW: Enhanced hook that includes verse texts
+// Enhanced hook that includes verse texts
 export const useVersesWithTexts = (chapterId: string) => {
-  const [state, setState] = useState<VersesWithTextState>({
-    versesWithTexts: [],
-    loading: false,
-    error: null,
-    selectedVerse: null,
-    currentTextVersion: null,
-  });
-
+  const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const { currentTextVersion } = useCurrentVersions();
 
-  const loadVersesWithTexts = async () => {
-    if (!chapterId) {
-      setState(prev => ({ ...prev, versesWithTexts: [], loading: false }));
-      return;
-    }
+  // Verses with texts query
+  const {
+    data: versesWithTexts = [],
+    isLoading: loading,
+    error,
+    refetch: refreshVerses,
+  } = useQuery({
+    queryKey: verseQueryKeys.withTexts(chapterId, currentTextVersion?.id),
+    queryFn: () =>
+      localDataService.getVersesWithTexts(chapterId, currentTextVersion?.id),
+    enabled: !!chapterId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-    setState(prev => ({ ...prev, loading: true, error: null }));
-
-    try {
-      const versesWithTexts = await localDataService.getVersesWithTexts(
-        chapterId,
-        currentTextVersion?.id
-      );
-
-      setState(prev => ({
-        ...prev,
-        versesWithTexts,
-        loading: false,
-        error: null,
-        currentTextVersion,
-      }));
-    } catch (error) {
-      logger.error('Failed to load verses with texts:', error);
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to load verses with texts',
-      }));
-    }
-  };
-
-  const selectVerse = (verse: Verse | null) => {
-    setState(prev => ({ ...prev, selectedVerse: verse }));
-  };
-
-  const refreshVerses = () => {
-    loadVersesWithTexts();
-  };
-
-  // Load verses when chapterId or currentTextVersion changes
-  useEffect(() => {
-    loadVersesWithTexts();
-  }, [chapterId, currentTextVersion?.id]);
+  const selectVerse = useCallback((verse: Verse | null) => {
+    setSelectedVerse(verse);
+  }, []);
 
   return {
-    ...state,
+    versesWithTexts,
+    loading,
+    error: error?.message || null,
+    selectedVerse,
+    currentTextVersion,
     selectVerse,
     refreshVerses,
   };

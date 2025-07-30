@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,12 @@ import {
   StyleSheet,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '../../../shared/context/ThemeContext';
-import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
+import { useTheme } from '@/shared/hooks';
+import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
+import { COLOR_VARIATIONS } from '../../../shared/constants/theme';
 import { useCurrentVersions } from '../../languages/hooks';
-import { localDataService } from '../../../shared/services/database/LocalDataService';
-import type { Verse } from '../../bible/types';
+import { useVersesWithTextsQuery } from '../../bible/hooks/useBibleQueries';
 import type { LocalVerseText } from '../../../shared/services/database/schema';
-import { logger } from '../../../shared/utils/logger';
 
 interface TextAndQueueTabsProps {
   // Optional prop to control the tab from parent if needed
@@ -24,15 +23,9 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
   initialTab = 'text',
 }) => {
   const { theme } = useTheme();
-  const { state } = useMediaPlayer();
+  const { state } = useUnifiedMediaPlayer();
   const { currentTextVersion } = useCurrentVersions();
   const [activeTab, setActiveTab] = useState<'text' | 'queue'>(initialTab);
-  const [verses, setVerses] = useState<Verse[]>([]);
-  const [verseTexts, setVerseTexts] = useState<Map<string, LocalVerseText>>(
-    new Map()
-  );
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const extractChapterId = (
     trackId: string | undefined
@@ -43,57 +36,25 @@ export const TextAndQueueTabs: React.FC<TextAndQueueTabsProps> = ({
     return match ? match[1] : undefined;
   };
 
-  useEffect(() => {
-    const loadVerses = async () => {
-      const chapterId = extractChapterId(state.currentTrack?.id);
-      if (!chapterId) {
-        setVerses([]);
-        setVerseTexts(new Map());
-        return;
-      }
+  const chapterId = extractChapterId(state.currentTrack?.id);
 
-      try {
-        setLoading(true);
-        setError(null);
-        const chapterVerses =
-          await localDataService.getVersesByChapterId(chapterId);
-        setVerses(chapterVerses);
-        logger.info(
-          'Loaded verses for chapter:',
-          chapterId,
-          chapterVerses.length
-        );
-      } catch (err) {
-        logger.error('Error loading verses:', err);
-        setError('Failed to load verses');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // TanStack Query for verses with texts
+  const {
+    data: versesWithTexts = [],
+    isLoading: loading,
+    error: versesError,
+  } = useVersesWithTextsQuery(chapterId || '', currentTextVersion?.id);
 
-    const loadVerseTexts = async () => {
-      const chapterId = extractChapterId(state.currentTrack?.id);
-      if (!chapterId || !currentTextVersion) {
-        setVerseTexts(new Map());
-        return;
-      }
+  // Extract verses and verse texts from the query result
+  const verses = versesWithTexts.map(item => item.verse);
+  const verseTexts = new Map<string, LocalVerseText>();
+  versesWithTexts.forEach(item => {
+    if (item.verseText) {
+      verseTexts.set(item.verse.id, item.verseText);
+    }
+  });
 
-      try {
-        const texts = await localDataService.getVerseTextsForChapter(
-          chapterId,
-          currentTextVersion.id
-        );
-        setVerseTexts(texts);
-        logger.info('Loaded verse texts for chapter:', chapterId, texts.size);
-      } catch (err) {
-        logger.error('Error loading verse texts:', err);
-        setVerseTexts(new Map());
-      }
-    };
-
-    loadVerses();
-    loadVerseTexts();
-  }, [state.currentTrack?.id, currentTextVersion]);
+  const error = versesError?.message || null;
 
   const renderTextContent = () => {
     if (loading) {
@@ -423,7 +384,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: COLOR_VARIATIONS.WHITE_10,
     alignItems: 'center',
   },
   toggleButtonText: {
@@ -504,7 +465,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 20,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLOR_VARIATIONS.WHITE_08,
   },
   verseHeader: {
     flexDirection: 'row',
@@ -539,7 +500,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 8,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLOR_VARIATIONS.WHITE_08,
     gap: 12,
   },
   queueItemText: {
@@ -554,10 +515,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   darkBackground: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLOR_VARIATIONS.WHITE_08,
   },
   lightBackground: {
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: COLOR_VARIATIONS.BLACK_05,
   },
   tabVisible: {
     display: 'flex',

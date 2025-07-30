@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useTranslations } from '@/shared/context/LocalizationContext';
+import { useTheme } from '@/shared/hooks';
+import { useTranslations } from '@/shared/hooks';
 import { DownloadStats as DownloadStatsType } from '../types';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface DownloadStatsProps {
   stats: DownloadStatsType;
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    borderTopColor: COLOR_VARIATIONS.BLACK_10,
   },
   sizeLabel: {
     fontSize: 14,

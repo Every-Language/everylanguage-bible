@@ -8,6 +8,7 @@ import type {
 } from './schema';
 import { validateTestament } from '../sync/types';
 import { logger } from '../../utils/logger';
+import { SQLiteBindParams } from 'expo-sqlite';
 
 const databaseManager = DatabaseManager.getInstance();
 
@@ -66,7 +67,7 @@ export class LocalDataService {
 
     let query = 'SELECT * FROM books';
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: SQLiteBindParams = [];
 
     if (filters?.testament) {
       // Validate and normalize testament but don't fail on unknown values
@@ -111,7 +112,7 @@ export class LocalDataService {
 
   async getBooksCount(testament?: 'OT' | 'NT'): Promise<number> {
     let query = 'SELECT COUNT(*) as count FROM books';
-    const params: any[] = [];
+    const params: SQLiteBindParams = [];
 
     if (testament) {
       query += ' WHERE testament = ?';
@@ -167,8 +168,38 @@ export class LocalDataService {
   }
 
   async isDataAvailable(): Promise<boolean> {
-    const count = await this.getBooksCount();
-    return count > 0;
+    try {
+      const [booksCount, chaptersCount, versesCount] = await Promise.all([
+        this.getBooksCount(),
+        this.getChaptersCount(),
+        this.getVersesCount(),
+      ]);
+
+      // Check if we have a reasonable amount of data in all tables
+      const hasBooks = booksCount > 0;
+      const hasChapters = chaptersCount > 0;
+      const hasVerses = versesCount > 0;
+
+      // For a complete Bible, we expect:
+      // - At least 66 books (66 books in the Bible)
+      // - At least 1000 chapters (Bible has ~1189 chapters)
+      // - At least 30000 verses (Bible has ~31,102 verses)
+      const hasCompleteBooks = booksCount >= 66;
+      const hasCompleteChapters = chaptersCount >= 1000;
+      const hasCompleteVerses = versesCount >= 30000;
+
+      // Return true if we have at least some data in all tables
+      // and a reasonable amount of complete data
+      return (
+        hasBooks &&
+        hasChapters &&
+        hasVerses &&
+        (hasCompleteBooks || hasCompleteChapters || hasCompleteVerses)
+      );
+    } catch (error) {
+      logger.error('Error checking data availability:', error);
+      return false;
+    }
   }
 
   /**
@@ -404,7 +435,7 @@ export class LocalDataService {
 
   async getChaptersCount(bookId?: string): Promise<number> {
     let query = 'SELECT COUNT(*) as count FROM chapters';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (bookId) {
       query += ' WHERE book_id = ?';
@@ -587,7 +618,7 @@ export class LocalDataService {
     sort?: VerseSort
   ): Promise<LocalVerse[]> {
     let query = 'SELECT * FROM verses WHERE chapter_id = ?';
-    const params: any[] = [chapterId];
+    const params: (string | number)[] = [chapterId];
     const conditions: string[] = [];
 
     // Apply additional filters
@@ -635,7 +666,7 @@ export class LocalDataService {
 
   async getVersesCount(chapterId?: string): Promise<number> {
     let query = 'SELECT COUNT(*) as count FROM verses';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (chapterId) {
       query += ' WHERE chapter_id = ?';
@@ -682,7 +713,7 @@ export class LocalDataService {
       LIMIT 1
     `;
 
-    const params: any[] = [chapterId, currentVerseNumber];
+    const params: (string | number)[] = [chapterId, currentVerseNumber];
     const result = await databaseManager.executeQuery<LocalVerse>(
       query,
       params
@@ -692,7 +723,7 @@ export class LocalDataService {
 
   async getRandomVerses(count = 5, chapterId?: string): Promise<LocalVerse[]> {
     let query = 'SELECT * FROM verses';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (chapterId) {
       query += ' WHERE chapter_id = ?';
@@ -982,7 +1013,7 @@ export class LocalDataService {
         LEFT JOIN verse_texts vt ON v.id = vt.verse_id
       `;
 
-      const params: any[] = [chapterId];
+      const params: (string | number)[] = [chapterId];
 
       // Add WHERE clause for chapter filter first
       query += ` WHERE v.chapter_id = ?`;

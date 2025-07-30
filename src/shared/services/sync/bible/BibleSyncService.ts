@@ -19,11 +19,17 @@ export interface BibleSyncOptions extends SyncOptions {
 }
 
 // Enhanced error types for better error handling
+export interface BibleSyncErrorDetails {
+  tableName?: string;
+  recordId?: string;
+  originalError?: unknown;
+}
+
 export class BibleSyncError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: BibleSyncErrorDetails
   ) {
     super(message);
     this.name = 'BibleSyncError';
@@ -31,56 +37,82 @@ export class BibleSyncError extends Error {
 }
 
 // Validation utilities for Bible-specific data
-const validateBookData = (book: any): any => {
-  if (!book.id || !book.name || typeof book.book_number !== 'number') {
-    throw new Error('Invalid book data: missing required fields');
+const validateBookData = (book: Record<string, unknown>): Tables<'books'> => {
+  if (!book['id'] || typeof book['id'] !== 'string') {
+    throw new Error('Invalid book data: missing or invalid id');
+  }
+
+  if (!book['name'] || typeof book['name'] !== 'string') {
+    throw new Error('Invalid book data: missing or invalid name');
+  }
+
+  if (
+    typeof book['book_number'] !== 'number' ||
+    (book['book_number'] as number) < 1
+  ) {
+    throw new Error('Invalid book data: missing or invalid book_number');
   }
 
   // Normalize testament field
-  if (book.testament && !['OT', 'NT'].includes(book.testament)) {
-    book.testament = null; // Set to null if invalid
+  if (
+    book['testament'] &&
+    typeof book['testament'] === 'string' &&
+    !['OT', 'NT'].includes(book['testament'] as string)
+  ) {
+    book['testament'] = null; // Set to null if invalid
   }
 
-  return book;
+  return book as Tables<'books'>;
 };
 
-const validateChapterData = (chapter: any): any => {
+const validateChapterData = (
+  chapter: Record<string, unknown>
+): Tables<'chapters'> => {
+  if (!chapter['id'] || typeof chapter['id'] !== 'string') {
+    throw new Error('Invalid chapter data: missing or invalid id');
+  }
+
+  if (!chapter['book_id'] || typeof chapter['book_id'] !== 'string') {
+    throw new Error('Invalid chapter data: missing or invalid book_id');
+  }
+
   if (
-    !chapter.id ||
-    !chapter.book_id ||
-    typeof chapter.chapter_number !== 'number'
+    typeof chapter['chapter_number'] !== 'number' ||
+    (chapter['chapter_number'] as number) < 1
   ) {
-    throw new Error('Invalid chapter data: missing required fields');
+    throw new Error('Invalid chapter data: missing or invalid chapter_number');
   }
 
   // Ensure total_verses is a positive number
-  if (typeof chapter.total_verses !== 'number' || chapter.total_verses < 0) {
-    chapter.total_verses = 1; // Default to 1 if invalid
+  if (
+    typeof chapter['total_verses'] !== 'number' ||
+    (chapter['total_verses'] as number) < 0
+  ) {
+    chapter['total_verses'] = 1; // Default to 1 if invalid
   }
 
-  // Ensure chapter_number is positive
-  if (chapter.chapter_number < 1) {
-    throw new Error('Invalid chapter data: chapter_number must be positive');
-  }
-
-  return chapter;
+  return chapter as Tables<'chapters'>;
 };
 
-const validateVerseData = (verse: any): any => {
+const validateVerseData = (
+  verse: Record<string, unknown>
+): Tables<'verses'> => {
+  if (!verse['id'] || typeof verse['id'] !== 'string') {
+    throw new Error('Invalid verse data: missing or invalid id');
+  }
+
+  if (!verse['chapter_id'] || typeof verse['chapter_id'] !== 'string') {
+    throw new Error('Invalid verse data: missing or invalid chapter_id');
+  }
+
   if (
-    !verse.id ||
-    !verse.chapter_id ||
-    typeof verse.verse_number !== 'number'
+    typeof verse['verse_number'] !== 'number' ||
+    (verse['verse_number'] as number) < 1
   ) {
-    throw new Error('Invalid verse data: missing required fields');
+    throw new Error('Invalid verse data: missing or invalid verse_number');
   }
 
-  // Ensure verse_number is positive
-  if (verse.verse_number < 1) {
-    throw new Error('Invalid verse data: verse_number must be positive');
-  }
-
-  return verse;
+  return verse as Tables<'verses'>;
 };
 
 class BibleSyncService implements BaseSyncService {
@@ -99,6 +131,28 @@ class BibleSyncService implements BaseSyncService {
     { version: string; timestamp: number }
   > = new Map();
   private readonly VERSION_CACHE_TTL = 60 * 60 * 1000; // 1 hour cache
+
+  // Clean up expired cache entries
+  private cleanupVersionCache(): void {
+    const now = Date.now();
+    for (const [key, value] of this.versionCheckCache.entries()) {
+      if (now - value.timestamp > this.VERSION_CACHE_TTL) {
+        this.versionCheckCache.delete(key);
+      }
+    }
+  }
+
+  // Clean up sync state on errors
+  private async cleanupSyncState(): Promise<void> {
+    try {
+      const tables = ['books', 'chapters', 'verses'];
+      for (const table of tables) {
+        await this.updateSyncStatus(table, 'idle');
+      }
+    } catch (error) {
+      logger.error('Error cleaning up sync state:', error);
+    }
+  }
 
   private constructor() {}
 
@@ -129,6 +183,9 @@ class BibleSyncService implements BaseSyncService {
    */
   async needsUpdate(): Promise<{ needsUpdate: boolean; tables: string[] }> {
     try {
+      // Clean up expired cache entries
+      this.cleanupVersionCache();
+
       const tables = ['books', 'chapters', 'verses'];
       const tablesToUpdate: string[] = [];
 
@@ -184,7 +241,7 @@ class BibleSyncService implements BaseSyncService {
 
       // Get remote count
       const { count: remoteCount, error } = await supabase
-        .from(tableName as any)
+        .from(tableName as 'books' | 'chapters' | 'verses')
         .select('*', { count: 'exact', head: true });
 
       if (error) {
@@ -216,7 +273,15 @@ class BibleSyncService implements BaseSyncService {
    */
   async syncAll(options: BibleSyncOptions = {}): Promise<SyncResult[]> {
     if (this.isSyncing) {
-      throw new Error('Bible sync is already in progress');
+      logger.info('Bible sync is already in progress, skipping this request');
+      return [
+        {
+          success: true,
+          tableName: 'all',
+          recordsSynced: 0,
+          warning: 'Sync is already in progress',
+        },
+      ];
     }
 
     this.isSyncing = true;
@@ -338,9 +403,9 @@ class BibleSyncService implements BaseSyncService {
       const errorDetails = {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: (error as Error)?.constructor?.name,
+        errorMessage: (error as Error)?.message || 'No message',
+        errorStack: (error as Error)?.stack || 'No stack',
         // Remove the problematic JSON.stringify that was causing empty objects
         // errorStringified: JSON.stringify(
         //   error,
@@ -349,6 +414,9 @@ class BibleSyncService implements BaseSyncService {
       };
 
       logger.error('Bible sync failed:', errorDetails);
+
+      // Clean up sync state on error
+      await this.cleanupSyncState();
 
       // Add a general error result if no specific error results exist
       if (results.length === 0) {
@@ -376,7 +444,7 @@ class BibleSyncService implements BaseSyncService {
 
       // For bible content, we often want full sync to ensure consistency
       const lastSync = options.forceFullSync
-        ? '1970-01-01T00:00:000Z'
+        ? '1970-01-01T00:00:00.000Z'
         : await this.getLastSync('books');
 
       let allBooks: Tables<'books'>[] = [];
@@ -407,7 +475,7 @@ class BibleSyncService implements BaseSyncService {
 
         // Add retry logic for network failures
         let remoteBooks: Tables<'books'>[] | null = null;
-        let error: any = null;
+        let error: unknown = null;
         const maxRetries = 3;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -429,7 +497,9 @@ class BibleSyncService implements BaseSyncService {
         }
 
         if (error) {
-          throw new Error(`Failed to fetch books: ${error.message}`);
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+          throw new Error(`Failed to fetch books: ${errorMessage}`);
         }
 
         if (!remoteBooks || remoteBooks.length === 0) {
@@ -492,7 +562,7 @@ class BibleSyncService implements BaseSyncService {
       await this.updateSyncStatus('chapters', 'syncing');
 
       const lastSync = options.forceFullSync
-        ? '1970-01-01T00:00:000Z'
+        ? '1970-01-01T00:00:00.000Z'
         : await this.getLastSync('chapters');
 
       let allChapters: Tables<'chapters'>[] = [];
@@ -523,7 +593,7 @@ class BibleSyncService implements BaseSyncService {
 
         // Add retry logic for network failures
         let remoteChapters: Tables<'chapters'>[] | null = null;
-        let error: any = null;
+        let error: unknown = null;
         const maxRetries = 3;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -545,7 +615,9 @@ class BibleSyncService implements BaseSyncService {
         }
 
         if (error) {
-          throw new Error(`Failed to fetch chapters: ${error.message}`);
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+          throw new Error(`Failed to fetch chapters: ${errorMessage}`);
         }
 
         if (!remoteChapters || remoteChapters.length === 0) {
@@ -606,7 +678,7 @@ class BibleSyncService implements BaseSyncService {
       await this.updateSyncStatus('verses', 'syncing');
 
       const lastSync = options.forceFullSync
-        ? '1970-01-01T00:00:000Z'
+        ? '1970-01-01T00:00:00.000Z'
         : await this.getLastSync('verses');
 
       let allVerses: Tables<'verses'>[] = [];
@@ -637,7 +709,7 @@ class BibleSyncService implements BaseSyncService {
 
         // Add retry logic for network failures
         let remoteVerses: Tables<'verses'>[] | null = null;
-        let error: any = null;
+        let error: unknown = null;
         const maxRetries = 3;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -659,7 +731,9 @@ class BibleSyncService implements BaseSyncService {
         }
 
         if (error) {
-          throw new Error(`Failed to fetch verses: ${error.message}`);
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+          throw new Error(`Failed to fetch verses: ${errorMessage}`);
         }
 
         if (!remoteVerses || remoteVerses.length === 0) {
@@ -715,163 +789,189 @@ class BibleSyncService implements BaseSyncService {
   private async upsertBooks(books: Tables<'books'>[]): Promise<void> {
     if (books.length === 0) return;
 
-    await databaseManager.transaction(async () => {
-      // Validate and normalize book data
-      const validatedBooks = books
-        .map(book => {
-          try {
-            return validateBookData(book);
-          } catch (error) {
-            logger.warn('Skipping invalid book data:', error);
-            return null;
-          }
-        })
-        .filter(Boolean);
+    try {
+      await databaseManager.transaction(async () => {
+        // Validate and normalize book data
+        const validatedBooks = books
+          .map(book => {
+            try {
+              return validateBookData(book);
+            } catch (error) {
+              logger.warn('Skipping invalid book data:', error);
+              return null;
+            }
+          })
+          .filter((book): book is Tables<'books'> => book !== null);
 
-      if (validatedBooks.length === 0) {
-        logger.warn('No valid books to insert after validation');
-        return;
-      }
+        if (validatedBooks.length === 0) {
+          logger.warn('No valid books to insert after validation');
+          return;
+        }
 
-      // Create placeholders for batch insert
-      const placeholders = validatedBooks
-        .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
-        .join(', ');
+        // Create placeholders for batch insert
+        const placeholders = validatedBooks
+          .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+          .join(', ');
 
-      const query = `
+        const query = `
         INSERT OR REPLACE INTO books (
-          id, book_number, name, testament, chapters, global_order, 
+          id, book_number, name, testament, global_order, 
           created_at, updated_at, synced_at
         ) VALUES ${placeholders}
       `;
 
-      // Flatten all parameters with validated data
-      const params = validatedBooks.flatMap(book => [
-        book.id,
-        book.book_number,
-        book.name,
-        book.testament, // Use validated testament
-        book.chapters || 1, // Use actual chapters or default
-        book.global_order || 0,
-        book.created_at || new Date().toISOString(),
-        book.updated_at || new Date().toISOString(),
-      ]);
+        // Flatten all parameters with validated data
+        const params = validatedBooks.flatMap(book => [
+          book.id,
+          book.book_number,
+          book.name,
+          book.testament, // Use validated testament
+          book.global_order || 0,
+          book.created_at || new Date().toISOString(),
+          book.updated_at || new Date().toISOString(),
+          new Date().toISOString(), // synced_at
+        ]);
 
-      await databaseManager.executeQuery(query, params);
-    });
+        await databaseManager.executeQuery(query, params);
+      });
+    } catch (error) {
+      logger.error('Error upserting books:', error);
+      throw error; // Re-throw to let the calling method handle it
+    }
   }
 
   private async upsertChapters(chapters: Tables<'chapters'>[]): Promise<void> {
     if (chapters.length === 0) return;
 
-    await databaseManager.transaction(async () => {
-      // Validate and normalize chapter data
-      const validatedChapters = chapters
-        .map(chapter => {
-          try {
-            return validateChapterData(chapter);
-          } catch (error) {
-            logger.warn('Skipping invalid chapter data:', error);
-            return null;
-          }
-        })
-        .filter(Boolean);
+    try {
+      await databaseManager.transaction(async () => {
+        // Validate and normalize chapter data
+        const validatedChapters = chapters
+          .map(chapter => {
+            try {
+              return validateChapterData(chapter);
+            } catch (error) {
+              logger.warn('Skipping invalid chapter data:', error);
+              return null;
+            }
+          })
+          .filter((chapter): chapter is Tables<'chapters'> => chapter !== null);
 
-      if (validatedChapters.length === 0) {
-        logger.warn('No valid chapters to insert after validation');
-        return;
-      }
+        if (validatedChapters.length === 0) {
+          logger.warn('No valid chapters to insert after validation');
+          return;
+        }
 
-      // ✅ PERFORMANCE FIX: Batch insert for chapters
-      const placeholders = validatedChapters
-        .map(() => '(?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
-        .join(', ');
+        // ✅ PERFORMANCE FIX: Batch insert for chapters
+        const placeholders = validatedChapters
+          .map(() => '(?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+          .join(', ');
 
-      const query = `
+        const query = `
         INSERT OR REPLACE INTO chapters (
           id, book_id, chapter_number, total_verses, global_order,
           created_at, updated_at, synced_at
         ) VALUES ${placeholders}
       `;
 
-      const params = validatedChapters.flatMap(chapter => [
-        chapter.id,
-        chapter.book_id,
-        chapter.chapter_number,
-        chapter.total_verses,
-        chapter.global_order || 0,
-        chapter.created_at || new Date().toISOString(),
-        chapter.updated_at || new Date().toISOString(),
-      ]);
+        const params = validatedChapters.flatMap(chapter => [
+          chapter.id,
+          chapter.book_id,
+          chapter.chapter_number,
+          chapter.total_verses,
+          chapter.global_order || 0,
+          chapter.created_at || new Date().toISOString(),
+          chapter.updated_at || new Date().toISOString(),
+          new Date().toISOString(), // synced_at
+        ]);
 
-      await databaseManager.executeQuery(query, params);
-    });
+        await databaseManager.executeQuery(query, params);
+      });
+    } catch (error) {
+      logger.error('Error upserting chapters:', error);
+      throw error; // Re-throw to let the calling method handle it
+    }
   }
 
   private async upsertVerses(verses: Tables<'verses'>[]): Promise<void> {
     if (verses.length === 0) return;
 
-    await databaseManager.transaction(async () => {
-      // Validate and normalize verse data
-      const validatedVerses = verses
-        .map(verse => {
-          try {
-            return validateVerseData(verse);
-          } catch (error) {
-            logger.warn('Skipping invalid verse data:', error);
-            return null;
-          }
-        })
-        .filter(Boolean);
+    try {
+      await databaseManager.transaction(async () => {
+        // Validate and normalize verse data
+        const validatedVerses = verses
+          .map(verse => {
+            try {
+              return validateVerseData(verse);
+            } catch (error) {
+              logger.warn('Skipping invalid verse data:', error);
+              return null;
+            }
+          })
+          .filter(Boolean);
 
-      if (validatedVerses.length === 0) {
-        logger.warn('No valid verses to insert after validation');
-        return;
-      }
+        if (validatedVerses.length === 0) {
+          logger.warn('No valid verses to insert after validation');
+          return;
+        }
 
-      // ✅ PERFORMANCE FIX: Split large verse batches to avoid SQLite variable limits
-      const BATCH_SIZE = 500; // SQLite has variable limits (~999), so batch to be safe
+        // ✅ PERFORMANCE FIX: Split large verse batches to avoid SQLite variable limits
+        const BATCH_SIZE = 500; // SQLite has variable limits (~999), so batch to be safe
 
-      for (let i = 0; i < validatedVerses.length; i += BATCH_SIZE) {
-        const batch = validatedVerses.slice(i, i + BATCH_SIZE);
+        for (let i = 0; i < validatedVerses.length; i += BATCH_SIZE) {
+          const batch = validatedVerses
+            .slice(i, i + BATCH_SIZE)
+            .filter((verse): verse is Tables<'verses'> => verse !== null);
 
-        const placeholders = batch
-          .map(() => '(?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
-          .join(', ');
+          if (batch.length === 0) continue;
 
-        const query = `
+          const placeholders = batch
+            .map(() => '(?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+            .join(', ');
+
+          const query = `
           INSERT OR REPLACE INTO verses (
             id, chapter_id, verse_number, global_order,
             created_at, updated_at, synced_at
           ) VALUES ${placeholders}
         `;
 
-        const params = batch.flatMap(verse => [
-          verse.id,
-          verse.chapter_id,
-          verse.verse_number,
-          verse.global_order || 0,
-          verse.created_at || new Date().toISOString(),
-          verse.updated_at || new Date().toISOString(),
-        ]);
+          const params = batch.flatMap(verse => [
+            verse.id,
+            verse.chapter_id,
+            verse.verse_number,
+            verse.global_order || 0,
+            verse.created_at || new Date().toISOString(),
+            verse.updated_at || new Date().toISOString(),
+            new Date().toISOString(), // synced_at
+          ]);
 
-        await databaseManager.executeQuery(query, params);
-      }
-    });
+          await databaseManager.executeQuery(query, params);
+        }
+      });
+    } catch (error) {
+      logger.error('Error upserting verses:', error);
+      throw error; // Re-throw to let the calling method handle it
+    }
   }
 
   // Helper methods
   async getLastSync(tableName: string): Promise<string> {
-    if (!databaseManager.initialized) {
+    try {
+      if (!databaseManager.initialized) {
+        return '1970-01-01T00:00:00.000Z';
+      }
+
+      const result = await databaseManager.executeQuery<BibleSyncMetadata>(
+        'SELECT last_sync FROM sync_metadata WHERE table_name = ?',
+        [tableName]
+      );
+
+      return result[0]?.last_sync || '1970-01-01T00:00:00.000Z';
+    } catch (error) {
+      logger.error(`Error getting last sync for ${tableName}:`, error);
       return '1970-01-01T00:00:00.000Z';
     }
-
-    const result = await databaseManager.executeQuery<BibleSyncMetadata>(
-      'SELECT last_sync FROM sync_metadata WHERE table_name = ?',
-      [tableName]
-    );
-
-    return result[0]?.last_sync || '1970-01-01T00:00:00.000Z';
   }
 
   private async getLocalVersion(tableName: string): Promise<string | null> {
@@ -914,10 +1014,15 @@ class BibleSyncService implements BaseSyncService {
     status: 'idle' | 'syncing' | 'error',
     errorMessage?: string
   ): Promise<void> {
-    await databaseManager.executeQuery(
-      'UPDATE sync_metadata SET sync_status = ?, error_message = ?, updated_at = CURRENT_TIMESTAMP WHERE table_name = ?',
-      [status, errorMessage || null, tableName]
-    );
+    try {
+      await databaseManager.executeQuery(
+        'UPDATE sync_metadata SET sync_status = ?, error_message = ?, updated_at = CURRENT_TIMESTAMP WHERE table_name = ?',
+        [status, errorMessage || null, tableName]
+      );
+    } catch (error) {
+      logger.error(`Error updating sync status for ${tableName}:`, error);
+      // Don't throw here as it could break the sync process
+    }
   }
 
   async getSyncMetadata(tableName?: string): Promise<BibleSyncMetadata[]> {
@@ -939,7 +1044,7 @@ class BibleSyncService implements BaseSyncService {
       const lastSync = await this.getLastSync(tableName);
 
       const { data, error } = await supabase
-        .from(tableName as any)
+        .from(tableName as 'books' | 'chapters' | 'verses')
         .select('id')
         .gt('updated_at', lastSync)
         .limit(1);
@@ -1058,7 +1163,7 @@ class BibleSyncService implements BaseSyncService {
 
           // Get remote count
           const { count: remoteCount, error } = await supabase
-            .from(tableName as any)
+            .from(tableName as 'books' | 'chapters' | 'verses')
             .select('*', { count: 'exact', head: true });
 
           if (error) {
@@ -1239,7 +1344,7 @@ class BibleSyncService implements BaseSyncService {
 
           // Get remote count
           const { count: remoteCount, error } = await supabase
-            .from(table as any)
+            .from(table as 'books' | 'chapters' | 'verses')
             .select('*', { count: 'exact', head: true });
 
           if (error) {

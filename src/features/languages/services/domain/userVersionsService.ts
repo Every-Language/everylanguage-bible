@@ -15,7 +15,7 @@ export class UserVersionsServiceError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: unknown
   ) {
     super(message);
     this.name = 'UserVersionsServiceError';
@@ -56,6 +56,7 @@ export interface UserVersionsServiceInterface {
 }
 
 // Helper to convert saved version to typed version
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const convertSavedVersionToTyped = (saved: any): AudioVersion | TextVersion => {
   const baseVersion = {
     id: saved.version_id,

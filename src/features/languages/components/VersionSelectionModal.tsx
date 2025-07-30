@@ -7,14 +7,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { SlideUpModal } from '@/shared/components/ui/SlideUpModal';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { Button } from '@/shared/components/ui/Button';
 import {
   VersionSelectionModalProps,
   VersionListItemProps,
   AudioVersion,
   TextVersion,
+  LanguageEntity,
 } from '../types';
 import { LanguageHierarchyBrowser } from './LanguageHierarchyBrowser';
 import { useLanguageSelection } from '../hooks/useLanguageSelection';
@@ -158,7 +160,7 @@ export const VersionSelectionModal: React.FC<VersionSelectionModalProps> = ({
     setShowLanguageBrowser(false);
   }, []);
 
-  const handleLanguageSelect = useCallback((_language: any) => {
+  const handleLanguageSelect = useCallback((_language: LanguageEntity) => {
     // This would navigate to available versions for the selected language
     // For now, we'll just close the browser
     setShowLanguageBrowser(false);
@@ -468,7 +470,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    backgroundColor: COLOR_VARIATIONS.BLUE_10,
   },
   currentVersionText: {
     flex: 1,

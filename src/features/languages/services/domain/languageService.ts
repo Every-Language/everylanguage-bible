@@ -16,7 +16,7 @@ export class LanguageServiceError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: unknown
   ) {
     super(message);
     this.name = 'LanguageServiceError';
@@ -48,6 +48,7 @@ export interface LanguageServiceInterface {
 }
 
 // Language entity validation
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const validateLanguageEntity = (entity: any): LanguageEntity => {
   if (!entity.id || !entity.name) {
     throw new LanguageServiceError(
@@ -78,6 +79,7 @@ const validateLanguageEntity = (entity: any): LanguageEntity => {
 };
 
 // Helper to build hierarchy from flat entities
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const buildHierarchy = (entities: any[]): LanguageEntity[] => {
   const entityMap = new Map<string, LanguageEntity>();
   const rootEntities: LanguageEntity[] = [];
@@ -125,6 +127,19 @@ class LanguageService implements LanguageServiceInterface {
       const cachedEntities = await this.repository.getAllLanguageEntities();
       return buildHierarchy(cachedEntities);
     } catch (error) {
+      logger.error('Failed to sync and get language hierarchy:', error);
+
+      // Fallback: try to get whatever data we have locally
+      try {
+        const cachedEntities = await this.repository.getAllLanguageEntities();
+        if (cachedEntities.length > 0) {
+          logger.info('Using cached language data as fallback');
+          return buildHierarchy(cachedEntities);
+        }
+      } catch (fallbackError) {
+        logger.error('Fallback to cached data also failed:', fallbackError);
+      }
+
       throw new LanguageServiceError(
         'Failed to get language hierarchy',
         'GET_HIERARCHY_FAILED',
@@ -289,9 +304,16 @@ class LanguageService implements LanguageServiceInterface {
       const updateCheck = await languageSync.needsUpdate();
 
       if (updateCheck.needsUpdate) {
-        await languageSync.syncAll();
+        // Add timeout to prevent hanging
+        const syncPromise = languageSync.syncAll();
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Language sync timeout')), 8000);
+        });
+
+        await Promise.race([syncPromise, timeoutPromise]);
       }
     } catch (error) {
+      logger.error('Language entities sync failed:', error);
       throw new LanguageServiceError(
         'Failed to sync language entities',
         'SYNC_FAILED',

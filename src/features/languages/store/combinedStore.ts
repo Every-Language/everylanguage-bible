@@ -62,15 +62,23 @@ export const initializeCombinedLanguageSelectionStore = async () => {
   const store = useCombinedLanguageSelectionStore.getState();
 
   try {
-    // Restore current selections
+    // Restore current selections (fast, local operation)
     await store.restoreCurrentSelections();
 
-    // Load saved versions
+    // Load saved versions (fast, local operation)
     await store.loadSavedVersions();
 
     // Load language hierarchy if not already loaded
+    // This can be slow if no cache exists, so we make it non-blocking
     if (store.languageHierarchy.length === 0) {
-      await store.loadLanguageHierarchy();
+      // Start loading hierarchy in background, don't wait for completion
+      store.loadLanguageHierarchy().catch(error => {
+        logger.warn(
+          'Language hierarchy loading failed during initialization:',
+          error
+        );
+        // Don't throw - this is non-critical for app startup
+      });
     }
 
     logger.info('Combined language selection store initialized successfully');

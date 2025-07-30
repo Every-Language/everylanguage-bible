@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { Button } from '@/shared/components/ui/Button';
 import { SyncStatus } from '@/shared/components/SyncStatus';
 

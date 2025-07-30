@@ -14,12 +14,76 @@ export interface NetworkStatusInfo {
   color: string;
 }
 
+export interface ConnectivityTestResult {
+  isOnline: boolean;
+  latency: number;
+  endpoint: string;
+  error?: string;
+}
+
+export interface ConnectivityConfig {
+  timeout: number;
+  retries: number;
+  parallelRequests: number;
+  successThreshold: number; // Number of successful requests needed
+}
+
 export class NetworkService {
+  private static instance: NetworkService;
+  private cache: Map<string, { data: boolean; timestamp: number }> = new Map();
+  private readonly CACHE_DURATION = 30000; // 30 seconds
+  private readonly DEFAULT_TIMEOUT = 3000; // 3 seconds (reduced from 5s)
+  private readonly MAX_RETRIES = 2;
+  private readonly SUCCESS_THRESHOLD = 1; // At least 1 successful request
+
+  // Tiered endpoints for better reliability
+  private readonly ENDPOINTS = {
+    // Tier 1: App-specific endpoints (most reliable)
+    app: [
+      'https://api.supabase.co/health', // Your Supabase endpoint
+      // Add your app's API health endpoints here
+    ],
+    // Tier 2: Reliable public APIs
+    reliable: [
+      'https://httpbin.org/get',
+      'https://jsonplaceholder.typicode.com/posts/1',
+      'https://api.github.com/zen',
+      'https://www.cloudflare.com/cdn-cgi/trace', // CDN endpoint
+    ],
+    // Tier 3: Fallback endpoints
+    fallback: [
+      'https://www.google.com/favicon.ico', // Small, fast resource
+      'https://www.apple.com/favicon.ico', // Another reliable favicon
+      'https://httpbin.org/status/200', // Simple status endpoint
+    ],
+  };
+
+  static getInstance() {
+    if (!NetworkService.instance) {
+      NetworkService.instance = new NetworkService();
+    }
+    return NetworkService.instance;
+  }
+
   /**
-   * Check if device has internet connectivity by making a test request
+   * Enhanced internet connectivity check with parallel requests and tiered endpoints
    */
-  static async checkOnlineCapabilities(): Promise<boolean> {
-    logger.info('NetworkService: Starting online capabilities check...');
+  async checkOnlineCapabilities(): Promise<boolean> {
+    logger.info(
+      'NetworkService: Starting enhanced online capabilities check...'
+    );
+
+    // Check cache first
+    const cacheKey = 'online-capabilities';
+    const cached = this.cache.get(cacheKey);
+
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      logger.info(
+        'NetworkService: Using cached online capabilities result:',
+        cached.data
+      );
+      return cached.data;
+    }
 
     // First check if we have basic network connectivity
     const networkState = await this.getNetworkState();
@@ -27,81 +91,236 @@ export class NetworkService {
 
     if (!networkState.isConnected) {
       logger.warn('NetworkService: No network connection detected');
+      this.cache.set(cacheKey, { data: false, timestamp: Date.now() });
       return false;
     }
 
+    logger.info(
+      'NetworkService: Network is connected, testing internet connectivity...'
+    );
+
     try {
-      // Use a simple timeout approach instead of AbortController
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 5000);
+      const config: ConnectivityConfig = {
+        timeout: this.DEFAULT_TIMEOUT,
+        retries: this.MAX_RETRIES,
+        parallelRequests: 3,
+        successThreshold: this.SUCCESS_THRESHOLD,
+      };
+
+      const result = await this.performConnectivityTest(config);
+
+      // Cache the result
+      this.cache.set(cacheKey, {
+        data: result.isOnline,
+        timestamp: Date.now(),
       });
 
-      // Try multiple endpoints for better reliability
-      const testEndpoints = [
-        'https://httpbin.org/get',
-        'https://jsonplaceholder.typicode.com/posts/1',
-        'https://api.github.com/zen',
-      ];
+      logger.info('NetworkService: Enhanced connectivity check result:', {
+        isOnline: result.isOnline,
+        latency: result.latency,
+        endpoint: result.endpoint,
+        error: result.error,
+      });
 
-      for (const endpoint of testEndpoints) {
-        try {
-          logger.info(`NetworkService: Trying endpoint: ${endpoint}`);
-          const fetchPromise = fetch(endpoint, {
-            method: 'GET',
-            headers: {
-              Accept: 'application/json',
-              'User-Agent': 'BibleApp/1.0',
-            },
-          });
-
-          const response = await Promise.race([fetchPromise, timeoutPromise]);
-          logger.info('NetworkService: Fetch response status:', {
-            endpoint: endpoint,
-            status: response.status,
-            ok: response.ok,
-            statusText: response.statusText,
-          });
-
-          if (response.ok) {
-            logger.info(
-              `NetworkService: Successfully connected to ${endpoint}`
-            );
-            return true;
-          } else {
-            logger.warn(
-              `NetworkService: Response not OK for ${endpoint}:`,
-              response.status,
-              response.statusText
-            );
-          }
-        } catch (endpointError) {
-          logger.warn(`NetworkService: Failed to connect to ${endpoint}:`, {
-            error: endpointError,
-            errorMessage: (endpointError as any)?.message || 'No message',
-          });
-          // Continue to next endpoint
-        }
-      }
-
-      logger.error('NetworkService: All endpoints failed');
-      return false;
+      return result.isOnline;
     } catch (error) {
-      logger.error('NetworkService: Fetch request failed:', {
-        error: error,
-        errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
-        networkState: networkState,
-      });
+      logger.error(
+        'NetworkService: Enhanced connectivity check failed:',
+        error
+      );
+      this.cache.set(cacheKey, { data: false, timestamp: Date.now() });
       return false;
     }
   }
 
   /**
+   * Perform connectivity test with parallel requests and tiered endpoints
+   */
+  private async performConnectivityTest(
+    config: ConnectivityConfig
+  ): Promise<ConnectivityTestResult> {
+    const startTime = Date.now();
+    let successfulRequests = 0;
+    let bestResult: ConnectivityTestResult | null = null;
+
+    logger.info(
+      'NetworkService: Starting connectivity test with config:',
+      config
+    );
+
+    // Test endpoints in tiers (app-specific first, then reliable, then fallback)
+    for (const [tierName, endpoints] of Object.entries(this.ENDPOINTS)) {
+      logger.info(
+        `NetworkService: Testing ${tierName} tier endpoints:`,
+        endpoints
+      );
+
+      // Test endpoints in parallel within each tier
+      const tierPromises = endpoints.map(endpoint =>
+        this.testEndpoint(endpoint, config.timeout, config.retries)
+      );
+
+      try {
+        const results = await Promise.allSettled(tierPromises);
+
+        // Process results
+        for (let i = 0; i < results.length; i++) {
+          const result = results[i];
+          const endpoint = endpoints[i];
+
+          if (
+            result &&
+            result.status === 'fulfilled' &&
+            result.value.isOnline
+          ) {
+            successfulRequests++;
+            logger.info(
+              `NetworkService: Endpoint ${endpoint} succeeded (${result.value.latency}ms)`
+            );
+
+            // Track the fastest successful result
+            if (!bestResult || result.value.latency < bestResult.latency) {
+              bestResult = result.value;
+            }
+
+            // If we have enough successful requests, return early
+            if (successfulRequests >= config.successThreshold && bestResult) {
+              logger.info(
+                `NetworkService: Sufficient successful requests (${successfulRequests}) from ${tierName} tier`
+              );
+              return bestResult;
+            }
+          } else if (result) {
+            const errorMessage =
+              result.status === 'rejected'
+                ? result.reason
+                : result.status === 'fulfilled'
+                  ? result.value.error || 'Unknown error'
+                  : 'Unknown error';
+            logger.warn(
+              `NetworkService: Endpoint ${endpoint} failed:`,
+              errorMessage
+            );
+          }
+        }
+      } catch (error) {
+        logger.warn(`NetworkService: Tier ${tierName} failed:`, error);
+      }
+    }
+
+    // If we get here, we didn't meet the success threshold
+    logger.error(
+      `NetworkService: Insufficient successful requests (${successfulRequests}/${config.successThreshold})`
+    );
+    return {
+      isOnline: false,
+      latency: Date.now() - startTime,
+      endpoint: 'none',
+      error: `Insufficient successful connectivity tests (${successfulRequests}/${config.successThreshold})`,
+    };
+  }
+
+  /**
+   * Test a single endpoint with retries
+   */
+  private async testEndpoint(
+    endpoint: string,
+    timeout: number,
+    retries: number
+  ): Promise<ConnectivityTestResult> {
+    const startTime = Date.now();
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        logger.info(
+          `NetworkService: Testing endpoint ${endpoint} (attempt ${attempt + 1}/${retries + 1})`
+        );
+
+        const response = await this.makeRequest(endpoint, timeout);
+        const latency = Date.now() - startTime;
+
+        if (response.ok) {
+          logger.info(
+            `NetworkService: Endpoint ${endpoint} successful (${latency}ms)`
+          );
+          return {
+            isOnline: true,
+            latency,
+            endpoint,
+          };
+        } else {
+          logger.warn(
+            `NetworkService: Endpoint ${endpoint} returned status ${response.status}`
+          );
+        }
+      } catch (error) {
+        logger.warn(
+          `NetworkService: Endpoint ${endpoint} attempt ${attempt + 1} failed:`,
+          error
+        );
+
+        // Don't retry on the last attempt
+        if (attempt === retries) {
+          return {
+            isOnline: false,
+            latency: Date.now() - startTime,
+            endpoint,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          };
+        }
+
+        // Wait before retry (exponential backoff)
+        await this.delay(Math.pow(2, attempt) * 100);
+      }
+    }
+
+    return {
+      isOnline: false,
+      latency: Date.now() - startTime,
+      endpoint,
+      error: 'Max retries exceeded',
+    };
+  }
+
+  /**
+   * Make a single HTTP request with timeout
+   */
+  private async makeRequest(
+    endpoint: string,
+    timeout: number
+  ): Promise<globalThis.Response> {
+    const controller = new globalThis.AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'BibleApp/1.0',
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  /**
+   * Utility function for delays
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
    * Get current network state
    */
-  static async getNetworkState(): Promise<NetworkState> {
+  async getNetworkState(): Promise<NetworkState> {
     const state = await NetInfo.fetch();
     return {
       isConnected: state.isConnected ?? false,
@@ -111,9 +330,17 @@ export class NetworkService {
   }
 
   /**
+   * Clear cache for online capabilities check
+   */
+  clearCache(): void {
+    this.cache.clear();
+    logger.info('NetworkService: Cache cleared');
+  }
+
+  /**
    * Get network status information for UI display
    */
-  static getNetworkStatusInfo(
+  getNetworkStatusInfo(
     networkState: NetworkState,
     theme: { colors: { error: string; success: string; textSecondary: string } }
   ): NetworkStatusInfo {
@@ -172,7 +399,7 @@ export class NetworkService {
   /**
    * Check if network is available for downloads
    */
-  static isNetworkAvailableForDownloads(networkState: NetworkState): boolean {
+  isNetworkAvailableForDownloads(networkState: NetworkState): boolean {
     return (
       networkState.isConnected && networkState.isInternetReachable === true
     );
@@ -181,7 +408,7 @@ export class NetworkService {
   /**
    * Get network status text for display
    */
-  static getNetworkStatusText(networkState: NetworkState): string {
+  getNetworkStatusText(networkState: NetworkState): string {
     const { isConnected, connectionType, isInternetReachable } = networkState;
 
     if (!isConnected) {
@@ -209,7 +436,7 @@ export class NetworkService {
   /**
    * Get network icon for display
    */
-  static getNetworkIcon(
+  getNetworkIcon(
     networkState: NetworkState
   ): keyof typeof MaterialIcons.glyphMap {
     const { isConnected, connectionType, isInternetReachable } = networkState;
@@ -234,7 +461,7 @@ export class NetworkService {
   /**
    * Get network status color for display
    */
-  static getNetworkStatusColor(
+  getNetworkStatusColor(
     networkState: NetworkState,
     theme: { colors: { error: string; success: string } }
   ): string {
@@ -249,7 +476,7 @@ export class NetworkService {
   /**
    * Subscribe to network state changes
    */
-  static subscribeToNetworkChanges(callback: (state: NetworkState) => void) {
+  subscribeToNetworkChanges(callback: (state: NetworkState) => void) {
     return NetInfo.addEventListener(state => {
       const networkState: NetworkState = {
         isConnected: state.isConnected ?? false,
@@ -263,7 +490,7 @@ export class NetworkService {
   /**
    * Debug method to test network connectivity with detailed logging
    */
-  static async debugNetworkConnectivity(): Promise<void> {
+  async debugNetworkConnectivity(): Promise<void> {
     logger.info('NetworkService: Starting debug network connectivity test...');
 
     try {
@@ -295,8 +522,19 @@ export class NetworkService {
     } catch (error) {
       logger.error('NetworkService: Debug - Error during network test:', {
         error: error,
-        errorMessage: (error as any)?.message || 'No message',
+        errorMessage: (error as Error)?.message || 'No message',
       });
     }
   }
+
+  /**
+   * Public method to test a single endpoint (for debugging)
+   */
+  async testSingleEndpoint(endpoint: string): Promise<ConnectivityTestResult> {
+    logger.info(`NetworkService: Testing single endpoint: ${endpoint}`);
+    return this.testEndpoint(endpoint, this.DEFAULT_TIMEOUT, this.MAX_RETRIES);
+  }
 }
+
+// Export singleton instance
+export const networkService = NetworkService.getInstance();

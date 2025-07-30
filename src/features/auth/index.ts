@@ -1,5 +1,4 @@
 // Auth components
-export { AuthProvider, useAuthContext } from './components/AuthProvider';
 export { AuthForm } from './components/AuthForm';
 
 // Auth screens

@@ -2,6 +2,13 @@ import { supabase } from '../../../shared/services/api/supabase';
 import DatabaseManager from '../../../shared/services/database/DatabaseManager';
 import { logger } from '../../../shared/utils/logger';
 
+interface AvailabilitySummaryResult {
+  total_languages: number;
+  languages_with_content: number;
+  total_audio_versions: number;
+  total_text_versions: number;
+}
+
 const databaseManager = DatabaseManager.getInstance();
 
 export class AvailabilityService {
@@ -13,9 +20,9 @@ export class AvailabilityService {
       logger.info('Starting availability update for all languages...');
 
       // Get all language entities
-      const allLanguages = await databaseManager.executeQuery(
+      const allLanguages = (await databaseManager.executeQuery(
         'SELECT id FROM language_entities_cache'
-      );
+      )) as Array<{ id: string }>;
 
       let updatedCount = 0;
       let hasContentCount = 0;
@@ -23,7 +30,7 @@ export class AvailabilityService {
       for (const language of allLanguages) {
         if (!language || !language.id) continue;
 
-        const languageId = language.id!;
+        const languageId = language.id;
         const availability = await this.checkLanguageAvailability(languageId);
 
         // Update the language entity cache
@@ -131,13 +138,13 @@ export class AvailabilityService {
         FROM language_entities_cache
       `);
 
-      const result = results[0] || {};
+      const result = (results[0] || {}) as unknown as AvailabilitySummaryResult;
 
       return {
-        totalLanguages: (result as any).total_languages || 0,
-        languagesWithContent: (result as any).languages_with_content || 0,
-        totalAudioVersions: (result as any).total_audio_versions || 0,
-        totalTextVersions: (result as any).total_text_versions || 0,
+        totalLanguages: result.total_languages || 0,
+        languagesWithContent: result.languages_with_content || 0,
+        totalAudioVersions: result.total_audio_versions || 0,
+        totalTextVersions: result.total_text_versions || 0,
       };
     } catch (error) {
       logger.error('Error getting availability summary:', error);

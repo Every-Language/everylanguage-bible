@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useAuthContext } from '@/features/auth/components/AuthProvider';
+import { useTheme } from '@/shared/hooks';
+import { useAuthContext } from '@/shared/hooks';
 import { SlideUpModal } from './ui/SlideUpModal';
 import { SyncStatusPill } from './SyncStatusPill';
 import { logger } from '../utils/logger';

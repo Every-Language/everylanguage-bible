@@ -13,20 +13,23 @@ import type {
   NativeStackNavigationProp,
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
-import { useTheme } from '../../../shared/context/ThemeContext';
-import { useVerses } from '../hooks/useVerses';
+import { useTheme } from '@/shared/hooks';
+import { PlayButton } from '@/shared/components';
+import { useVersesWithTextsQuery } from '../hooks/useBibleQueries';
 import { VerseCard } from '@/features/bible/components/VerseCard';
 import { useCurrentVersions } from '../../languages/hooks';
-import { localDataService } from '../../../shared/services/database/LocalDataService';
-import type { LocalVerseText } from '../../../shared/services/database/schema';
-import { useAudioService } from '../../media/hooks/useAudioService';
-import { useMediaPlayer } from '../../../shared/context/MediaPlayerContext';
-import type { MediaTrack } from '../../../shared/context/MediaPlayerContext';
+
+import type {
+  LocalVerseText,
+  LocalVerse,
+} from '../../../shared/services/database/schema';
+import { useUnifiedMediaPlayer } from '../../media/hooks/useUnifiedMediaPlayer';
+import type { MediaTrack } from '@/shared/store/mediaPlayerStore';
 import type { Chapter, Verse } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 import { logger } from '../../../shared/utils/logger';
 import { ChapterDownloadModal } from '../../downloads/components/ChapterDownloadModal';
-import { useChapterAudioInfo } from '../../media/hooks/useChapterQueue';
+import { useChapterAudioInfo } from '../../media/hooks/useChapterAudioInfo';
 
 type VersesScreenProps = NativeStackScreenProps<
   BibleStackParamList,
@@ -35,26 +38,29 @@ type VersesScreenProps = NativeStackScreenProps<
 
 export const VersesScreen: React.FC = () => {
   const { theme } = useTheme();
-  const { actions: mediaActions } = useAudioService();
-  const { state: mediaState } = useMediaPlayer();
+  const { actions: mediaActions } = useUnifiedMediaPlayer();
   const navigation =
     useNavigation<NativeStackNavigationProp<BibleStackParamList>>();
   const route = useRoute<VersesScreenProps['route']>();
 
   const { book, chapter } = route.params;
-  const { verses, loading, error } = useVerses(chapter.id);
-
   const { currentTextVersion } = useCurrentVersions();
-  const [verseTexts, setVerseTexts] = React.useState<
-    Map<string, LocalVerseText>
-  >(new Map());
-  const [loadingTexts, setLoadingTexts] = React.useState(false);
+
+  const {
+    data: versesWithTexts = [],
+    isLoading: loading,
+    error: versesError,
+    refetch: refetchVerses,
+    isRefetching,
+  } = useVersesWithTextsQuery(chapter.id, currentTextVersion?.id);
 
   // Download modal state
   const [showDownloadModal, setShowDownloadModal] = React.useState(false);
 
   // Check media availability for this chapter
-  const { audioInfo, loading: audioLoading } = useChapterAudioInfo(chapter.id);
+  const { data: audioInfo, isLoading: audioLoading } = useChapterAudioInfo(
+    chapter.id
+  );
 
   // Check if media is available and show download modal if not
   React.useEffect(() => {
@@ -62,51 +68,6 @@ export const VersesScreen: React.FC = () => {
       setShowDownloadModal(true);
     }
   }, [audioInfo, audioLoading]);
-
-  // Load verse texts when currentTextVersion changes
-  React.useEffect(() => {
-    const loadVerseTexts = async () => {
-      logger.log(
-        '📖 VersesScreen - Loading verse texts for chapterId:',
-        chapter.id
-      );
-      logger.log('📖 VersesScreen - Current text version:', currentTextVersion);
-
-      if (!currentTextVersion) {
-        logger.log(
-          '📖 VersesScreen - No textVersion, setting verse texts to empty'
-        );
-        setVerseTexts(new Map());
-        return;
-      }
-
-      try {
-        setLoadingTexts(true);
-        const textsMap = await localDataService.getVerseTextsForChapter(
-          chapter.id,
-          currentTextVersion.id
-        );
-        logger.log(
-          '📖 VersesScreen - Loaded verse texts:',
-          textsMap.size,
-          'texts for version:',
-          currentTextVersion.name
-        );
-        logger.log(
-          '📖 VersesScreen - First few verse text IDs:',
-          Array.from(textsMap.keys()).slice(0, 3)
-        );
-        setVerseTexts(textsMap);
-      } catch (error) {
-        logger.error('📖 VersesScreen - Error loading verse texts:', error);
-        setVerseTexts(new Map());
-      } finally {
-        setLoadingTexts(false);
-      }
-    };
-
-    loadVerseTexts();
-  }, [chapter.id, currentTextVersion?.id]);
 
   const styles = StyleSheet.create({
     container: {
@@ -159,11 +120,7 @@ export const VersesScreen: React.FC = () => {
     actionButton: {
       padding: 8,
     },
-    playButton: {
-      backgroundColor: theme.colors.primary,
-      borderRadius: 20,
-      padding: 8,
-    },
+
     content: {
       flex: 1,
     },
@@ -192,15 +149,22 @@ export const VersesScreen: React.FC = () => {
     versesList: {
       padding: 16,
     },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 40,
+    syncDescription: {
+      fontSize: 14,
+      textAlign: 'center',
+      marginTop: 8,
+      marginBottom: 20,
+      lineHeight: 20,
     },
-    emptyText: {
+    syncButton: {
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+      marginTop: 16,
+    },
+    syncButtonText: {
       fontSize: 16,
-      color: theme.colors.textSecondary,
+      fontWeight: '600',
       textAlign: 'center',
     },
   });
@@ -273,17 +237,6 @@ export const VersesScreen: React.FC = () => {
   };
 
   const handlePlayVerse = (verse: Verse) => {
-    // Check if this verse is currently playing
-    const currentTrackId = `${book.id}-${chapter.id}-${verse.id}`;
-    const isCurrentlyPlaying =
-      mediaState.currentTrack?.id === currentTrackId && mediaState.isPlaying;
-
-    if (isCurrentlyPlaying) {
-      // If currently playing, pause it
-      mediaActions.pause();
-      return;
-    }
-
     // Create mock track data and load it into the media player
     const mockTrack = createMockTrackForVerse(verse);
 
@@ -304,8 +257,11 @@ export const VersesScreen: React.FC = () => {
     setShowDownloadModal(false);
   };
 
-  const renderVerseCard = (verse: Verse) => {
-    const verseText = verseTexts.get(verse.id) || null;
+  const renderVerseCard = (verseWithText: {
+    verse: LocalVerse;
+    verseText: LocalVerseText | null;
+  }) => {
+    const { verse, verseText } = verseWithText;
     return (
       <VerseCard
         key={verse.id}
@@ -321,7 +277,7 @@ export const VersesScreen: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (loading || loadingTexts) {
+    if (loading) {
       return (
         <View style={styles.loadingContainer}>
           <MaterialIcons
@@ -334,28 +290,45 @@ export const VersesScreen: React.FC = () => {
       );
     }
 
-    if (error) {
+    // Show sync button if no data after 3 retry attempts or if there's an error
+    const shouldShowSyncButton =
+      (versesError && versesWithTexts.length === 0) ||
+      (!loading && !isRefetching && versesWithTexts.length === 0);
+
+    if (shouldShowSyncButton) {
       return (
         <View style={styles.errorContainer}>
           <MaterialIcons
-            name='error-outline'
-            size={48}
-            color={theme.colors.error}
-          />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      );
-    }
-
-    if (verses.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <MaterialIcons
-            name='library-books'
+            name='cloud-download'
             size={48}
             color={theme.colors.textSecondary}
           />
-          <Text style={styles.emptyText}>No verses found for this chapter</Text>
+          <Text style={styles.errorText}>
+            {versesError instanceof Error
+              ? versesError.message
+              : 'No verses available for this chapter'}
+          </Text>
+          <Text
+            style={[
+              styles.syncDescription,
+              { color: theme.colors.textSecondary },
+            ]}>
+            Download Bible content to view verses
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.syncButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={() => refetchVerses()}>
+            <Text
+              style={[
+                styles.syncButtonText,
+                { color: theme.colors.textInverse },
+              ]}>
+              Retry
+            </Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -365,7 +338,7 @@ export const VersesScreen: React.FC = () => {
         style={styles.content}
         contentContainerStyle={styles.versesList}
         showsVerticalScrollIndicator={false}>
-        {verses.map(renderVerseCard)}
+        {versesWithTexts.map(renderVerseCard)}
       </ScrollView>
     );
   };
@@ -408,15 +381,12 @@ export const VersesScreen: React.FC = () => {
               color={theme.colors.text}
             />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.playButton]}
-            onPress={handlePlayChapter}>
-            <MaterialIcons
-              name='play-arrow'
-              size={24}
-              color={theme.colors.textInverse}
-            />
-          </TouchableOpacity>
+          <PlayButton
+            type='chapter'
+            id={`${book.id}-${chapter.id}`}
+            size='large'
+            onPress={handlePlayChapter}
+          />
         </View>
       </View>
       {renderContent()}

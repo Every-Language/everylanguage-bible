@@ -28,32 +28,35 @@ class Logger {
     return level <= this.config.level;
   }
 
-  private serializeError(error: any): any {
+  private serializeError(error: unknown): Record<string, unknown> {
     if (error instanceof Error) {
       return {
         name: error.name,
         message: error.message,
         stack: error.stack,
         // Include any additional properties
-        ...Object.getOwnPropertyNames(error).reduce((acc, key) => {
-          if (key !== 'name' && key !== 'message' && key !== 'stack') {
-            try {
-              acc[key] = (error as any)[key];
-            } catch {
-              acc[key] = '[Unable to serialize]';
+        ...Object.getOwnPropertyNames(error).reduce(
+          (acc, key) => {
+            if (key !== 'name' && key !== 'message' && key !== 'stack') {
+              try {
+                acc[key] = (error as unknown as Record<string, unknown>)[key];
+              } catch {
+                acc[key] = '[Unable to serialize]';
+              }
             }
-          }
-          return acc;
-        }, {} as any),
+            return acc;
+          },
+          {} as Record<string, unknown>
+        ),
       };
     }
-    return error;
+    return { error: String(error) };
   }
 
   private formatMessage(
     level: string,
     message: string,
-    ...args: any[]
+    ...args: unknown[]
   ): string {
     const timestamp = new Date().toISOString();
     const formattedArgs =
@@ -84,7 +87,7 @@ class Logger {
     return `[${timestamp}] ${level}: ${message}${formattedArgs}`;
   }
 
-  error(message: string, ...args: any[]): void {
+  error(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.ERROR)) {
       const formattedMessage = this.formatMessage('ERROR', message, ...args);
       if (this.config.enableConsole) {
@@ -94,7 +97,7 @@ class Logger {
     }
   }
 
-  warn(message: string, ...args: any[]): void {
+  warn(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.WARN)) {
       const formattedMessage = this.formatMessage('WARN', message, ...args);
       if (this.config.enableConsole) {
@@ -103,7 +106,7 @@ class Logger {
     }
   }
 
-  info(message: string, ...args: any[]): void {
+  info(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.INFO)) {
       const formattedMessage = this.formatMessage('INFO', message, ...args);
       if (this.config.enableConsole) {
@@ -112,7 +115,7 @@ class Logger {
     }
   }
 
-  debug(message: string, ...args: any[]): void {
+  debug(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
       const formattedMessage = this.formatMessage('DEBUG', message, ...args);
       if (this.config.enableConsole) {
@@ -122,7 +125,7 @@ class Logger {
   }
 
   // Convenience method for backward compatibility
-  log(message: string, ...args: any[]): void {
+  log(message: string, ...args: unknown[]): void {
     this.info(message, ...args);
   }
 

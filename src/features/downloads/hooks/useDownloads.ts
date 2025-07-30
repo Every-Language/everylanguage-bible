@@ -22,7 +22,7 @@ export interface UseDownloadsReturn {
     fileName: string,
     options?: DownloadOptions & {
       addToMediaFiles?: boolean;
-      originalSearchResult?: any;
+      originalSearchResult?: Record<string, unknown>;
       mediaFileOptions?: DownloadToMediaOptions;
     }
   ) => Promise<DownloadItem>;
@@ -30,7 +30,7 @@ export interface UseDownloadsReturn {
     files: Array<{ filePath: string; fileName: string }>,
     options?: DownloadOptions & {
       addToMediaFiles?: boolean;
-      originalSearchResults?: any[];
+      originalSearchResults?: Record<string, unknown>[];
       mediaFileOptions?: DownloadToMediaOptions;
     }
   ) => Promise<void>;
@@ -132,7 +132,7 @@ export const useDownloads = (): UseDownloadsReturn => {
       fileName: string,
       options: DownloadOptions & {
         addToMediaFiles?: boolean;
-        originalSearchResult?: any;
+        originalSearchResult?: Record<string, unknown>;
         mediaFileOptions?: DownloadToMediaOptions;
       } = {}
     ): Promise<DownloadItem> => {
@@ -215,7 +215,7 @@ export const useDownloads = (): UseDownloadsReturn => {
       files: Array<{ filePath: string; fileName: string }>,
       options: DownloadOptions & {
         addToMediaFiles?: boolean;
-        originalSearchResults?: any[];
+        originalSearchResults?: Record<string, unknown>[];
         mediaFileOptions?: DownloadToMediaOptions;
       } = {}
     ): Promise<void> => {

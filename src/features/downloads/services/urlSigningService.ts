@@ -54,12 +54,13 @@ export class UrlSigningService {
       );
       return responseData as SignedUrlResponse;
     } catch (error: unknown) {
+      const err = error as Error;
       logger.error('🔐 [URL Signing] Failed to get signed URLs:', {
         error: error,
         errorType: typeof error,
-        errorConstructor: (error as any)?.constructor?.name,
-        errorMessage: (error as any)?.message || 'No message',
-        errorStack: (error as any)?.stack || 'No stack',
+        errorConstructor: err?.constructor?.name,
+        errorMessage: err?.message || 'No message',
+        errorStack: err?.stack || 'No stack',
       });
       throw error;
     }

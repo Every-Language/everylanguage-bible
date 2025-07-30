@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
+import { useTheme } from '@/shared/hooks';
 import { logger } from '@/shared/utils/logger';
 
 interface FileDownloadProgress {
@@ -23,167 +23,192 @@ interface DownloadProgressDisplayProps {
   downloadError: string | null;
 }
 
-export const DownloadProgressDisplay: React.FC<
-  DownloadProgressDisplayProps
-> = ({
-  isDownloading,
-  downloadProgress,
-  searchResults,
-  overallProgress,
-  completedFiles,
-  failedFiles,
-  downloadError,
-}) => {
-  const { theme } = useTheme();
+export const DownloadProgressDisplay: React.FC<DownloadProgressDisplayProps> =
+  memo(
+    ({
+      isDownloading,
+      downloadProgress,
+      searchResults,
+      overallProgress,
+      completedFiles,
+      failedFiles,
+      downloadError,
+    }) => {
+      const { theme } = useTheme();
 
-  // Debug logging
-  logger.debug('DownloadProgressDisplay render:', {
-    isDownloading,
-    downloadProgressLength: downloadProgress.length,
-    searchResultsLength: searchResults.length,
-    overallProgress,
-    completedFiles,
-    failedFiles,
-    downloadError,
-  });
+      // Debug logging - only log when there are actual changes
+      React.useEffect(() => {
+        if (downloadProgress.length > 0) {
+          logger.debug('DownloadProgressDisplay render:', {
+            isDownloading,
+            downloadProgressLength: downloadProgress.length,
+            searchResultsLength: searchResults.length,
+            overallProgress,
+            completedFiles,
+            failedFiles,
+            downloadError,
+          });
+        }
+      }, [
+        isDownloading,
+        downloadProgress.length,
+        searchResults.length,
+        overallProgress,
+        completedFiles,
+        failedFiles,
+        downloadError,
+      ]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'check-circle';
-      case 'failed':
-        return 'error';
-      case 'downloading':
-        return 'cloud-download';
-      default:
-        return 'schedule';
-    }
-  };
+      const getStatusIcon = (status: string) => {
+        switch (status) {
+          case 'completed':
+            return 'check-circle';
+          case 'failed':
+            return 'error';
+          case 'downloading':
+            return 'cloud-download';
+          default:
+            return 'schedule';
+        }
+      };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return theme.colors.success;
-      case 'failed':
-        return theme.colors.error;
-      case 'downloading':
-        return theme.colors.primary;
-      default:
-        return theme.colors.textSecondary;
-    }
-  };
+      const getStatusColor = (status: string) => {
+        switch (status) {
+          case 'completed':
+            return theme.colors.success;
+          case 'failed':
+            return theme.colors.error;
+          case 'downloading':
+            return theme.colors.primary;
+          default:
+            return theme.colors.textSecondary;
+        }
+      };
 
-  // Show progress display when downloading OR when there are progress items (even if not currently downloading)
-  if (downloadProgress.length === 0) {
-    return null;
-  }
+      // Show progress display when downloading OR when there are progress items (even if not currently downloading)
+      if (downloadProgress.length === 0) {
+        return null;
+      }
 
-  return (
-    <View
-      style={[
-        styles.downloadProgressContainer,
-        { backgroundColor: theme.colors.surfaceVariant },
-      ]}>
-      <View style={styles.overallProgressHeader}>
-        <Text style={[styles.progressTitle, { color: theme.colors.text }]}>
-          Download Progress
-        </Text>
-        <Text
-          style={[styles.progressStats, { color: theme.colors.textSecondary }]}>
-          {completedFiles}/{searchResults.length} completed
-          {failedFiles > 0 && ` • ${failedFiles} failed`}
-        </Text>
-      </View>
-
-      <View
-        style={[
-          styles.progressBarContainer,
-          { backgroundColor: theme.colors.border },
-        ]}>
+      return (
         <View
           style={[
-            styles.progressBar,
-            {
-              backgroundColor: theme.colors.primary,
-              width: `${overallProgress * 100}%`,
-            },
-          ]}
-        />
-      </View>
+            styles.downloadProgressContainer,
+            { backgroundColor: theme.colors.surfaceVariant },
+          ]}>
+          <View style={styles.overallProgressHeader}>
+            <Text style={[styles.progressTitle, { color: theme.colors.text }]}>
+              Download Progress
+            </Text>
+            <Text
+              style={[
+                styles.progressStats,
+                { color: theme.colors.textSecondary },
+              ]}>
+              {completedFiles}/{searchResults.length} completed
+              {failedFiles > 0 && ` • ${failedFiles} failed`}
+            </Text>
+          </View>
 
-      <Text
-        style={[
-          styles.progressPercentage,
-          { color: theme.colors.textSecondary },
-        ]}>
-        {Math.round(overallProgress * 100)}%
-      </Text>
+          <View
+            style={[
+              styles.progressBarContainer,
+              { backgroundColor: theme.colors.surfaceOverlay },
+            ]}>
+            <View
+              style={[
+                styles.progressBar,
+                {
+                  backgroundColor: theme.colors.primary,
+                  width: `${overallProgress * 100}%`,
+                },
+              ]}
+            />
+          </View>
 
-      <ScrollView
-        style={styles.fileProgressList}
-        showsVerticalScrollIndicator={false}>
-        {downloadProgress.map((file, index) => (
-          <View key={index} style={styles.fileProgressItem}>
-            <View style={styles.fileProgressHeader}>
+          <Text
+            style={[
+              styles.progressPercentage,
+              { color: theme.colors.textSecondary },
+            ]}>
+            {Math.round(overallProgress * 100)}%
+          </Text>
+
+          <ScrollView
+            style={styles.fileProgressList}
+            showsVerticalScrollIndicator={false}>
+            {downloadProgress.map((file, index) => (
+              <View
+                key={`${file.filePath}-${index}`}
+                style={styles.fileProgressItem}>
+                <View style={styles.fileProgressHeader}>
+                  <MaterialIcons
+                    name={
+                      getStatusIcon(
+                        file.status
+                      ) as keyof typeof MaterialIcons.glyphMap
+                    }
+                    size={16}
+                    color={getStatusColor(file.status)}
+                  />
+                  <Text style={[styles.fileName, { color: theme.colors.text }]}>
+                    {file.fileName}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.fileProgressText,
+                      { color: theme.colors.textSecondary },
+                    ]}>
+                    {Math.round(file.progress * 100)}%
+                  </Text>
+                </View>
+
+                {file.status === 'downloading' && (
+                  <View
+                    style={[
+                      styles.fileProgressBarContainer,
+                      { backgroundColor: theme.colors.surfaceOverlay },
+                    ]}>
+                    <View
+                      style={[
+                        styles.fileProgressBar,
+                        {
+                          backgroundColor: theme.colors.primary,
+                          width: `${file.progress * 100}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                )}
+
+                {file.error && (
+                  <Text
+                    style={[styles.fileError, { color: theme.colors.error }]}>
+                    {file.error}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+
+          {downloadError && (
+            <View style={styles.errorContainer}>
               <MaterialIcons
-                name={
-                  getStatusIcon(
-                    file.status
-                  ) as keyof typeof MaterialIcons.glyphMap
-                }
+                name='error'
                 size={16}
-                color={getStatusColor(file.status)}
+                color={theme.colors.error}
               />
-              <Text style={[styles.fileName, { color: theme.colors.text }]}>
-                {file.fileName}
-              </Text>
-              <Text
-                style={[
-                  styles.fileProgressText,
-                  { color: theme.colors.textSecondary },
-                ]}>
-                {Math.round(file.progress * 100)}%
+              <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                {downloadError}
               </Text>
             </View>
-
-            {file.status === 'downloading' && (
-              <View
-                style={[
-                  styles.fileProgressBarContainer,
-                  { backgroundColor: theme.colors.border },
-                ]}>
-                <View
-                  style={[
-                    styles.fileProgressBar,
-                    {
-                      backgroundColor: theme.colors.primary,
-                      width: `${file.progress * 100}%`,
-                    },
-                  ]}
-                />
-              </View>
-            )}
-
-            {file.error && (
-              <Text style={[styles.fileError, { color: theme.colors.error }]}>
-                {file.error}
-              </Text>
-            )}
-          </View>
-        ))}
-      </ScrollView>
-
-      {downloadError && (
-        <View style={styles.errorContainer}>
-          <MaterialIcons name='error' size={16} color={theme.colors.error} />
-          <Text style={[styles.errorText, { color: theme.colors.error }]}>
-            {downloadError}
-          </Text>
+          )}
         </View>
-      )}
-    </View>
+      );
+    }
   );
-};
+
+DownloadProgressDisplay.displayName = 'DownloadProgressDisplay';
 
 const styles = {
   downloadProgressContainer: {

@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { NetworkService } from '@/shared/services/network';
+import { useTheme } from '@/shared/hooks';
 
 interface NetworkStatusDisplayProps {
   isOnline: boolean;
@@ -34,11 +33,26 @@ export const NetworkStatusDisplay: React.FC<NetworkStatusDisplayProps> = ({
     if (isCheckingOnline) {
       return 'Checking internet connection...';
     }
-    return NetworkService.getNetworkStatusText({
-      isConnected: isConnected ?? false,
-      connectionType: connectionType ?? 'unknown',
-      isInternetReachable: isInternetReachable ?? false,
-    });
+
+    // Local implementation of network status text logic
+    if (!isConnected) {
+      return 'No network connection';
+    }
+    if (isInternetReachable === false) {
+      return 'No internet access';
+    }
+    switch (connectionType) {
+      case 'wifi':
+        return 'WiFi connected';
+      case 'cellular':
+        return 'Mobile data connected';
+      case 'bluetooth':
+        return 'Bluetooth connected';
+      case 'ethernet':
+        return 'Ethernet connected';
+      default:
+        return 'Network connected';
+    }
   };
 
   const getNetworkIcon = (): keyof typeof MaterialIcons.glyphMap => {
@@ -48,11 +62,22 @@ export const NetworkStatusDisplay: React.FC<NetworkStatusDisplayProps> = ({
     if (isCheckingOnline) {
       return 'hourglass-empty';
     }
-    return NetworkService.getNetworkIcon({
-      isConnected: isConnected ?? false,
-      connectionType: connectionType ?? 'unknown',
-      isInternetReachable: isInternetReachable ?? false,
-    });
+
+    // Local implementation of network icon logic
+    if (!isConnected) return 'cloud-off';
+    if (isInternetReachable === false) return 'wifi-off';
+    switch (connectionType) {
+      case 'wifi':
+        return 'wifi';
+      case 'cellular':
+        return 'signal-cellular-4-bar';
+      case 'bluetooth':
+        return 'bluetooth';
+      case 'ethernet':
+        return 'cable';
+      default:
+        return 'language';
+    }
   };
 
   const getNetworkStatusColor = () => {
@@ -62,14 +87,12 @@ export const NetworkStatusDisplay: React.FC<NetworkStatusDisplayProps> = ({
     if (isCheckingOnline) {
       return theme.colors.primary;
     }
-    return NetworkService.getNetworkStatusColor(
-      {
-        isConnected: isConnected ?? false,
-        connectionType: connectionType ?? 'unknown',
-        isInternetReachable: isInternetReachable ?? false,
-      },
-      theme
-    );
+
+    // Local implementation of network status color logic
+    if (!isConnected || isInternetReachable === false) {
+      return theme.colors.error;
+    }
+    return theme.colors.success;
   };
 
   if (!hasCheckedOnline) {

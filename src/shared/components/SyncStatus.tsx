@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useTheme } from '@/shared/context/ThemeContext';
-import { useSync } from '@/shared/context/SyncContext';
+import { useTheme } from '@/shared/hooks';
+import { useSync } from '@/shared/hooks';
+import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 import { useBackgroundSync } from '@/shared/hooks/useBackgroundSync';
 import { logger } from '@/shared/utils/logger';
 
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
+    borderTopColor: COLOR_VARIATIONS.BLACK_10,
   },
   progressText: {
     fontSize: 12,
