@@ -68,11 +68,15 @@ class VerseTextSyncService implements BaseSyncService {
     });
 
     if (this.isSyncing) {
-      logger.warn('VerseTextSync - Sync already in progress, throwing error');
-      throw new VerseTextSyncError(
-        'Verse text sync is already in progress',
-        'SYNC_IN_PROGRESS'
+      logger.info(
+        'VerseTextSync - Sync already in progress, skipping this request'
       );
+      return {
+        success: true,
+        tableName: 'verse_texts',
+        recordsSynced: 0,
+        warning: 'Verse text sync is already in progress',
+      };
     }
 
     this.isSyncing = true;

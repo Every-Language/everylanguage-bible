@@ -38,6 +38,7 @@ export interface SyncStore extends SyncState {
   clearLocalData: () => Promise<void>;
   getSyncMetadata: () => Promise<unknown>;
   checkForUpdates: () => Promise<{ needsUpdate: boolean; tables: string[] }>;
+  refreshHasLocalData: () => Promise<void>;
 }
 
 // Store
@@ -113,7 +114,13 @@ export const useSyncStore = create<SyncStore>()(
       },
 
       syncNow: async () => {
-        const { setSyncing, setSyncProgress, setError, isInitialized } = get();
+        const {
+          setSyncing,
+          setSyncProgress,
+          setError,
+          isInitialized,
+          setHasLocalData,
+        } = get();
 
         if (!isInitialized) {
           throw new Error('Database not initialized');
@@ -136,6 +143,10 @@ export const useSyncStore = create<SyncStore>()(
           const lastSync = await localDataService.getLastSyncedAt();
           set({ lastSyncAt: lastSync });
 
+          // Refresh hasLocalData state after successful sync
+          const hasData = await localDataService.isDataAvailable();
+          setHasLocalData(hasData);
+
           logger.info('SyncStore: Sync completed successfully');
         } catch (error) {
           const errorMessage =
@@ -150,7 +161,13 @@ export const useSyncStore = create<SyncStore>()(
       },
 
       forceFullSync: async () => {
-        const { setSyncing, setSyncProgress, setError, isInitialized } = get();
+        const {
+          setSyncing,
+          setSyncProgress,
+          setError,
+          isInitialized,
+          setHasLocalData,
+        } = get();
 
         if (!isInitialized) {
           throw new Error('Database not initialized');
@@ -172,6 +189,10 @@ export const useSyncStore = create<SyncStore>()(
           // Update last sync time
           const lastSync = await localDataService.getLastSyncedAt();
           set({ lastSyncAt: lastSync });
+
+          // Refresh hasLocalData state after successful sync
+          const hasData = await localDataService.isDataAvailable();
+          setHasLocalData(hasData);
 
           logger.info('SyncStore: Force full sync completed successfully');
         } catch (error) {
@@ -228,6 +249,11 @@ export const useSyncStore = create<SyncStore>()(
           logger.error('SyncStore: Failed to check for updates:', error);
           return { needsUpdate: false, tables: [] };
         }
+      },
+
+      refreshHasLocalData: async () => {
+        const hasData = await localDataService.isDataAvailable();
+        set({ hasLocalData: hasData });
       },
     }),
     {

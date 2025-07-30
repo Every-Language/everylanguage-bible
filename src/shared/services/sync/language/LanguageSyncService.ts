@@ -141,7 +141,17 @@ class LanguageSyncService implements BaseSyncService {
    */
   async syncAll(options: LanguageSyncOptions = {}): Promise<SyncResult[]> {
     if (this.isSyncing) {
-      throw new Error('Language sync is already in progress');
+      logger.info(
+        'Language sync is already in progress, skipping this request'
+      );
+      return [
+        {
+          success: true,
+          tableName: 'all',
+          recordsSynced: 0,
+          warning: 'Language sync is already in progress',
+        },
+      ];
     }
 
     this.isSyncing = true;

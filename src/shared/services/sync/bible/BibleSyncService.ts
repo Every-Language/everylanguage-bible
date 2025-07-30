@@ -273,7 +273,15 @@ class BibleSyncService implements BaseSyncService {
    */
   async syncAll(options: BibleSyncOptions = {}): Promise<SyncResult[]> {
     if (this.isSyncing) {
-      throw new Error('Bible sync is already in progress');
+      logger.info('Bible sync is already in progress, skipping this request');
+      return [
+        {
+          success: true,
+          tableName: 'all',
+          recordsSynced: 0,
+          warning: 'Sync is already in progress',
+        },
+      ];
     }
 
     this.isSyncing = true;

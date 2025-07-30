@@ -8,14 +8,17 @@ export interface SyncContextType {
   syncProgress: SyncProgress | null;
   lastSyncAt: string | null;
   hasLocalData: boolean;
+  error: string | null;
   initializeDatabase: () => Promise<void>;
   syncNow: () => Promise<void>;
   forceFullSync: () => Promise<void>;
   resetSyncTimestamp: () => void;
   clearLocalData: () => Promise<void>;
-  getSyncMetadata: () => Promise<Record<string, unknown>>;
+  getSyncMetadata: () => Promise<unknown>;
   checkForUpdates: () => Promise<{ needsUpdate: boolean; tables: string[] }>;
   setOnboardingMode: (isOnboarding: boolean) => void;
+  refreshHasLocalData: () => Promise<void>;
+  clearError: () => void;
 }
 
 /**
@@ -29,6 +32,7 @@ export const useSync = (): SyncContextType => {
     syncProgress,
     lastSyncAt,
     hasLocalData,
+    error,
     initializeDatabase,
     syncNow,
     forceFullSync,
@@ -37,6 +41,8 @@ export const useSync = (): SyncContextType => {
     getSyncMetadata,
     checkForUpdates,
     setOnboardingMode,
+    refreshHasLocalData,
+    clearError,
   } = useSyncStore();
 
   return {
@@ -45,6 +51,7 @@ export const useSync = (): SyncContextType => {
     syncProgress,
     lastSyncAt,
     hasLocalData,
+    error,
     initializeDatabase,
     syncNow,
     forceFullSync,
@@ -53,5 +60,7 @@ export const useSync = (): SyncContextType => {
     getSyncMetadata,
     checkForUpdates,
     setOnboardingMode,
+    refreshHasLocalData,
+    clearError,
   };
 };

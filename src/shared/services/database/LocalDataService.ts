@@ -168,8 +168,38 @@ export class LocalDataService {
   }
 
   async isDataAvailable(): Promise<boolean> {
-    const count = await this.getBooksCount();
-    return count > 0;
+    try {
+      const [booksCount, chaptersCount, versesCount] = await Promise.all([
+        this.getBooksCount(),
+        this.getChaptersCount(),
+        this.getVersesCount(),
+      ]);
+
+      // Check if we have a reasonable amount of data in all tables
+      const hasBooks = booksCount > 0;
+      const hasChapters = chaptersCount > 0;
+      const hasVerses = versesCount > 0;
+
+      // For a complete Bible, we expect:
+      // - At least 66 books (66 books in the Bible)
+      // - At least 1000 chapters (Bible has ~1189 chapters)
+      // - At least 30000 verses (Bible has ~31,102 verses)
+      const hasCompleteBooks = booksCount >= 66;
+      const hasCompleteChapters = chaptersCount >= 1000;
+      const hasCompleteVerses = versesCount >= 30000;
+
+      // Return true if we have at least some data in all tables
+      // and a reasonable amount of complete data
+      return (
+        hasBooks &&
+        hasChapters &&
+        hasVerses &&
+        (hasCompleteBooks || hasCompleteChapters || hasCompleteVerses)
+      );
+    } catch (error) {
+      logger.error('Error checking data availability:', error);
+      return false;
+    }
   }
 
   /**

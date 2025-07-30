@@ -5,6 +5,7 @@ import { useTheme } from '@/shared/hooks';
 import { useSync } from '@/shared/hooks/useSyncFromStore';
 import { useBackgroundSync } from '@/shared/hooks/useBackgroundSync';
 import { useNetworkState } from '@/shared/hooks/useNetworkState';
+import { logger } from '@/shared/utils/logger';
 
 interface SyncStatusPillProps {
   onPress?: () => void;
@@ -12,10 +13,38 @@ interface SyncStatusPillProps {
 
 export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ onPress }) => {
   const { theme } = useTheme();
-  const { isSyncing, syncProgress, hasLocalData, isInitialized } = useSync();
+  const { isSyncing, syncProgress, hasLocalData, isInitialized, syncNow } =
+    useSync();
 
-  const { hasRemoteChanges } = useBackgroundSync();
+  const { hasRemoteChanges, checkForRemoteChanges } = useBackgroundSync();
   const { isConnected, connectionType } = useNetworkState();
+
+  const handlePress = async () => {
+    if (onPress) {
+      onPress();
+    } else {
+      // Default sync behavior when no onPress is provided
+      try {
+        if (!isConnected) {
+          logger.warn('Cannot sync: No internet connection');
+          return;
+        }
+
+        if (isSyncing) {
+          logger.info('Sync already in progress');
+          return;
+        }
+
+        // Check for remote changes first
+        await checkForRemoteChanges();
+
+        // Perform sync
+        await syncNow();
+      } catch (error) {
+        logger.error('Sync failed:', error);
+      }
+    }
+  };
 
   const getConnectionIcon = (): keyof typeof MaterialIcons.glyphMap => {
     if (!isConnected) return 'cloud-off';
@@ -91,8 +120,8 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({ onPress }) => {
           borderColor: getStatusColor(),
         },
       ]}
-      onPress={onPress}
-      disabled={!onPress}>
+      onPress={handlePress}
+      disabled={isSyncing}>
       <MaterialIcons
         name={getConnectionIcon()}
         size={16}

@@ -330,6 +330,15 @@ export class BackgroundSyncService {
       if (syncedContent.length > 0) {
         const message = `Successfully synced: ${syncedContent.join(', ')}`;
         logger.info(message);
+
+        // Refresh hasLocalData state after successful sync
+        try {
+          const { useSyncStore } = await import('@/shared/store/syncStore');
+          await useSyncStore.getState().refreshHasLocalData();
+        } catch (error) {
+          logger.warn('Failed to refresh hasLocalData state:', error);
+        }
+
         return { success: true, message };
       } else {
         const message = 'All content is already up to date';

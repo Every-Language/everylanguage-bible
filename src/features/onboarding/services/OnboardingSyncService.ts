@@ -55,7 +55,15 @@ class OnboardingSyncService {
    */
   async performOnboardingSync(): Promise<OnboardingSyncResult> {
     if (this.isSyncing) {
-      throw new Error('Onboarding sync is already in progress');
+      logger.info(
+        'Onboarding sync is already in progress, skipping this request'
+      );
+      return {
+        success: true,
+        totalRecordsSynced: 0,
+        errors: ['Onboarding sync is already in progress'],
+        duration: 0,
+      };
     }
 
     this.isSyncing = true;
