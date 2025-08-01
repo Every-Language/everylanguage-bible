@@ -140,6 +140,7 @@ export const BackgroundDownloadsScreen: React.FC = () => {
         mediaState.currentTrack?.id === download.id &&
         !mediaState.isPlaying
       ) {
+        // Audio version validation is handled in the unified media player
         await mediaActions.play();
         // logger.info('Resumed audio file:', download.fileName);
         return;

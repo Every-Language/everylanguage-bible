@@ -28,8 +28,8 @@ export const useMediaSearch = () => {
 
   const searchMediaFiles = useCallback(
     async (chapterId: string, versionId?: string | number) => {
-      const VERSION_ID = 1;
-      const targetVersion = Number(versionId) || VERSION_ID;
+      // Use provided version ID or fallback to 1 if not specified
+      const targetVersion = versionId ? Number(versionId) : 1;
 
       setState(prev => ({
         ...prev,

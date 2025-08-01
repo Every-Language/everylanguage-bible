@@ -216,5 +216,20 @@
     "getSignedUrlsAndDownload": "Get Signed URLs & Download",
     "signingUrls": "Signing URLs...",
     "downloadingFiles": "Downloading Files..."
+  },
+  "onboarding": {
+    "welcome": "Welcome to",
+    "description": "Discover, read, and listen to the Bible in your preferred language. Access thousands of Bible versions, audio recordings, and study tools to deepen your spiritual journey.",
+    "setupChoice": "Choose how you'd like to set up your Bible app",
+    "selectLanguage": "Select Language",
+    "setupInfo": "This is just initial setup. You can add more Bible versions later in the app settings, both online and offline.",
+    "onlineSetup": {
+      "title": "Online Bible Setup",
+      "description": "Requires internet connection. Set up your Bible app with online content and streaming audio"
+    },
+    "offlineSetup": {
+      "title": "Offline Bible Setup",
+      "description": "No internet required. Import your own Bible files for offline use"
+    }
   }
 }

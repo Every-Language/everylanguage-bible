@@ -27,6 +27,8 @@ import {
 import { queryClient } from '@/shared/services/query/queryClient';
 import { bibleQueryKeys } from '@/features/bible/hooks/useBibleQueries';
 import { mediaFilesQueryKeys } from '@/features/media/hooks/useMediaFilesQueries';
+import { useCurrentVersions } from '@/features/languages/hooks';
+import { audioVersionValidationService } from '@/features/languages/services/audioVersionValidationService';
 
 // Query Keys for chapter audio info (for invalidation)
 const chapterAudioInfoQueryKeys = {
@@ -99,6 +101,12 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   // Background downloads hook
   const { isProcessing: backgroundProcessing, addBatchToBackgroundQueue } =
     useBackgroundDownloads();
+
+  // Audio version validation
+  const { currentAudioVersion } = useCurrentVersions();
+  const [audioVersionError, setAudioVersionError] = useState<string | null>(
+    null
+  );
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
@@ -248,8 +256,19 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     [networkError, mediaSearchError]
   );
   const canDownload = useMemo(
-    () => searchResults.length > 0 && !isSearching && isOnline,
-    [searchResults.length, isSearching, isOnline]
+    () =>
+      searchResults.length > 0 &&
+      !isSearching &&
+      isOnline &&
+      !audioVersionError &&
+      currentAudioVersion,
+    [
+      searchResults.length,
+      isSearching,
+      isOnline,
+      audioVersionError,
+      currentAudioVersion,
+    ]
   );
 
   const isDownloadDisabled = useMemo(
@@ -260,20 +279,57 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   // Check online capabilities and search for media files
   const handleOnlineCapabilitiesCheck = useCallback(async () => {
     try {
+      // Validate audio version before searching
+      const validation =
+        await audioVersionValidationService.validateVersionForChapter(
+          currentAudioVersion,
+          chapterId
+        );
+
+      if (!validation.isValid) {
+        setAudioVersionError(
+          validation.error || 'Audio version validation failed'
+        );
+        return;
+      }
+
+      setAudioVersionError(null);
+
       await ensureNetworkAvailable(async () => {
-        await searchMediaFiles(chapterId, versionId);
+        // Use selected audio version instead of hardcoded version
+        const targetVersionId = currentAudioVersion?.id || versionId;
+        await searchMediaFiles(chapterId, targetVersionId);
       });
     } catch (error) {
       logger.warn('Online capabilities check failed:', error);
     }
-  }, [ensureNetworkAvailable, searchMediaFiles, chapterId, versionId]);
+  }, [
+    ensureNetworkAvailable,
+    searchMediaFiles,
+    chapterId,
+    versionId,
+    currentAudioVersion,
+  ]);
 
   // Download all files
   const handleDownload = useCallback(async () => {
     if (searchResults.length === 0) return;
 
+    // Validate audio version before downloading
+    const validation =
+      await audioVersionValidationService.validateForDownload(
+        currentAudioVersion
+      );
+    if (!validation.isValid) {
+      setAudioVersionError(
+        validation.error || 'Audio version validation failed'
+      );
+      return;
+    }
+
     setIsDownloading(true);
     setDownloadError(null);
+    setAudioVersionError(null);
 
     try {
       logger.info('Starting download of files:', {
@@ -340,6 +396,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     chapterTitle,
     onClose,
     validMediaFiles,
+    currentAudioVersion,
   ]); // Remove unnecessary dependencies: backgroundInitialized, downloadFile, handleInitializeDownloadProgress, updateFileProgress
 
   // Check online capabilities when modal becomes visible
@@ -467,6 +524,24 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
             searchError={searchError}
             onFormatFileSize={formatFileSize}
           />
+
+          {/* Audio Version Error Display */}
+          {audioVersionError && (
+            <View
+              style={[
+                styles.errorContainer,
+                { backgroundColor: theme.colors.surface },
+              ]}>
+              <MaterialIcons
+                name='error-outline'
+                size={20}
+                color={theme.colors.error}
+              />
+              <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                {audioVersionError}
+              </Text>
+            </View>
+          )}
 
           {/* Download Progress Display */}
           <DownloadProgressDisplay
@@ -623,5 +698,17 @@ const styles = StyleSheet.create({
   processingText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
   },
 });

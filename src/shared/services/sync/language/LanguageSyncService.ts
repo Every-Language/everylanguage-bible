@@ -7,10 +7,12 @@ import type {
   SyncConfig,
 } from '../types';
 import type { SyncMetadata } from '../../database/schema';
+import { NetworkService } from '../../network/NetworkService';
 
 import { logger } from '../../../utils/logger';
 
 const databaseManager = DatabaseManager.getInstance();
+const networkService = NetworkService.getInstance();
 
 export interface LanguageSyncOptions extends SyncOptions {
   forceFullSync?: boolean;
@@ -152,6 +154,24 @@ class LanguageSyncService implements BaseSyncService {
           warning: 'Language sync is already in progress',
         },
       ];
+    }
+
+    // Check network connectivity first
+    try {
+      const isOnline = await networkService.checkOnlineCapabilities();
+      if (!isOnline) {
+        logger.warn('Language sync skipped: No internet connection available');
+        return [
+          {
+            success: false,
+            tableName: 'all',
+            recordsSynced: 0,
+            error: 'No internet connection available',
+          },
+        ];
+      }
+    } catch (networkError) {
+      logger.warn('Network check failed, proceeding with sync:', networkError);
     }
 
     this.isSyncing = true;

@@ -10,8 +10,6 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/hooks';
-import { onboardingSyncService } from '../services/OnboardingSyncService';
-import type { OnboardingSyncProgress } from '../services/OnboardingSyncService';
 import { logger } from '@/shared/utils/logger';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
@@ -111,11 +109,8 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
   const { theme } = useTheme();
   const [versions] = useState<BibleVersion[]>(sampleBibleVersions);
   const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState(0);
-  const [syncProgress, setSyncProgress] =
-    useState<OnboardingSyncProgress | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const handleVersionToggle = (versionId: string) => {
     setSelectedVersions(prev =>
@@ -128,45 +123,39 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
   const handleImport = async () => {
     if (selectedVersions.length === 0) return;
 
-    setIsImporting(true);
-    setImportProgress(0);
-    setSyncError(null);
+    setIsProcessing(true);
+    setProgress(0);
 
     try {
-      // Set up progress callback
-      onboardingSyncService.setProgressCallback(
-        (progress: OnboardingSyncProgress) => {
-          setSyncProgress(progress);
-          setImportProgress(progress.progress);
-        }
-      );
+      // Simulate processing steps
+      logger.info('Starting Bible version selection processing');
 
-      // Perform optimized onboarding sync
-      const result = await onboardingSyncService.performOnboardingSync();
+      // Step 1: Processing selection
+      setProgress(25);
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (result.success) {
-        logger.info(
-          `Onboarding sync completed successfully in ${result.duration}ms`
-        );
-        onComplete();
-      } else {
-        logger.error('Onboarding sync failed:', result.errors);
-        setSyncError(result.errors.join(', '));
-        // Still complete onboarding even with errors
-        setTimeout(() => {
-          onComplete();
-        }, 2000);
-      }
+      // Step 2: Preparing content
+      setProgress(50);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Step 3: Finalizing
+      setProgress(75);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Step 4: Complete
+      setProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      logger.info('Bible version selection completed successfully');
+      onComplete();
     } catch (error) {
-      logger.error('Import failed:', error);
-      setSyncError(error instanceof Error ? error.message : 'Import failed');
+      logger.error('Bible version selection failed:', error);
       // Still complete onboarding even with errors
       setTimeout(() => {
         onComplete();
       }, 2000);
     } finally {
-      setIsImporting(false);
-      onboardingSyncService.setProgressCallback(null);
+      setIsProcessing(false);
     }
   };
 
@@ -231,10 +220,10 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
   };
 
   const getProgressMessage = () => {
-    if (syncProgress) {
-      return syncProgress.message;
-    }
-    return 'Preparing Bible content...';
+    if (progress < 25) return 'Processing your selection...';
+    if (progress < 50) return 'Preparing Bible content...';
+    if (progress < 75) return 'Finalizing setup...';
+    return 'Setup complete!';
   };
 
   return (
@@ -254,16 +243,16 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
           </Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.colors.text }]}>
-          Import Bible Content
+          Offline Bible Setup
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          Select Bible versions to import and store locally
+          Import your Bible files for offline use
         </Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Bible Version Selection */}
-        {!isImporting && (
+        {!isProcessing && (
           <>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Available Bible Versions
@@ -273,14 +262,14 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
                 styles.sectionSubtitle,
                 { color: theme.colors.textSecondary },
               ]}>
-              Select the versions you want to download for offline use
+              Select the versions you want to use in the app
             </Text>
             {versions.map(renderBibleVersion)}
           </>
         )}
 
-        {/* Import Progress */}
-        {isImporting && (
+        {/* Processing Progress */}
+        {isProcessing && (
           <View style={styles.progressContainer}>
             <ActivityIndicator size='large' color={theme.colors.primary} />
             <Text style={[styles.progressText, { color: theme.colors.text }]}>
@@ -291,7 +280,7 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
                 style={[
                   styles.progressFill,
                   {
-                    width: `${importProgress}%`,
+                    width: `${progress}%`,
                     backgroundColor: theme.colors.primary,
                   },
                 ]}
@@ -302,22 +291,8 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
                 styles.progressPercentage,
                 { color: theme.colors.textSecondary },
               ]}>
-              {importProgress}%
+              {progress}%
             </Text>
-            {syncProgress?.recordsSynced !== undefined && (
-              <Text
-                style={[
-                  styles.recordsSynced,
-                  { color: theme.colors.textSecondary },
-                ]}>
-                Synced {syncProgress.recordsSynced.toLocaleString()} records
-              </Text>
-            )}
-            {syncError && (
-              <Text style={[styles.errorText, { color: theme.colors.error }]}>
-                {syncError}
-              </Text>
-            )}
           </View>
         )}
       </ScrollView>
@@ -329,14 +304,14 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
             styles.importButton,
             {
               backgroundColor:
-                selectedVersions.length > 0 && !isImporting
+                selectedVersions.length > 0 && !isProcessing
                   ? theme.colors.primary
                   : theme.colors.border,
             },
           ]}
           onPress={handleImport}
-          disabled={selectedVersions.length === 0 || isImporting}>
-          {isImporting ? (
+          disabled={selectedVersions.length === 0 || isProcessing}>
+          {isProcessing ? (
             <ActivityIndicator size='small' color={theme.colors.textInverse} />
           ) : (
             <Text
@@ -344,7 +319,7 @@ export const ImportBibleScreen: React.FC<ImportBibleScreenProps> = ({
                 styles.importButtonText,
                 { color: theme.colors.textInverse },
               ]}>
-              Import Selected ({selectedVersions.length})
+              Continue ({selectedVersions.length} selected)
             </Text>
           )}
         </TouchableOpacity>
@@ -474,15 +449,6 @@ const styles = StyleSheet.create({
   progressPercentage: {
     fontSize: 14,
     marginBottom: 8,
-  },
-  recordsSynced: {
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  errorText: {
-    fontSize: 14,
-    textAlign: 'center',
-    color: COLOR_VARIATIONS.ERROR_RED,
   },
   footer: {
     padding: 20,

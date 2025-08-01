@@ -21,7 +21,20 @@ export const OnboardingCard: React.FC<OnboardingCardProps> = ({
   disabled = false,
 }) => {
   const { theme } = useTheme();
-  const textColor = getContrastTextColor(backgroundColor, theme);
+
+  // Determine text color based on background
+  let textColor: string;
+  if (backgroundColor === theme.colors.primary) {
+    // For primary color, use inverse text
+    textColor = theme.colors.textInverse;
+  } else if (backgroundColor === theme.colors.secondary) {
+    // For secondary color, use regular text
+    textColor = theme.colors.text;
+  } else {
+    // Fallback to contrast calculation
+    textColor = getContrastTextColor(backgroundColor, theme);
+  }
+
   const iconBackgroundColor =
     textColor === theme.colors.text
       ? 'rgba(0, 0, 0, 0.1)'

@@ -166,6 +166,7 @@ export default [
       'coverage/',
       '*.config.js',
       '*.config.ts',
+      'scripts/',
     ],
   },
   prettierConfig,

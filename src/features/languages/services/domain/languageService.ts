@@ -10,6 +10,7 @@ import type {
 } from '../../types/entities';
 import type { LanguageEntityCache } from '../../../../shared/services/database/schema';
 import { logger } from '../../../../shared/utils/logger';
+import { NetworkService } from '@/shared/services/network/NetworkService';
 
 // Domain service errors
 export class LanguageServiceError extends Error {
@@ -300,25 +301,59 @@ class LanguageService implements LanguageServiceInterface {
 
   async syncLanguageEntities(): Promise<void> {
     try {
+      // Check network connectivity first
+      const networkService = NetworkService.getInstance();
+      const isOnline = await networkService.checkOnlineCapabilities();
+
+      if (!isOnline) {
+        throw new LanguageServiceError(
+          'No internet connection available. Please check your network connection and try again.',
+          'NETWORK_UNAVAILABLE',
+          { networkCheck: false }
+        );
+      }
+
       // Check if sync is needed
       const updateCheck = await languageSync.needsUpdate();
 
       if (updateCheck.needsUpdate) {
-        // Add timeout to prevent hanging
+        // Add timeout to prevent hanging - increased from 8s to 30s for better reliability
         const syncPromise = languageSync.syncAll();
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Language sync timeout')), 8000);
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  'Language sync timeout - please check your internet connection'
+                )
+              ),
+            30000
+          );
         });
 
         await Promise.race([syncPromise, timeoutPromise]);
       }
     } catch (error) {
       logger.error('Language entities sync failed:', error);
-      throw new LanguageServiceError(
-        'Failed to sync language entities',
-        'SYNC_FAILED',
-        { originalError: error }
-      );
+
+      // Provide more specific error messages based on error type
+      let errorMessage = 'Failed to sync language entities';
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          errorMessage =
+            'Language sync timed out. Please check your internet connection and try again.';
+        } else if (
+          error.message.includes('network') ||
+          error.message.includes('fetch')
+        ) {
+          errorMessage =
+            'Network error during language sync. Please check your internet connection.';
+        }
+      }
+
+      throw new LanguageServiceError(errorMessage, 'SYNC_FAILED', {
+        originalError: error,
+      });
     }
   }
 

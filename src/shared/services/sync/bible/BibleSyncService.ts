@@ -810,12 +810,12 @@ class BibleSyncService implements BaseSyncService {
 
         // Create placeholders for batch insert
         const placeholders = validatedBooks
-          .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+          .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?)')
           .join(', ');
 
         const query = `
         INSERT OR REPLACE INTO books (
-          id, book_number, name, testament, global_order, 
+          id, book_number, name, testament, chapters, global_order, 
           created_at, updated_at, synced_at
         ) VALUES ${placeholders}
       `;
@@ -826,6 +826,7 @@ class BibleSyncService implements BaseSyncService {
           book.book_number,
           book.name,
           book.testament, // Use validated testament
+          0, // chapters column - default to 0 since it's not in the remote data
           book.global_order || 0,
           book.created_at || new Date().toISOString(),
           book.updated_at || new Date().toISOString(),
@@ -864,7 +865,7 @@ class BibleSyncService implements BaseSyncService {
 
         // ✅ PERFORMANCE FIX: Batch insert for chapters
         const placeholders = validatedChapters
-          .map(() => '(?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+          .map(() => '(?, ?, ?, ?, ?, ?, ?, ?)')
           .join(', ');
 
         const query = `
@@ -926,7 +927,7 @@ class BibleSyncService implements BaseSyncService {
           if (batch.length === 0) continue;
 
           const placeholders = batch
-            .map(() => '(?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
+            .map(() => '(?, ?, ?, ?, ?, ?, ?)')
             .join(', ');
 
           const query = `

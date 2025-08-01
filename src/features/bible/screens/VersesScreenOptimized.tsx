@@ -19,6 +19,7 @@ import { PlayButton } from '@/shared/components';
 import { VerseCard } from '@/features/bible/components/VerseCard';
 import { useCurrentVersions } from '../../languages/hooks';
 import { useUnifiedMediaPlayer } from '../../media/hooks/useUnifiedMediaPlayer';
+import { useAudioVersionValidation } from '../../media/hooks/useAudioVersionValidation';
 import type { MediaTrack } from '@/shared/store/mediaPlayerStore';
 import type { Chapter, Verse } from '../types';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
@@ -43,6 +44,9 @@ export const VersesScreenOptimized: React.FC = () => {
   const { book, chapter } = route.params;
   const { currentTextVersion } = useCurrentVersions();
 
+  // Audio version validation
+  const { validateForDownload } = useAudioVersionValidation();
+
   // Download modal state
   const [showDownloadModal, setShowDownloadModal] = React.useState(false);
 
@@ -62,10 +66,25 @@ export const VersesScreenOptimized: React.FC = () => {
 
   // Check if media is available and show download modal if not
   React.useEffect(() => {
-    if (!audioLoading && audioInfo && !audioInfo.hasAudioFiles) {
-      setShowDownloadModal(true);
-    }
-  }, [audioInfo, audioLoading]);
+    const checkAudioAvailability = async () => {
+      if (!audioLoading && audioInfo && !audioInfo.hasAudioFiles) {
+        // Validate audio version before showing download modal
+        const isValidVersion = await validateForDownload(chapter.id);
+        if (isValidVersion) {
+          setShowDownloadModal(true);
+        } else {
+          // If no valid audio version, don't show download modal
+          // User needs to select an audio version first
+          logger.warn(
+            'No valid audio version selected for chapter:',
+            chapter.id
+          );
+        }
+      }
+    };
+
+    checkAudioAvailability();
+  }, [audioInfo, audioLoading, validateForDownload, chapter.id]);
 
   const styles = StyleSheet.create({
     container: {
@@ -210,7 +229,8 @@ export const VersesScreenOptimized: React.FC = () => {
     };
   };
 
-  const handlePlayChapter = () => {
+  const handlePlayChapter = async () => {
+    // Audio version validation is handled in the unified media player
     const mockTrack = createMockTrackForChapter();
     logger.log('Playing chapter:', chapter);
     logger.log('Mock track data:', mockTrack);
@@ -226,7 +246,8 @@ export const VersesScreenOptimized: React.FC = () => {
     logger.log('Share chapter:', chapter);
   };
 
-  const handlePlayVerse = (verse: Verse) => {
+  const handlePlayVerse = async (verse: Verse) => {
+    // Audio version validation is handled in the unified media player
     const mockTrack = createMockTrackForVerse(verse);
     logger.log('Playing verse:', verse);
     logger.log('Mock track data:', mockTrack);

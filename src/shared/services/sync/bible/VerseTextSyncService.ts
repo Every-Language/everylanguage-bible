@@ -60,173 +60,198 @@ class VerseTextSyncService implements BaseSyncService {
    */
   async syncVerseTextsForVersion(
     versionId: string,
-    options: VerseTextSyncOptions = {}
+    _options: VerseTextSyncOptions = {}
   ): Promise<SyncResult> {
-    logger.info('VerseTextSync - syncVerseTextsForVersion called:', {
-      versionId,
-      options,
-    });
-
     if (this.isSyncing) {
-      logger.info(
-        'VerseTextSync - Sync already in progress, skipping this request'
-      );
+      logger.warn('Verse text sync already in progress');
       return {
-        success: true,
+        success: false,
+        error: 'Sync already in progress',
         tableName: 'verse_texts',
         recordsSynced: 0,
-        warning: 'Verse text sync is already in progress',
       };
     }
 
     this.isSyncing = true;
-    const { batchSize = 500 } = options;
+    const startTime = Date.now();
+    const maxRetries = 3;
+    let retryCount = 0;
 
-    try {
-      await this.updateSyncStatus('verse_texts', 'syncing');
-
-      logger.info(
-        `VerseTextSync - Starting verse text sync for text_version: ${versionId}`
-      );
-
-      const lastSync = options.forceFullSync
-        ? '1970-01-01T00:00:00.000Z'
-        : await this.getLastSync('verse_texts');
-
-      logger.info(
-        `VerseTextSync - Last sync: ${lastSync}, Force full sync: ${options.forceFullSync}`
-      );
-
-      let allVerseTexts: Tables<'verse_texts'>[] = [];
-      let hasMoreData = true;
-      let lastFetchedId: string | null = null;
-      const mobileBatchSize = Math.min(batchSize, 2000); // Increased from 500 to 2000 for faster onboarding
-
-      while (hasMoreData) {
+    while (retryCount < maxRetries) {
+      try {
         logger.info(
-          `VerseTextSync - Fetching batch (limit: ${mobileBatchSize}, lastFetchedId: ${lastFetchedId})`
+          `Starting verse text sync for version: ${versionId} (attempt ${retryCount + 1}/${maxRetries})`
         );
 
-        // Build query based on version type
-        let query = supabase
+        // Update sync status
+        await this.updateSyncStatus('verse_texts', 'syncing');
+
+        // Get last sync time
+        const lastSync = await this.getLastSync('verse_texts');
+        logger.info('Last sync time:', lastSync);
+
+        // Fetch verse texts from Supabase
+        const { data: verseTexts, error: fetchError } = await supabase
           .from('verse_texts')
           .select('*')
+          .eq('text_version_id', versionId)
           .gte('updated_at', lastSync)
-          .eq('publish_status', 'published')
-          .is('deleted_at', null)
-          .order('updated_at', { ascending: true })
-          .order('id', { ascending: true })
-          .limit(mobileBatchSize);
+          .order('updated_at', { ascending: true });
 
-        // Filter by the specific version
-        logger.info(
-          `VerseTextSync - Filtering by text_version_id: ${versionId}`
-        );
-        query = query.eq('text_version_id', versionId);
-
-        if (lastFetchedId) {
-          query = query.gt('id', lastFetchedId);
-        }
-
-        logger.info(`VerseTextSync - Executing Supabase query...`);
-        const { data: remoteVerseTexts, error } = await query;
-
-        if (error) {
-          logger.error(`VerseTextSync - Supabase query error:`, error);
+        if (fetchError) {
+          logger.error('Error fetching verse texts:', fetchError);
+          await this.updateSyncStatus(
+            'verse_texts',
+            'error',
+            fetchError.message
+          );
           throw new VerseTextSyncError(
-            `Failed to fetch verse texts: ${error.message}`,
+            'Failed to fetch verse texts from server',
             'FETCH_ERROR',
-            { versionId, error }
+            { error: fetchError }
           );
         }
 
+        if (!verseTexts || verseTexts.length === 0) {
+          logger.info('No new verse texts to sync');
+          await this.updateSyncStatus('verse_texts', 'idle');
+          return {
+            success: true,
+            tableName: 'verse_texts',
+            recordsSynced: 0,
+          };
+        }
+
+        logger.info(`Found ${verseTexts.length} verse texts to sync`);
+
+        // Pre-validate the data before processing
+        const validVerseTexts = verseTexts.filter(verseText => {
+          const isValid =
+            verseText.id &&
+            verseText.verse_id &&
+            verseText.verse_text &&
+            typeof verseText.id === 'string' &&
+            typeof verseText.verse_id === 'string' &&
+            typeof verseText.verse_text === 'string';
+
+          if (!isValid) {
+            logger.warn('Skipping invalid verse text record:', {
+              id: verseText.id,
+              verse_id: verseText.verse_id,
+              has_text: !!verseText.verse_text,
+              text_length: verseText.verse_text?.length,
+            });
+          }
+
+          return isValid;
+        });
+
+        if (validVerseTexts.length === 0) {
+          logger.warn('No valid verse texts found after validation');
+          await this.updateSyncStatus('verse_texts', 'idle');
+          return {
+            success: true,
+            tableName: 'verse_texts',
+            recordsSynced: 0,
+          };
+        }
+
         logger.info(
-          `VerseTextSync - Query returned ${remoteVerseTexts?.length || 0} verse texts`
+          `Processing ${validVerseTexts.length} valid verse texts out of ${verseTexts.length} total`
         );
-        if (remoteVerseTexts && remoteVerseTexts.length > 0) {
-          const firstVerseText = remoteVerseTexts[0];
-          logger.info(`VerseTextSync - First verse text:`, {
-            id: firstVerseText?.id,
-            verse_id: firstVerseText?.verse_id,
-            text_version_id: firstVerseText?.text_version_id,
-            verse_text: firstVerseText?.verse_text?.substring(0, 50) + '...',
-          });
-        }
 
-        if (!remoteVerseTexts || remoteVerseTexts.length === 0) {
-          logger.info(`VerseTextSync - No more data, stopping fetch loop`);
-          hasMoreData = false;
-          break;
-        }
+        // Enhanced logging for debugging
+        logger.info('Sample verse text data:', {
+          sampleRecord: validVerseTexts[0]
+            ? {
+                id: validVerseTexts[0].id,
+                verse_id: validVerseTexts[0].verse_id,
+                text_version_id: validVerseTexts[0].text_version_id,
+                text_length: validVerseTexts[0].verse_text?.length,
+                publish_status: validVerseTexts[0].publish_status,
+                version: validVerseTexts[0].version,
+              }
+            : null,
+          totalRecords: validVerseTexts.length,
+          versionId,
+        });
 
-        allVerseTexts = allVerseTexts.concat(remoteVerseTexts);
+        // Upsert verse texts
+        await this.upsertVerseTexts(validVerseTexts);
 
-        const lastVerseText = remoteVerseTexts[remoteVerseTexts.length - 1];
-        if (lastVerseText?.id) {
-          lastFetchedId = lastVerseText.id;
-        }
+        // Update last sync time
+        const newSyncTime = new Date().toISOString();
+        await this.updateLastSync('verse_texts', newSyncTime);
 
-        if (remoteVerseTexts.length < mobileBatchSize) {
-          hasMoreData = false;
-        }
-      }
+        const duration = Date.now() - startTime;
+        logger.info(`Verse text sync completed successfully in ${duration}ms`, {
+          recordsProcessed: validVerseTexts.length,
+          versionId,
+          duration,
+          retryCount,
+        });
 
-      if (allVerseTexts.length === 0) {
         await this.updateSyncStatus('verse_texts', 'idle');
-        logger.info(`No verse texts found for text_version: ${versionId}`);
 
         const result: SyncResult = {
           success: true,
           tableName: 'verse_texts',
-          recordsSynced: 0,
+          recordsSynced: validVerseTexts.length,
         };
 
         this.notifyListeners(result);
         return result;
+      } catch (error) {
+        retryCount++;
+        const duration = Date.now() - startTime;
+
+        // Log the error with retry information
+        logger.error(
+          `Verse text sync failed (attempt ${retryCount}/${maxRetries}):`,
+          {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            errorCode:
+              error instanceof VerseTextSyncError ? error.code : 'UNKNOWN',
+            duration,
+            retryCount,
+            maxRetries,
+          }
+        );
+
+        // If this is the last retry, update status and return error
+        if (retryCount >= maxRetries) {
+          await this.updateSyncStatus(
+            'verse_texts',
+            'error',
+            error instanceof Error ? error.message : 'Unknown error'
+          );
+
+          const result: SyncResult = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            tableName: 'verse_texts',
+            recordsSynced: 0,
+          };
+
+          this.notifyListeners(result);
+          return result;
+        }
+
+        // Wait before retrying (exponential backoff)
+        const waitTime = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
+        logger.info(`Retrying verse text sync in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
       }
-
-      // Batch upsert for better performance
-      await this.upsertVerseTexts(allVerseTexts);
-
-      // Update sync metadata
-      const latestVerseText = allVerseTexts[allVerseTexts.length - 1];
-      if (latestVerseText?.updated_at) {
-        await this.updateLastSync('verse_texts', latestVerseText.updated_at);
-      }
-      await this.updateSyncStatus('verse_texts', 'idle');
-
-      logger.info(
-        `Synced ${allVerseTexts.length} verse texts for text_version: ${versionId}`
-      );
-
-      const result: SyncResult = {
-        success: true,
-        tableName: 'verse_texts',
-        recordsSynced: allVerseTexts.length,
-      };
-
-      this.notifyListeners(result);
-      return result;
-    } catch (error) {
-      logger.error('Verse texts sync failed:', error);
-      await this.updateSyncStatus(
-        'verse_texts',
-        'error',
-        error instanceof Error ? error.message : 'Unknown error'
-      );
-
-      const result: SyncResult = {
-        success: false,
-        tableName: 'verse_texts',
-        recordsSynced: 0,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-
-      this.notifyListeners(result);
-      return result;
-    } finally {
-      this.isSyncing = false;
     }
+
+    // This should never be reached, but just in case
+    this.isSyncing = false;
+    return {
+      success: false,
+      error: 'Max retries exceeded',
+      tableName: 'verse_texts',
+      recordsSynced: 0,
+    };
   }
 
   /**
@@ -272,32 +297,13 @@ class VerseTextSyncService implements BaseSyncService {
   async cleanupUnusedVerseTexts(): Promise<void> {
     try {
       const db = await databaseManager.getDatabase();
-
-      // Get all saved version IDs
-      const savedVersions = await db.getAllAsync<{ version_id: string }>(
-        'SELECT DISTINCT version_id FROM user_saved_versions WHERE version_type = ?',
-        ['text']
-      );
-
-      if (savedVersions.length === 0) {
-        // If no saved versions, clean up all verse texts
-        await db.execAsync('DELETE FROM verse_texts');
-        logger.info('Cleaned up all verse texts (no saved text versions)');
-        return;
-      }
-
-      const savedVersionIds = savedVersions.map(v => v.version_id);
-      const placeholders = savedVersionIds.map(() => '?').join(',');
-
-      // Delete verse texts that don't belong to any saved version
-      const query = `
+      await db.execAsync(`
         DELETE FROM verse_texts 
-        WHERE text_version_id NOT IN (${placeholders}) 
-        AND text_version_id IS NOT NULL
-      `;
-
-      await databaseManager.execSingle(query, savedVersionIds);
-      logger.info('Cleaned up unused verse texts');
+        WHERE text_version_id NOT IN (
+          SELECT version_id FROM user_saved_versions 
+          WHERE version_type = 'text'
+        )
+      `);
     } catch (error) {
       logger.error('Error cleaning up unused verse texts:', error);
       throw new VerseTextSyncError(
@@ -305,6 +311,257 @@ class VerseTextSyncService implements BaseSyncService {
         'CLEANUP_ERROR',
         { error }
       );
+    }
+  }
+
+  /**
+   * Clear and rebuild verse_texts table to fix corruption issues
+   */
+  async clearAndRebuildVerseTextsTable(): Promise<void> {
+    try {
+      logger.info('Clearing and rebuilding verse_texts table...');
+
+      const db = await databaseManager.getDatabase();
+
+      // Drop and recreate the table
+      await db.execAsync('DROP TABLE IF EXISTS verse_texts');
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS verse_texts (
+          id TEXT PRIMARY KEY,
+          verse_id TEXT NOT NULL,
+          text_version_id TEXT,
+          verse_text TEXT NOT NULL,
+          publish_status TEXT NOT NULL,
+          version INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (verse_id) REFERENCES verses (id) ON DELETE CASCADE
+        )
+      `);
+
+      // Reset sync metadata
+      await db.execAsync(`
+        DELETE FROM sync_metadata WHERE table_name = 'verse_texts'
+      `);
+      await db.execAsync(`
+        INSERT INTO sync_metadata (table_name, last_sync, total_records, sync_status, created_at, updated_at)
+        VALUES ('verse_texts', '1970-01-01T00:00:00.000Z', 0, 'idle', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `);
+
+      logger.info('Verse_texts table cleared and rebuilt successfully');
+    } catch (error) {
+      logger.error('Error clearing and rebuilding verse_texts table:', error);
+      throw new VerseTextSyncError(
+        'Failed to clear and rebuild verse_texts table',
+        'REBUILD_ERROR',
+        { error }
+      );
+    }
+  }
+
+  /**
+   * Diagnose and fix verse text sync issues
+   */
+  async diagnoseAndFixSyncIssues(): Promise<{
+    success: boolean;
+    issues: string[];
+    fixes: string[];
+  }> {
+    const issues: string[] = [];
+    const fixes: string[] = [];
+
+    try {
+      logger.info('Diagnosing verse text sync issues...');
+
+      const db = await databaseManager.getDatabase();
+
+      // Check if verse_texts table exists
+      const tableExists = await db.getFirstAsync<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='verse_texts'"
+      );
+
+      if (!tableExists || tableExists.count === 0) {
+        issues.push('verse_texts table does not exist');
+        fixes.push('Creating verse_texts table');
+        await this.clearAndRebuildVerseTextsTable();
+      }
+
+      // Check table structure
+      const tableInfo = await db.getAllAsync<{ name: string; type: string }>(
+        'PRAGMA table_info(verse_texts)'
+      );
+
+      const expectedColumns = [
+        'id',
+        'verse_id',
+        'text_version_id',
+        'verse_text',
+        'publish_status',
+        'version',
+        'created_at',
+        'updated_at',
+        'synced_at',
+      ];
+
+      const actualColumns = tableInfo.map(col => col.name);
+      const missingColumns = expectedColumns.filter(
+        col => !actualColumns.includes(col)
+      );
+
+      if (missingColumns.length > 0) {
+        issues.push(`Missing columns: ${missingColumns.join(', ')}`);
+        fixes.push('Rebuilding table with correct structure');
+        await this.clearAndRebuildVerseTextsTable();
+      }
+
+      // Check sync metadata
+      const syncMetadata = await db.getFirstAsync<{
+        last_sync: string;
+        sync_status: string;
+      }>(
+        'SELECT last_sync, sync_status FROM sync_metadata WHERE table_name = ?',
+        ['verse_texts']
+      );
+
+      if (!syncMetadata) {
+        issues.push('Missing sync metadata for verse_texts');
+        fixes.push('Creating sync metadata');
+        await db.execAsync(`
+          INSERT INTO sync_metadata (table_name, last_sync, total_records, sync_status, created_at, updated_at)
+          VALUES ('verse_texts', '1970-01-01T00:00:00.000Z', 0, 'idle', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `);
+      }
+
+      // Test a simple insert to verify the table works
+      try {
+        await db.runAsync(
+          `
+          INSERT OR REPLACE INTO verse_texts (
+            id, verse_id, text_version_id, verse_text,
+            publish_status, version, created_at, updated_at, synced_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `,
+          [
+            'test-id',
+            'test-verse-id',
+            'test-version-id',
+            'test text',
+            'published',
+            1,
+            new Date().toISOString(),
+            new Date().toISOString(),
+          ]
+        );
+
+        // Clean up test data
+        await db.runAsync('DELETE FROM verse_texts WHERE id = ?', ['test-id']);
+
+        logger.info('Table structure test passed');
+      } catch (testError) {
+        issues.push(
+          `Table structure test failed: ${testError instanceof Error ? testError.message : 'Unknown error'}`
+        );
+        fixes.push('Rebuilding table due to structure issues');
+        await this.clearAndRebuildVerseTextsTable();
+      }
+
+      logger.info('Verse text sync diagnosis completed', { issues, fixes });
+
+      return {
+        success: issues.length === 0,
+        issues,
+        fixes,
+      };
+    } catch (error) {
+      logger.error('Error during verse text sync diagnosis:', error);
+      issues.push(
+        `Diagnosis failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      return {
+        success: false,
+        issues,
+        fixes: ['Manual intervention required'],
+      };
+    }
+  }
+
+  /**
+   * Emergency fix for database transaction errors
+   * This method can be called when encountering the ERR_INTERNAL_SQLITE_ERROR
+   */
+  async emergencyFixTransactionError(): Promise<{
+    success: boolean;
+    message: string;
+    actions: string[];
+  }> {
+    try {
+      logger.info('Starting emergency fix for verse text transaction error...');
+
+      const actions: string[] = [];
+
+      // First, try to diagnose the issue
+      const diagnosis = await this.diagnoseAndFixSyncIssues();
+      actions.push(...diagnosis.fixes);
+
+      if (!diagnosis.success) {
+        // If diagnosis shows issues, rebuild the table
+        logger.warn(
+          'Database issues detected, rebuilding verse_texts table...'
+        );
+        await this.clearAndRebuildVerseTextsTable();
+        actions.push('Rebuilt verse_texts table due to corruption');
+      }
+
+      // Test the fix by trying a simple operation
+      try {
+        const db = await databaseManager.getDatabase();
+        await db.runAsync(
+          `
+          INSERT OR REPLACE INTO verse_texts (
+            id, verse_id, text_version_id, verse_text,
+            publish_status, version, created_at, updated_at, synced_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `,
+          [
+            'emergency-test-id',
+            'emergency-test-verse',
+            'emergency-test-version',
+            'Emergency test text',
+            'published',
+            1,
+            new Date().toISOString(),
+            new Date().toISOString(),
+          ]
+        );
+
+        // Clean up test data
+        await db.runAsync('DELETE FROM verse_texts WHERE id = ?', [
+          'emergency-test-id',
+        ]);
+        actions.push('Verified database operations work correctly');
+
+        logger.info('Emergency fix completed successfully');
+        return {
+          success: true,
+          message: 'Database transaction error has been fixed',
+          actions,
+        };
+      } catch (testError) {
+        logger.error('Emergency fix verification failed:', testError);
+        return {
+          success: false,
+          message: 'Database is still corrupted after fix attempt',
+          actions: [...actions, 'Manual database reset required'],
+        };
+      }
+    } catch (error) {
+      logger.error('Emergency fix failed:', error);
+      return {
+        success: false,
+        message: 'Emergency fix failed',
+        actions: ['Manual intervention required'],
+      };
     }
   }
 
@@ -322,7 +579,52 @@ class VerseTextSyncService implements BaseSyncService {
       const batch = verseTexts.slice(i, i + BATCH_SIZE);
 
       await databaseManager.transaction(async () => {
-        const placeholders = batch
+        // Validate and clean the batch data
+        const validatedBatch = batch
+          .map(verseText => {
+            try {
+              // Validate required fields
+              if (
+                !verseText.id ||
+                !verseText.verse_id ||
+                !verseText.verse_text
+              ) {
+                logger.warn('Skipping invalid verse text:', {
+                  id: verseText.id,
+                  verse_id: verseText.verse_id,
+                  has_text: !!verseText.verse_text,
+                });
+                return null;
+              }
+
+              // Clean and validate the data
+              return {
+                id: verseText.id.trim(),
+                verse_id: verseText.verse_id.trim(),
+                text_version_id: verseText.text_version_id?.trim() || null,
+                verse_text: verseText.verse_text.trim(),
+                publish_status: verseText.publish_status?.trim() || 'published',
+                version:
+                  typeof verseText.version === 'number' && verseText.version > 0
+                    ? verseText.version
+                    : 1,
+                created_at: verseText.created_at || new Date().toISOString(),
+                updated_at: verseText.updated_at || new Date().toISOString(),
+              };
+            } catch (error) {
+              logger.warn('Error validating verse text data:', error);
+              return null;
+            }
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null);
+
+        if (validatedBatch.length === 0) {
+          logger.warn('No valid verse texts to insert after validation');
+          return;
+        }
+
+        // Create placeholders for each record (8 parameters per record, excluding synced_at which uses CURRENT_TIMESTAMP)
+        const placeholders = validatedBatch
           .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)')
           .join(', ');
 
@@ -333,16 +635,66 @@ class VerseTextSyncService implements BaseSyncService {
           ) VALUES ${placeholders}
         `;
 
-        const params = batch.flatMap(verseText => [
+        // Flatten the parameters for each record (8 parameters per record)
+        const params = validatedBatch.flatMap(verseText => [
           verseText.id,
           verseText.verse_id,
           verseText.text_version_id,
           verseText.verse_text,
           verseText.publish_status,
           verseText.version,
-          verseText.created_at || new Date().toISOString(),
-          verseText.updated_at || new Date().toISOString(),
+          verseText.created_at,
+          verseText.updated_at,
+          // Note: synced_at is handled by CURRENT_TIMESTAMP in the SQL
         ]);
+
+        // Debug logging to verify parameter count
+        const expectedPlaceholders = validatedBatch.length * 8;
+        const actualParams = params.length;
+
+        if (expectedPlaceholders !== actualParams) {
+          logger.error('Parameter count mismatch detected:', {
+            expectedPlaceholders,
+            actualParams,
+            batchSize: validatedBatch.length,
+            query: query.substring(0, 200) + '...',
+            paramsCount: params.length,
+            sampleParams: params.slice(0, 8), // Log first 8 params for debugging
+          });
+          throw new VerseTextSyncError(
+            `Parameter count mismatch: expected ${expectedPlaceholders}, got ${actualParams}`,
+            'PARAMETER_MISMATCH',
+            {
+              expectedPlaceholders,
+              actualParams,
+              batchSize: validatedBatch.length,
+            }
+          );
+        }
+
+        // Additional validation: ensure no undefined or null values in critical fields
+        const hasInvalidParams = params.some((param, index) => {
+          const fieldIndex = index % 8;
+          const isCriticalField =
+            fieldIndex === 0 || fieldIndex === 1 || fieldIndex === 3; // id, verse_id, verse_text
+          return (
+            isCriticalField &&
+            (param === undefined || param === null || param === '')
+          );
+        });
+
+        if (hasInvalidParams) {
+          logger.error('Invalid parameters detected in verse text batch:', {
+            batchSize: validatedBatch.length,
+            paramsCount: params.length,
+            sampleParams: params.slice(0, 16), // Log first 16 params for debugging
+          });
+          throw new VerseTextSyncError(
+            'Invalid parameters detected in verse text batch',
+            'INVALID_PARAMETERS',
+            { batchSize: validatedBatch.length, paramsCount: params.length }
+          );
+        }
 
         await databaseManager.execSingle(query, params);
       });

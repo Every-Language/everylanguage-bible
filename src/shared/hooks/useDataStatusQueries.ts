@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { localDataService } from '../services/database/LocalDataService';
-import { useSync } from './index';
+import { useSync } from './useSyncFromStore';
 
 // Data Status Query Keys
 export const dataStatusQueryKeys = {

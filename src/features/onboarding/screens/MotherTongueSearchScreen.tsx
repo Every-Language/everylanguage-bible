@@ -9,11 +9,10 @@ import {
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/hooks';
 import { useNetworkForAction } from '@/shared/hooks/useNetworkState';
-import { NoInternetModal, SyncProgressModal } from '@/shared/components';
+import { LanguageHierarchyBrowser } from '@/features/languages/components/LanguageHierarchyBrowser';
+import { NoInternetModal } from '@/shared/components';
 import { logger } from '@/shared/utils/logger';
-import { LanguageHierarchyBrowser } from '@/features/languages/components';
-import { useCurrentVersions } from '@/features/languages/hooks';
-import {
+import type {
   AudioVersion,
   TextVersion,
   LanguageEntity,
@@ -29,20 +28,17 @@ export const MotherTongueSearchScreen: React.FC<
   MotherTongueSearchScreenProps
 > = ({ onBack, onComplete }) => {
   const { theme } = useTheme();
-  const { isOnline, isChecking, ensureNetworkAvailable, retryAndExecute } =
+  const { isOnline, ensureNetworkAvailable, retryAndExecute } =
     useNetworkForAction();
 
-  // Language selection state
-  const {
-    currentAudioVersion,
-    currentTextVersion,
-    setAudioVersion,
-    setTextVersion,
-  } = useCurrentVersions();
+  // State for version selection
+  const [currentAudioVersion, setCurrentAudioVersion] =
+    useState<AudioVersion | null>(null);
+  const [currentTextVersion, setCurrentTextVersion] =
+    useState<TextVersion | null>(null);
 
-  // Modal states
+  // State for modals
   const [showNoInternetModal, setShowNoInternetModal] = useState(false);
-  const [showSyncProgressModal, setShowSyncProgressModal] = useState(false);
   const [showAudioVersionBrowser, setShowAudioVersionBrowser] = useState(false);
   const [showTextVersionBrowser, setShowTextVersionBrowser] = useState(false);
 
@@ -50,61 +46,57 @@ export const MotherTongueSearchScreen: React.FC<
   useEffect(() => {
     logger.debug('MotherTongueSearchScreen: Network state debug:', {
       isOnline,
-      isChecking,
       timestamp: new Date().toISOString(),
     });
-  }, [isOnline, isChecking]);
+  }, [isOnline]);
 
   // Check for internet connectivity when component mounts
   useEffect(() => {
-    if (!isOnline && !isChecking) {
+    if (!isOnline) {
       logger.debug(
         'MotherTongueSearchScreen: No internet detected, showing modal'
       );
       setShowNoInternetModal(true);
     } else {
       logger.debug(
-        'MotherTongueSearchScreen: Internet available or checking, hiding modal'
+        'MotherTongueSearchScreen: Internet available, hiding modal'
       );
       setShowNoInternetModal(false);
     }
-  }, [isOnline, isChecking]);
+  }, [isOnline]);
 
   const handleAudioVersionPress = () => {
-    if (!isOnline) {
-      setShowNoInternetModal(true);
-      return;
-    }
     setShowAudioVersionBrowser(true);
   };
 
   const handleTextVersionPress = () => {
-    if (!isOnline) {
-      setShowNoInternetModal(true);
-      return;
-    }
     setShowTextVersionBrowser(true);
   };
 
   const handleAudioVersionSelect = (
-    _version: AudioVersion | TextVersion,
-    _type: 'audio' | 'text'
+    version: AudioVersion | TextVersion,
+    type: 'audio' | 'text'
   ) => {
-    setAudioVersion(_version as AudioVersion);
+    // Handle audio version selection
+    if (type === 'audio') {
+      setCurrentAudioVersion(version as AudioVersion);
+    }
     setShowAudioVersionBrowser(false);
   };
 
   const handleTextVersionSelect = (
-    _version: AudioVersion | TextVersion,
-    _type: 'audio' | 'text'
+    version: AudioVersion | TextVersion,
+    type: 'audio' | 'text'
   ) => {
-    setTextVersion(_version as TextVersion);
+    // Handle text version selection
+    if (type === 'text') {
+      setCurrentTextVersion(version as TextVersion);
+    }
     setShowTextVersionBrowser(false);
   };
 
   const handleLanguageSelect = (_language: LanguageEntity) => {
-    // This would be handled by the LanguageHierarchyBrowser
-    // We don't need to do anything here as the browser will show available versions
+    // Handle language selection
   };
 
   const handleContinue = async () => {
@@ -112,8 +104,8 @@ export const MotherTongueSearchScreen: React.FC<
       try {
         // Ensure network is available before proceeding
         await ensureNetworkAvailable(() => {
-          // Show sync progress modal instead of immediately completing
-          setShowSyncProgressModal(true);
+          // Complete onboarding directly
+          onComplete();
         });
       } catch (error) {
         logger.debug(
@@ -130,16 +122,12 @@ export const MotherTongueSearchScreen: React.FC<
       // Use the retry and execute method
       await retryAndExecute(() => {
         setShowNoInternetModal(false);
+        onComplete();
       });
     } catch (error) {
       logger.debug('MotherTongueSearchScreen: Retry failed:', error);
       // Modal will stay open if retry fails
     }
-  };
-
-  const handleGetStarted = () => {
-    // Navigate to home screen when sync is complete
-    onComplete();
   };
 
   const canContinue = currentAudioVersion && currentTextVersion;
@@ -244,10 +232,10 @@ export const MotherTongueSearchScreen: React.FC<
           </Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.colors.text }]}>
-          Select Your Bible Versions
+          Online Bible Setup
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          Choose your preferred text and audio versions
+          Choose your preferred text and audio versions for online streaming
         </Text>
       </View>
 
@@ -345,12 +333,6 @@ export const MotherTongueSearchScreen: React.FC<
         visible={showNoInternetModal && !isOnline}
         onRetry={handleRetryConnection}
         onClose={() => setShowNoInternetModal(false)}
-      />
-
-      <SyncProgressModal
-        visible={showSyncProgressModal}
-        onClose={() => setShowSyncProgressModal(false)}
-        onGetStarted={handleGetStarted}
       />
 
       {/* Language Hierarchy Browser for Text Versions */}

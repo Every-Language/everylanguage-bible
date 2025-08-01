@@ -3,6 +3,7 @@ import { useMediaPlayer } from '@/shared/hooks/useMediaPlayerFromStore';
 import { audioService, type AudioServiceState } from '../services/AudioService';
 import { MediaTrack as MediaFeatureTrack } from '../types';
 import { logger } from '@/shared/utils/logger';
+import { useAudioVersionValidation } from './useAudioVersionValidation';
 
 // Type adapter to convert between MediaTrack types
 type MediaPlayerTrack = {
@@ -98,6 +99,7 @@ export const useUnifiedMediaPlayer = (
 ): { state: UnifiedMediaPlayerState; actions: UnifiedMediaPlayerActions } => {
   const { state: storeState, actions: storeActions } = useMediaPlayer();
   const { onError } = options;
+  const { validateForPlayback } = useAudioVersionValidation();
 
   // Initialize audio service state with current AudioService state
   const [audioServiceState, setAudioServiceState] = useState<AudioServiceState>(
@@ -261,6 +263,15 @@ export const useUnifiedMediaPlayer = (
 
       // Playback controls
       play: async () => {
+        // Validate audio version before playing
+        const isValidVersion = await validateForPlayback();
+        if (!isValidVersion) {
+          const errorMessage =
+            'Please select an audio version before playing audio.';
+          onError?.(errorMessage);
+          return;
+        }
+
         // Optimistic UI update - update store state immediately
         storeActions.play();
 
@@ -361,7 +372,13 @@ export const useUnifiedMediaPlayer = (
       // Error handling
       clearError: storeActions.clearError,
     }),
-    [storeActions, options.autoPlay, onError, storeState.currentTrack]
+    [
+      storeActions,
+      options.autoPlay,
+      onError,
+      storeState.currentTrack,
+      validateForPlayback,
+    ]
   );
 
   return {

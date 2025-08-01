@@ -97,7 +97,7 @@ export const createLanguageHierarchySlice: StateCreator<
 
   // Actions
   loadLanguageHierarchy: async (retryCount = 0) => {
-    const maxRetries = 2;
+    const maxRetries = 3; // Increased from 2 to 3
 
     try {
       set({ isLoadingHierarchy: true, hierarchyError: null });
@@ -147,10 +147,18 @@ export const createLanguageHierarchySlice: StateCreator<
         `No cached language data, performing initial sync... (attempt ${retryCount + 1})`
       );
 
-      // Add a timeout for the sync operation to prevent hanging
+      // Add a timeout for the sync operation to prevent hanging - increased from 10s to 30s
       const syncPromise = languageService.getLanguageHierarchy();
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Language sync timeout')), 10000);
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                'Language sync timeout - please check your internet connection'
+              )
+            ),
+          30000
+        );
       });
 
       const freshHierarchy = await Promise.race([syncPromise, timeoutPromise]);
@@ -185,51 +193,42 @@ export const createLanguageHierarchySlice: StateCreator<
         })
         .catch((error: unknown) => {
           logger.error('Background sync failed:', error);
+
+          // Provide more specific error messages
+          let errorMessage =
+            'Failed to sync language data. Please check your internet connection.';
+          if (error instanceof Error) {
+            if (error.message.includes('timeout')) {
+              errorMessage =
+                'Language sync timed out. Please check your internet connection and try again.';
+            } else if (
+              error.message.includes('network') ||
+              error.message.includes('fetch')
+            ) {
+              errorMessage =
+                'Network error during language sync. Please check your internet connection.';
+            }
+          }
+
           set({
-            hierarchyError:
-              'Failed to sync language data. Please check your internet connection.',
+            hierarchyError: errorMessage,
           });
         });
     } catch (error) {
-      logger.error(
-        `Error loading language hierarchy (attempt ${retryCount + 1}):`,
-        error
-      );
+      logger.error('Error loading language hierarchy:', error);
 
-      // Retry logic for certain types of errors
-      if (retryCount < maxRetries && error instanceof Error) {
-        const isRetryableError =
-          error.message.includes('timeout') ||
-          error.message.includes('network') ||
-          error.message.includes('fetch') ||
-          error.message.includes('connection');
-
-        if (isRetryableError) {
-          logger.info(
-            `Retrying language hierarchy load (${retryCount + 1}/${maxRetries})...`
-          );
-          // Wait a bit before retrying
-          await new Promise(resolve =>
-            setTimeout(resolve, 1000 * (retryCount + 1))
-          );
-          return get().loadLanguageHierarchy(retryCount + 1);
-        }
-      }
-
-      // Provide user-friendly error message
+      // Provide more specific error messages
       let errorMessage = 'Failed to load language hierarchy';
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {
           errorMessage =
-            'Language data is taking longer than expected. Please try again.';
+            'Language sync timed out. Please check your internet connection and try again.';
         } else if (
           error.message.includes('network') ||
           error.message.includes('fetch')
         ) {
           errorMessage =
-            'Unable to load language data. Please check your internet connection.';
-        } else {
-          errorMessage = error.message;
+            'Network error during language sync. Please check your internet connection.';
         }
       }
 
@@ -237,7 +236,18 @@ export const createLanguageHierarchySlice: StateCreator<
         isLoadingHierarchy: false,
         hierarchyError: errorMessage,
       });
-      throw error;
+
+      // Retry with exponential backoff
+      if (retryCount < maxRetries) {
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        logger.log(
+          `Retrying language hierarchy load in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`
+        );
+
+        setTimeout(() => {
+          get().loadLanguageHierarchy(retryCount + 1);
+        }, delay);
+      }
     }
   },
 

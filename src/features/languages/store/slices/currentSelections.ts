@@ -175,10 +175,63 @@ export const createCurrentSelectionsSlice: StateCreator<
       );
     } catch (error) {
       logger.error('🔄 Sync - Failed to sync verse texts:', error);
-      set({
-        isSyncingVerseTexts: false,
-        verseTextSyncError: 'Failed to sync verse texts',
-      });
+
+      // Check if this is a database transaction error that we can fix
+      const errorMessage = error instanceof Error ? error.message : '';
+      const isTransactionError =
+        errorMessage.includes('TRANSACTION_FAILED') ||
+        errorMessage.includes('ERR_INTERNAL_SQLITE_ERROR') ||
+        errorMessage.includes('SINGLE_QUERY_FAILED');
+
+      if (isTransactionError) {
+        logger.warn(
+          '🔄 Sync - Detected database transaction error, attempting emergency fix...'
+        );
+
+        try {
+          const verseTextSyncService = VerseTextSyncService.getInstance();
+          const fixResult =
+            await verseTextSyncService.emergencyFixTransactionError();
+
+          if (fixResult.success) {
+            logger.info('🔄 Sync - Emergency fix successful, retrying sync...');
+
+            // Retry the sync after the fix
+            await verseTextSyncService.syncVerseTextsForVersion(
+              currentTextVersion.id
+            );
+
+            set({
+              isSyncingVerseTexts: false,
+              lastVerseTextSync: new Date().toISOString(),
+              verseTextSyncError: null,
+            });
+
+            logger.log(
+              `🔄 Sync - Successfully synced verse texts for ${currentTextVersion.name} after emergency fix`
+            );
+            return;
+          } else {
+            logger.error('🔄 Sync - Emergency fix failed:', fixResult.message);
+            set({
+              isSyncingVerseTexts: false,
+              verseTextSyncError: `Database error: ${fixResult.message}`,
+            });
+          }
+        } catch (fixError) {
+          logger.error('🔄 Sync - Emergency fix attempt failed:', fixError);
+          set({
+            isSyncingVerseTexts: false,
+            verseTextSyncError: 'Database error: Emergency fix failed',
+          });
+        }
+      } else {
+        // Regular error handling
+        set({
+          isSyncingVerseTexts: false,
+          verseTextSyncError: 'Failed to sync verse texts',
+        });
+      }
     }
   },
 

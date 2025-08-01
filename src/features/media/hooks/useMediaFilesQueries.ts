@@ -4,7 +4,7 @@ import {
   MediaFileFilters,
   MediaFileSort,
 } from '@/shared/services/database/MediaFilesService';
-import { useSync } from '@/shared/hooks';
+import { useSync } from '@/shared/hooks/useSyncFromStore';
 
 // Media Files Query Keys
 export const mediaFilesQueryKeys = {
