@@ -37,12 +37,18 @@ Add these secrets to your GitHub repository:
 
 #### Required Secrets
 
-| Secret Name                  | Description                          | How to Find                                                  |
-| ---------------------------- | ------------------------------------ | ------------------------------------------------------------ |
-| `POWERSYNC_API_TOKEN`        | Your PowerSync Personal Access Token | PowerSync Dashboard → Account Settings → API Tokens          |
-| `POWERSYNC_PROJECT_ID`       | Your PowerSync Project ID            | PowerSync Dashboard → Projects → Copy Project ID             |
-| `POWERSYNC_DEV_INSTANCE_ID`  | Development PowerSync Instance ID    | PowerSync Dashboard → Dev Instance → Settings → Instance ID  |
-| `POWERSYNC_PROD_INSTANCE_ID` | Production PowerSync Instance ID     | PowerSync Dashboard → Prod Instance → Settings → Instance ID |
+| Secret Name                  | Description                                            | How to Find                                                  |
+| ---------------------------- | ------------------------------------------------------ | ------------------------------------------------------------ |
+| `POWERSYNC_API_TOKEN`        | Your PowerSync Personal Access Token                   | PowerSync Dashboard → Account Settings → API Tokens          |
+| `POWERSYNC_PROJECT_ID`       | Your PowerSync Project ID (same for both environments) | PowerSync Dashboard → Projects → Copy Project ID             |
+| `POWERSYNC_DEV_INSTANCE_ID`  | Development PowerSync Instance ID                      | PowerSync Dashboard → Dev Instance → Settings → Instance ID  |
+| `POWERSYNC_PROD_INSTANCE_ID` | Production PowerSync Instance ID                       | PowerSync Dashboard → Prod Instance → Settings → Instance ID |
+
+**Note:** The workflow maps these to PowerSync CLI environment variables:
+
+- `POWERSYNC_API_TOKEN` → `AUTH_TOKEN`
+- `POWERSYNC_PROJECT_ID` → `PROJECT_ID`
+- `POWERSYNC_*_INSTANCE_ID` → `INSTANCE_ID`
 
 ### How to Set Up Secrets
 
@@ -99,21 +105,17 @@ Add these secrets to your GitHub repository:
 ### Method 3: Local CLI Testing
 
 ```bash
-# Install PowerSync CLI
-npm install -g @powersync/cli
-
+# PowerSync CLI is available via npx (no installation needed)
 # Initialize CLI with your API token
 npx powersync init
 
 # Test validation locally
-npx powersync validate-sync-rules powersync/sync-rules.yaml \
-  --project-id YOUR_PROJECT_ID \
-  --instance-id YOUR_DEV_INSTANCE_ID
+PROJECT_ID=your_project_id INSTANCE_ID=your_dev_instance_id \
+npx powersync instance sync-rules validate -f powersync/sync-rules.yaml
 
 # Test deployment locally (optional)
-npx powersync deploy-sync-rules powersync/sync-rules.yaml \
-  --project-id YOUR_PROJECT_ID \
-  --instance-id YOUR_DEV_INSTANCE_ID
+PROJECT_ID=your_project_id INSTANCE_ID=your_dev_instance_id \
+npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml
 ```
 
 ## 📋 Deployment Process
