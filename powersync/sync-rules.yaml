@@ -1,0 +1,18 @@
+# PowerSync Sync Rules for EveryLanguage Bible App
+# Sync-rule docs: https://docs.powersync.com/usage/sync-rules
+
+bucket_definitions:
+  # Global bucket for bible content - publicly accessible data
+  global_bible:
+    data:
+      # Sync all bible versions
+      - SELECT * FROM bible_versions
+      
+      # Sync all books with their bible version relationships
+      - SELECT * FROM books
+      
+      # Sync all chapters with their book relationships
+      - SELECT * FROM chapters
+      
+      # Sync all verses with their chapter relationships
+      - SELECT * FROM verses 

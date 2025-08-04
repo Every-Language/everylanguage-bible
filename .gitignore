@@ -34,9 +34,7 @@ yarn-error.*
 
 # local env files
 .env*.local
-
 .env
-.env.production
 
 # typescript
 *.tsbuildinfo
@@ -61,3 +59,7 @@ logs/
 
 # npm registry configuration (contains tokens)
 .npmrc
+
+# PowerSync
+powersync/.env
+src/powersync/generated-schema.ts

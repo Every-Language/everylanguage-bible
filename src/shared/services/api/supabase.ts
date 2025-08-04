@@ -3,9 +3,13 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@everylanguage/shared-types';
-import Constants from 'expo-constants';
 
-import { env, getRequiredEnvVar } from '@/app/config/env';
+import {
+  env,
+  getRequiredEnvVar,
+  environmentInfo,
+  debugEnvironmentConfig,
+} from '@/app/config/env';
 import { logger } from '@/shared/utils/logger';
 
 // Define proper types for global and process
@@ -19,15 +23,16 @@ interface GlobalWithProcess {
 
 // Debug utility to check Supabase configuration
 export function debugSupabaseConfig() {
+  debugEnvironmentConfig();
   logger.debug('Supabase Configuration Debug:', {
-    urlAvailable: !!env.supabase.url,
-    urlLength: env.supabase.url.length,
-    anonKeyAvailable: !!env.supabase.anonKey,
-    anonKeyLength: env.supabase.anonKey.length,
-    environmentSource: {
-      hasExpoConfig: !!Constants.expoConfig?.extra,
-      hasProcessEnv: !!(global as GlobalWithProcess).process?.env,
-    },
+    buildProfile: environmentInfo.buildProfile,
+    configType: environmentInfo.configType,
+    isProduction: environmentInfo.isProduction,
+    url: env.supabase.url
+      ? `${env.supabase.url.substring(0, 20)}...`
+      : '[MISSING]',
+    anonKey: env.supabase.anonKey ? '[REDACTED]' : '[MISSING]',
+    hasProcessEnv: !!(global as GlobalWithProcess).process?.env,
   });
 }
 
@@ -45,7 +50,7 @@ try {
   logger.error('Failed to load Supabase environment variables:', error);
   debugSupabaseConfig();
   throw new Error(
-    'Supabase configuration is missing. Please check your environment variables: EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY'
+    `Supabase configuration is missing for ${environmentInfo.configType} config (build profile: ${environmentInfo.buildProfile}). Please check your environment variables.`
   );
 }
 
@@ -53,6 +58,14 @@ try {
 if (!supabaseUrl.startsWith('https://')) {
   throw new Error('Invalid Supabase URL format. Must start with https://');
 }
+
+// Log which configuration we're using (for debugging)
+logger.info(`🔧 Supabase Client Configuration:`, {
+  buildProfile: environmentInfo.buildProfile,
+  configType: environmentInfo.configType,
+  url: `${supabaseUrl.substring(0, 30)}...`,
+  isProduction: environmentInfo.isProduction,
+});
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -63,16 +76,19 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// Tell React Native to use our fast refresh
+if (AppState.currentState === 'active') {
+  // Only set up listeners in active state
+  AppState.addEventListener('change', nextAppState => {
+    if (nextAppState === 'active') {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  });
+}
+
 // Verify client was created successfully
 if (!supabase) {
   throw new Error('Failed to create Supabase client');
 }
-
-// Handle session refresh for React Native
-AppState.addEventListener('change', state => {
-  if (state === 'active') {
-    supabase.auth.startAutoRefresh();
-  } else {
-    supabase.auth.stopAutoRefresh();
-  }
-});
