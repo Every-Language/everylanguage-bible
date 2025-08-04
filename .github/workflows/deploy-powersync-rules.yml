@@ -45,6 +45,7 @@ jobs:
       - name: Validate sync rules against dev instance
         env:
           AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
+          ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
           PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
           INSTANCE_ID: ${{ secrets.POWERSYNC_DEV_INSTANCE_ID }}
         run: |
@@ -72,6 +73,7 @@ jobs:
       - name: Deploy sync rules to dev
         env:
           AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
+          ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
           PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
           INSTANCE_ID: ${{ secrets.POWERSYNC_DEV_INSTANCE_ID }}
         run: |
@@ -82,6 +84,7 @@ jobs:
       - name: Post-deployment validation
         env:
           AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
+          ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
           PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
           INSTANCE_ID: ${{ secrets.POWERSYNC_DEV_INSTANCE_ID }}
         run: |
@@ -110,6 +113,7 @@ jobs:
       - name: Deploy sync rules to production
         env:
           AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
+          ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
           PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
           INSTANCE_ID: ${{ secrets.POWERSYNC_PROD_INSTANCE_ID }}
         run: |
@@ -120,6 +124,7 @@ jobs:
       - name: Post-deployment validation
         env:
           AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
+          ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
           PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
           INSTANCE_ID: ${{ secrets.POWERSYNC_PROD_INSTANCE_ID }}
         run: |

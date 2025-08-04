@@ -33,20 +33,22 @@ The GitHub Actions workflow (`.github/workflows/deploy-powersync-rules.yml`) dep
 
 ### Required GitHub Secrets
 
-Add these secrets to your GitHub repository:
+Add these **5 secrets** to your GitHub repository:
 
 #### Required Secrets
 
-| Secret Name                  | Description                                            | How to Find                                                  |
-| ---------------------------- | ------------------------------------------------------ | ------------------------------------------------------------ |
-| `POWERSYNC_API_TOKEN`        | Your PowerSync Personal Access Token                   | PowerSync Dashboard → Account Settings → API Tokens          |
-| `POWERSYNC_PROJECT_ID`       | Your PowerSync Project ID (same for both environments) | PowerSync Dashboard → Projects → Copy Project ID             |
-| `POWERSYNC_DEV_INSTANCE_ID`  | Development PowerSync Instance ID                      | PowerSync Dashboard → Dev Instance → Settings → Instance ID  |
-| `POWERSYNC_PROD_INSTANCE_ID` | Production PowerSync Instance ID                       | PowerSync Dashboard → Prod Instance → Settings → Instance ID |
+| Secret Name                  | Description                                            | How to Find                                                                  |
+| ---------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `POWERSYNC_API_TOKEN`        | Your PowerSync Personal Access Token                   | PowerSync Dashboard → Account Settings → API Tokens                          |
+| `POWERSYNC_ORG_ID`           | Your PowerSync Organization ID                         | Dashboard URL: `https://powersync.journeyapps.com/org/ORG_ID/app/PROJECT_ID` |
+| `POWERSYNC_PROJECT_ID`       | Your PowerSync Project ID (same for both environments) | Dashboard URL: `https://powersync.journeyapps.com/org/ORG_ID/app/PROJECT_ID` |
+| `POWERSYNC_DEV_INSTANCE_ID`  | Development PowerSync Instance ID                      | PowerSync Dashboard → Dev Instance → Settings → Instance ID                  |
+| `POWERSYNC_PROD_INSTANCE_ID` | Production PowerSync Instance ID                       | PowerSync Dashboard → Prod Instance → Settings → Instance ID                 |
 
 **Note:** The workflow maps these to PowerSync CLI environment variables:
 
 - `POWERSYNC_API_TOKEN` → `AUTH_TOKEN`
+- `POWERSYNC_ORG_ID` → `ORG_ID`
 - `POWERSYNC_PROJECT_ID` → `PROJECT_ID`
 - `POWERSYNC_*_INSTANCE_ID` → `INSTANCE_ID`
 
@@ -58,11 +60,12 @@ Add these secrets to your GitHub repository:
    - Click "Create Personal Access Token"
    - Copy the token (starts with `ps_pat_`)
 
-2. **Get Project and Instance IDs**:
-   - In PowerSync Dashboard, go to your project
-   - Copy the Project ID from the URL or project settings
-   - Go to your dev instance → Settings → Copy Instance ID
-   - Go to your prod instance → Settings → Copy Instance ID
+2. **Get Organization ID, Project ID, and Instance IDs**:
+   - In PowerSync Dashboard, look at the URL: `https://powersync.journeyapps.com/org/YOUR_ORG_ID/app/YOUR_PROJECT_ID`
+   - Copy the **ORG_ID** (first UUID in the URL)
+   - Copy the **PROJECT_ID** (second UUID in the URL)
+   - Go to your dev instance → Settings → Copy **Instance ID**
+   - Go to your prod instance → Settings → Copy **Instance ID**
 
 3. **Add to GitHub**:
    - Go to your GitHub repository
@@ -110,11 +113,11 @@ Add these secrets to your GitHub repository:
 npx powersync init
 
 # Test validation locally
-PROJECT_ID=your_project_id INSTANCE_ID=your_dev_instance_id \
+ORG_ID=your_org_id PROJECT_ID=your_project_id INSTANCE_ID=your_dev_instance_id \
 npx powersync instance sync-rules validate -f powersync/sync-rules.yaml
 
 # Test deployment locally (optional)
-PROJECT_ID=your_project_id INSTANCE_ID=your_dev_instance_id \
+ORG_ID=your_org_id PROJECT_ID=your_project_id INSTANCE_ID=your_dev_instance_id \
 npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml
 ```
 
