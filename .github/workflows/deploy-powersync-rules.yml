@@ -78,7 +78,7 @@ jobs:
           INSTANCE_ID: ${{ secrets.POWERSYNC_DEV_INSTANCE_ID }}
         run: |
           echo "🚀 Deploying sync rules to development environment..."
-          npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml
+          npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml --skipConfirmation
           echo "✅ Sync rules deployed to development successfully"
 
       - name: Post-deployment validation
@@ -118,7 +118,7 @@ jobs:
           INSTANCE_ID: ${{ secrets.POWERSYNC_PROD_INSTANCE_ID }}
         run: |
           echo "🚀 Deploying sync rules to production environment..."
-          npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml
+          npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml --skipConfirmation
           echo "✅ Sync rules deployed to production successfully"
 
       - name: Post-deployment validation

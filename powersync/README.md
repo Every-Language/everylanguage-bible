@@ -118,7 +118,7 @@ npx powersync instance sync-rules validate -f powersync/sync-rules.yaml
 
 # Test deployment locally (optional)
 ORG_ID=your_org_id PROJECT_ID=your_project_id INSTANCE_ID=your_dev_instance_id \
-npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml
+npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml --skipConfirmation
 ```
 
 ## 📋 Deployment Process
