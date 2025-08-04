@@ -42,9 +42,6 @@ jobs:
           python -c "import yaml; yaml.safe_load(open('powersync/sync-rules.yaml'))"
           echo "✅ Sync rules YAML syntax is valid"
 
-      - name: Install PowerSync CLI
-        run: npm install -g @powersync/cli
-
       - name: Validate sync rules against dev instance
         env:
           POWERSYNC_API_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
@@ -73,9 +70,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install PowerSync CLI
-        run: npm install -g @powersync/cli
 
       - name: Deploy sync rules to dev
         env:
@@ -118,9 +112,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install PowerSync CLI
-        run: npm install -g @powersync/cli
 
       - name: Deploy sync rules to production
         env:
