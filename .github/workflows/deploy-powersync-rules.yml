@@ -3,7 +3,7 @@ name: Deploy PowerSync Sync Rules
 on:
   push:
     branches: [main, develop]
-    paths: ['powersync/sync-rules.yaml']
+    paths: ['powersync/sync-rules.yaml', '.github/workflows/deploy-powersync-rules.yml']
   pull_request:
     branches: [main, develop]
     paths: ['powersync/sync-rules.yaml']
