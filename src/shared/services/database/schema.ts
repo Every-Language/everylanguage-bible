@@ -252,7 +252,7 @@ export const createTables = async (
       audio_versions_count INTEGER DEFAULT 0,
       text_versions_count INTEGER DEFAULT 0,
       last_availability_check TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (parent_id) REFERENCES language_entities_cache (id)
+      FOREIGN KEY (parent_id) REFERENCES language_entities_cache (id) ON DELETE SET NULL
     )
   `);
 

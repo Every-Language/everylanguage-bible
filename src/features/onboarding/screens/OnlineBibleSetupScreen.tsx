@@ -11,7 +11,10 @@ import { useTheme } from '@/shared/hooks';
 import { useNetworkForAction } from '@/shared/hooks/useNetworkState';
 import { LanguageHierarchyBrowser } from '@/features/languages/components/LanguageHierarchyBrowser';
 import { NoInternetModal } from '@/shared/components';
+import { OnboardingProgressModal } from '@/features/onboarding/components/OnboardingProgressModal';
+import { useCurrentVersions } from '@/features/languages/hooks/useLanguageSelection';
 import { logger } from '@/shared/utils/logger';
+import VerseTextSyncService from '@/shared/services/sync/bible/VerseTextSyncService';
 import type {
   AudioVersion,
   TextVersion,
@@ -32,6 +35,9 @@ export const OnlineBibleSetupScreen: React.FC<OnlineBibleSetupScreenProps> = ({
   const { isOnline, ensureNetworkAvailable, retryAndExecute } =
     useNetworkForAction();
 
+  // Language selection hooks
+  const { setAudioVersion, setTextVersion } = useCurrentVersions();
+
   // State for version selection
   const [currentAudioVersion, setCurrentAudioVersion] =
     useState<AudioVersion | null>(null);
@@ -42,6 +48,7 @@ export const OnlineBibleSetupScreen: React.FC<OnlineBibleSetupScreenProps> = ({
   const [showNoInternetModal, setShowNoInternetModal] = useState(false);
   const [showAudioVersionBrowser, setShowAudioVersionBrowser] = useState(false);
   const [showTextVersionBrowser, setShowTextVersionBrowser] = useState(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
 
   // Debug logging for network state
   useEffect(() => {
@@ -78,7 +85,10 @@ export const OnlineBibleSetupScreen: React.FC<OnlineBibleSetupScreenProps> = ({
   ) => {
     // Handle audio version selection
     if (type === 'audio') {
-      setCurrentAudioVersion(version as AudioVersion);
+      const audioVersion = version as AudioVersion;
+      setCurrentAudioVersion(audioVersion);
+      // Set the version in the store
+      setAudioVersion(audioVersion);
     }
     setShowAudioVersionBrowser(false);
   };
@@ -89,7 +99,10 @@ export const OnlineBibleSetupScreen: React.FC<OnlineBibleSetupScreenProps> = ({
   ) => {
     // Handle text version selection
     if (type === 'text') {
-      setCurrentTextVersion(version as TextVersion);
+      const textVersion = version as TextVersion;
+      setCurrentTextVersion(textVersion);
+      // Set the version in the store
+      setTextVersion(textVersion);
     }
     setShowTextVersionBrowser(false);
   };
@@ -102,9 +115,47 @@ export const OnlineBibleSetupScreen: React.FC<OnlineBibleSetupScreenProps> = ({
     if (currentAudioVersion && currentTextVersion) {
       try {
         // Ensure network is available before proceeding
-        await ensureNetworkAvailable(() => {
-          // Complete onboarding directly
-          onComplete();
+        await ensureNetworkAvailable(async () => {
+          // Set versions in store
+          setAudioVersion(currentAudioVersion);
+          setTextVersion(currentTextVersion);
+
+          // Trigger verse text sync for the selected text version
+          if (currentTextVersion) {
+            try {
+              logger.info(
+                'OnlineBibleSetupScreen: Starting verse text sync for version:',
+                {
+                  versionId: currentTextVersion.id,
+                  versionName: currentTextVersion.name,
+                }
+              );
+
+              const verseTextSyncService = VerseTextSyncService.getInstance();
+              await verseTextSyncService.syncVerseTextsForVersion(
+                currentTextVersion.id,
+                { forceFullSync: true }
+              );
+
+              logger.info(
+                'OnlineBibleSetupScreen: Verse text sync completed successfully'
+              );
+            } catch (error) {
+              const errorMessage =
+                error instanceof Error ? error.message : String(error);
+              logger.warn(
+                'OnlineBibleSetupScreen: Verse text sync had issues, but continuing:',
+                {
+                  error: errorMessage,
+                  versionId: currentTextVersion.id,
+                }
+              );
+              // Continue with onboarding even if verse text sync fails
+            }
+          }
+
+          // Show progress modal after verse text sync
+          setShowProgressModal(true);
         });
       } catch (error) {
         logger.debug(
@@ -129,7 +180,7 @@ export const OnlineBibleSetupScreen: React.FC<OnlineBibleSetupScreenProps> = ({
     }
   };
 
-  const handleSetDefaultVersions = () => {
+  const handleSetDefaultVersions = async () => {
     // Set default test versions
     const defaultAudioVersion: AudioVersion = {
       id: 'cc8f3110-a366-4d81-88d5-4a2bb7d31062',
@@ -154,6 +205,42 @@ export const OnlineBibleSetupScreen: React.FC<OnlineBibleSetupScreenProps> = ({
 
     setCurrentAudioVersion(defaultAudioVersion);
     setCurrentTextVersion(defaultTextVersion);
+
+    // Set the versions in the store
+    setAudioVersion(defaultAudioVersion);
+    setTextVersion(defaultTextVersion);
+
+    // Trigger verse text sync for the default text version
+    try {
+      logger.info(
+        'OnlineBibleSetupScreen: Starting verse text sync for default version:',
+        {
+          versionId: defaultTextVersion.id,
+          versionName: defaultTextVersion.name,
+        }
+      );
+
+      const verseTextSyncService = VerseTextSyncService.getInstance();
+      await verseTextSyncService.syncVerseTextsForVersion(
+        defaultTextVersion.id,
+        { forceFullSync: true }
+      );
+
+      logger.info(
+        'OnlineBibleSetupScreen: Default verse text sync completed successfully'
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.warn(
+        'OnlineBibleSetupScreen: Default verse text sync had issues, but continuing:',
+        {
+          error: errorMessage,
+          versionId: defaultTextVersion.id,
+        }
+      );
+      // Continue even if verse text sync fails
+    }
 
     logger.debug('OnlineBibleSetupScreen: Default versions set:', {
       audio: defaultAudioVersion.name,
@@ -408,6 +495,18 @@ export const OnlineBibleSetupScreen: React.FC<OnlineBibleSetupScreenProps> = ({
         onVersionSelect={handleAudioVersionSelect}
         mode='browse'
         title='Select Audio Version'
+      />
+
+      {/* Onboarding Progress Modal */}
+      <OnboardingProgressModal
+        visible={showProgressModal}
+        onClose={() => setShowProgressModal(false)}
+        onComplete={() => {
+          setShowProgressModal(false);
+          onComplete();
+        }}
+        audioVersion={currentAudioVersion}
+        textVersion={currentTextVersion}
       />
     </SafeAreaView>
   );

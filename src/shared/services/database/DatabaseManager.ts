@@ -617,82 +617,102 @@ class DatabaseManager {
   }
 
   private async migrateToVersion5(): Promise<void> {
-    if (!this.db) return;
-
-    logger.info(
-      'Migrating database to version 5: Removing foreign key constraint from media_files_verses table and updating start_time_seconds to REAL'
-    );
-
     try {
-      // Check if the table exists and has the old foreign key constraint
-      const tableInfo = await this.db.getAllAsync<{ sql: string }>(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='media_files_verses'"
+      this.updateProgress({
+        stage: 'migrating',
+        message: 'Migrating to version 5: Language entities cache improvements',
+        progress: 80,
+      });
+
+      // Check if language_entities_cache table exists
+      const tableExists = await this.db!.getFirstAsync<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='language_entities_cache'"
       );
 
-      if (tableInfo && tableInfo.length > 0 && tableInfo[0]) {
-        const tableSql = tableInfo[0].sql;
+      if (tableExists && tableExists.count > 0) {
+        // Fix foreign key constraint issues
+        await this.fixLanguageEntitiesCacheConstraints();
+      }
 
-        // Check if migration is needed (old foreign key constraint or INTEGER start_time_seconds)
-        const needsMigration =
-          tableSql.includes('FOREIGN KEY (verse_id) REFERENCES verses (id)') ||
-          tableSql.includes('start_time_seconds INTEGER');
+      await this.db!.execAsync('PRAGMA user_version = 5');
+      logger.info('Migration to version 5 completed successfully');
+    } catch (error) {
+      logger.error('Migration to version 5 failed:', error);
+      throw error;
+    }
+  }
 
-        if (needsMigration) {
-          logger.info(
-            'Migrating media_files_verses table to remove foreign key constraint and update start_time_seconds to REAL'
-          );
+  private async fixLanguageEntitiesCacheConstraints(): Promise<void> {
+    try {
+      logger.info('Fixing language entities cache foreign key constraints...');
 
-          // Check if media_files_verses_new table already exists and drop it
-          const newTableExists = await this.db.getFirstAsync<{ name: string }>(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='media_files_verses_new'"
-          );
+      // Step 1: Find orphaned records (records with parent_id that doesn't exist)
+      const orphanedRecords = await this.db!.getAllAsync<{
+        id: string;
+        parent_id: string;
+      }>(
+        `SELECT id, parent_id FROM language_entities_cache 
+         WHERE parent_id IS NOT NULL 
+         AND parent_id NOT IN (SELECT id FROM language_entities_cache)`
+      );
 
-          if (newTableExists) {
-            logger.info(
-              'media_files_verses_new table already exists, dropping it first...'
-            );
-            await this.db.execAsync('DROP TABLE media_files_verses_new');
-          }
+      if (orphanedRecords.length > 0) {
+        logger.warn(
+          `Found ${orphanedRecords.length} orphaned language entity records, setting parent_id to NULL`
+        );
 
-          // Create new table without the verse_id foreign key constraint and with REAL start_time_seconds
-          await this.db.execAsync(`
-            CREATE TABLE media_files_verses_new (
-              id TEXT PRIMARY KEY,
-              media_file_id TEXT NOT NULL,
-              verse_id TEXT NOT NULL,
-              start_time_seconds REAL NOT NULL,
-              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-              updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-              synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
-              FOREIGN KEY (media_file_id) REFERENCES media_files (id) ON DELETE CASCADE
-            )
-          `);
+        // Step 2: Set parent_id to NULL for orphaned records
+        const orphanedIds = orphanedRecords.map(r => r.id);
+        const placeholders = orphanedIds.map(() => '?').join(',');
 
-          // Copy data from old table to new table
-          await this.db.execAsync(`
-            INSERT INTO media_files_verses_new 
-            SELECT * FROM media_files_verses
-          `);
-
-          // Drop old table and rename new table
-          await this.db.execAsync('DROP TABLE media_files_verses');
-          await this.db.execAsync(
-            'ALTER TABLE media_files_verses_new RENAME TO media_files_verses'
-          );
-
-          logger.info('Successfully migrated media_files_verses table');
-        } else {
-          logger.info('media_files_verses table already has correct schema');
-        }
-      } else {
-        logger.info(
-          'media_files_verses table does not exist, will be created with correct schema'
+        await this.db!.runAsync(
+          `UPDATE language_entities_cache 
+           SET parent_id = NULL, updated_at = CURRENT_TIMESTAMP 
+           WHERE id IN (${placeholders})`,
+          orphanedIds
         );
       }
 
-      logger.info('Successfully migrated to version 5');
+      // Step 3: Drop and recreate the foreign key constraint with ON DELETE SET NULL
+      await this.db!.runAsync('PRAGMA foreign_keys = OFF');
+
+      // Create temporary table with new schema
+      await this.db!.runAsync(`
+        CREATE TABLE language_entities_cache_new (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          level TEXT NOT NULL,
+          parent_id TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          has_available_versions BOOLEAN DEFAULT 0,
+          audio_versions_count INTEGER DEFAULT 0,
+          text_versions_count INTEGER DEFAULT 0,
+          last_availability_check TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (parent_id) REFERENCES language_entities_cache_new (id) ON DELETE SET NULL
+        )
+      `);
+
+      // Copy data to new table
+      await this.db!.runAsync(`
+        INSERT INTO language_entities_cache_new 
+        SELECT * FROM language_entities_cache
+      `);
+
+      // Drop old table and rename new one
+      await this.db!.runAsync('DROP TABLE language_entities_cache');
+      await this.db!.runAsync(
+        'ALTER TABLE language_entities_cache_new RENAME TO language_entities_cache'
+      );
+
+      await this.db!.runAsync('PRAGMA foreign_keys = ON');
+
+      logger.info(
+        'Language entities cache foreign key constraints fixed successfully'
+      );
     } catch (error) {
-      logger.error('Error during migration to version 5:', error);
+      logger.error('Failed to fix language entities cache constraints:', error);
       throw error;
     }
   }

@@ -630,25 +630,158 @@ class LanguageSyncService implements BaseSyncService {
   private async upsertLanguageEntities(
     entities: RemoteLanguageEntity[]
   ): Promise<void> {
-    await databaseManager.transaction(async () => {
-      for (const entity of entities) {
-        await databaseManager.executeQuery(
-          `
-          INSERT OR REPLACE INTO language_entities_cache (
-            id, name, level, parent_id, created_at, updated_at, synced_at
-          ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `,
-          [
-            entity.id,
-            entity.name,
-            entity.level,
-            entity.parent_id,
-            entity.created_at,
-            entity.updated_at,
-          ]
+    if (entities.length === 0) return;
+
+    // First, validate and sort entities to ensure parents are inserted before children
+    const sortedEntities = this.sortEntitiesByHierarchy(entities);
+
+    // Split into smaller batches to avoid transaction timeouts
+    const BATCH_SIZE = 50;
+
+    for (let i = 0; i < sortedEntities.length; i += BATCH_SIZE) {
+      const batch = sortedEntities.slice(i, i + BATCH_SIZE);
+
+      await this.upsertLanguageEntitiesBatch(batch);
+    }
+  }
+
+  private sortEntitiesByHierarchy(
+    entities: RemoteLanguageEntity[]
+  ): RemoteLanguageEntity[] {
+    const entityMap = new Map(entities.map(e => [e.id, e]));
+    const sorted: RemoteLanguageEntity[] = [];
+    const visited = new Set<string>();
+
+    const visit = (entity: RemoteLanguageEntity) => {
+      if (visited.has(entity.id)) return;
+
+      // If parent exists and hasn't been visited, visit parent first
+      if (entity.parent_id && entityMap.has(entity.parent_id)) {
+        const parent = entityMap.get(entity.parent_id)!;
+        visit(parent);
+      }
+
+      visited.add(entity.id);
+      sorted.push(entity);
+    };
+
+    entities.forEach(entity => visit(entity));
+    return sorted;
+  }
+
+  private async upsertLanguageEntitiesBatch(
+    entities: RemoteLanguageEntity[]
+  ): Promise<void> {
+    const maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+      try {
+        await databaseManager.transaction(async () => {
+          for (const entity of entities) {
+            // Validate entity data before insertion
+            if (!this.validateLanguageEntity(entity)) {
+              logger.warn('Skipping invalid language entity:', entity);
+              continue;
+            }
+
+            await databaseManager.executeQuery(
+              `
+              INSERT OR REPLACE INTO language_entities_cache (
+                id, name, level, parent_id, created_at, updated_at, synced_at
+              ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            `,
+              [
+                entity.id,
+                entity.name,
+                entity.level,
+                entity.parent_id,
+                entity.created_at,
+                entity.updated_at,
+              ]
+            );
+          }
+        });
+
+        // Success - break out of retry loop
+        break;
+      } catch (error) {
+        attempt++;
+        logger.warn(
+          `Language entities batch upsert attempt ${attempt} failed:`,
+          error
+        );
+
+        if (attempt >= maxRetries) {
+          logger.error('All retry attempts failed, trying fallback approach');
+          await this.fallbackUpsertLanguageEntities(entities);
+          return;
+        }
+
+        // Wait before retry with exponential backoff
+        await new Promise(resolve =>
+          setTimeout(resolve, Math.pow(2, attempt) * 1000)
         );
       }
-    });
+    }
+  }
+
+  private async fallbackUpsertLanguageEntities(
+    entities: RemoteLanguageEntity[]
+  ): Promise<void> {
+    try {
+      logger.info('Using fallback approach for language entities upsert');
+
+      // Temporarily disable foreign key constraints
+      await databaseManager.executeRaw('PRAGMA foreign_keys = OFF');
+
+      await databaseManager.transaction(async () => {
+        for (const entity of entities) {
+          if (!this.validateLanguageEntity(entity)) {
+            logger.warn(
+              'Skipping invalid language entity in fallback:',
+              entity
+            );
+            continue;
+          }
+
+          // Use INSERT OR IGNORE to skip problematic records
+          await databaseManager.executeQuery(
+            `
+            INSERT OR IGNORE INTO language_entities_cache (
+              id, name, level, parent_id, created_at, updated_at, synced_at
+            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          `,
+            [
+              entity.id,
+              entity.name,
+              entity.level,
+              entity.parent_id,
+              entity.created_at,
+              entity.updated_at,
+            ]
+          );
+        }
+      });
+
+      // Re-enable foreign key constraints
+      await databaseManager.executeRaw('PRAGMA foreign_keys = ON');
+
+      logger.info('Fallback language entities upsert completed successfully');
+    } catch (error) {
+      logger.error('Fallback language entities upsert failed:', error);
+      throw error;
+    }
+  }
+
+  private validateLanguageEntity(entity: RemoteLanguageEntity): boolean {
+    return !!(
+      entity.id &&
+      entity.name &&
+      entity.level &&
+      entity.created_at &&
+      entity.updated_at
+    );
   }
 
   private async upsertAvailableVersions(
