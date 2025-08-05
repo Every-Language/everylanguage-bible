@@ -13,6 +13,7 @@ import { useLocalizationStore } from '@/shared/store/localizationStore';
 import { useThemeStore } from '@/shared/store/themeStore';
 import { initializeAllStores } from '@/shared/store';
 import { permissionsService } from '@/shared/services/permissions/PermissionsService';
+import { powerSyncSystem } from '@/shared/services/powersync';
 import { OnboardingScreen } from '@/features/onboarding/screens/OnboardingScreen';
 import { HomeScreen } from '@/features/home/screens/HomeScreen';
 import { logger } from '@/shared/utils/logger';
@@ -48,6 +49,26 @@ const AppContent: React.FC = () => {
 
         // Initialize all Zustand stores
         await initializeAllStores();
+
+        // Initialize PowerSync database
+        try {
+          logger.info('Initializing PowerSync...');
+          await powerSyncSystem.initialize();
+          logger.info('PowerSync initialized successfully');
+
+          // Connect to backend (supports both authenticated and anonymous users)
+          logger.info('Connecting PowerSync to backend...');
+          await powerSyncSystem.connect();
+          logger.info(
+            'PowerSync connected successfully - data sync will begin automatically'
+          );
+        } catch (powerSyncError) {
+          // Non-critical error - app can continue without PowerSync for now
+          logger.error(
+            'PowerSync initialization/connection failed (app will continue):',
+            powerSyncError
+          );
+        }
 
         // Request permissions
         await permissionsService.requestAllPermissions();

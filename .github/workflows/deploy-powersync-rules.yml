@@ -36,11 +36,20 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Validate sync rules syntax
         run: |
           # Basic YAML syntax validation
           python -c "import yaml; yaml.safe_load(open('powersync/sync-rules.yaml'))"
           echo "✅ Sync rules YAML syntax is valid"
+
+      - name: Verify schema is in sync with sync rules
+        run: |
+          echo "🔍 Checking if committed schema matches sync rules..."
+          npm run powersync:verify-schema
+          echo "✅ Schema verification completed"
 
       - name: Validate sync rules against dev instance
         env:

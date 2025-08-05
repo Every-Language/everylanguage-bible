@@ -88,4 +88,61 @@ jobs:
             echo "❌ Native folders detected - should not exist in managed workflow"
             exit 1
           fi
-          echo "✅ Managed workflow validated" 
+          echo "✅ Managed workflow validated"
+
+  # Job 3: PowerSync Schema Validation (NEW)
+  powersync-schema-check:
+    name: PowerSync Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch more history for better file change detection
+          fetch-depth: 0
+
+      - name: Check for PowerSync file changes
+        id: powersync-changes
+        run: |
+          if git diff --name-only ${{ github.event.before }}..${{ github.sha }} | grep -E "(powersync/sync-rules\.yaml|powersync/AppSchema\.ts)" > /dev/null; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "PowerSync related files changed, running validation..."
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No PowerSync files changed, skipping validation..."
+          fi
+
+      - name: Setup Node.js
+        if: steps.powersync-changes.outputs.changes == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: Install dependencies
+        if: steps.powersync-changes.outputs.changes == 'true'
+        run: npm ci
+
+      - name: Verify PowerSync schema consistency
+        if: steps.powersync-changes.outputs.changes == 'true'
+        run: |
+          echo "🔍 Verifying PowerSync schema is consistent with sync rules..."
+          npm run powersync:verify-schema
+          echo "✅ PowerSync schema verification passed"
+
+      - name: Check for uncommitted schema changes
+        if: steps.powersync-changes.outputs.changes == 'true'
+        run: |
+          echo "🔄 Generating fresh schema to compare..."
+          npm run powersync:generate-schema
+          
+          if git diff --exit-code powersync/AppSchema.ts; then
+            echo "✅ No uncommitted schema changes detected"
+          else
+            echo "❌ Schema file has uncommitted changes after generation"
+            echo ""
+            echo "The committed schema differs from what would be generated."
+            echo "Please run 'npm run powersync:generate-schema' and commit the changes."
+            exit 1
+          fi 

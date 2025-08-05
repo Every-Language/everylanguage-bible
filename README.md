@@ -193,6 +193,20 @@ npm run lint:fix
 npm run format
 ```
 
+### PowerSync Schema Management
+
+The app uses PowerSync for real-time data synchronization. When modifying sync rules:
+
+```bash
+# Generate schema from sync rules
+npm run powersync:generate-schema
+
+# Verify schema consistency
+npm run powersync:verify-schema
+```
+
+> **📖 See [PowerSync Schema Management Guide](docs/powersync-schema-management.md) for detailed documentation**
+
 ### Git Workflow
 
 1. Create feature branch from `develop`
