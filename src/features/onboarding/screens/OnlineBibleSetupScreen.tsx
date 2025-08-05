@@ -19,14 +19,15 @@ import type {
 } from '@/features/languages/types';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
-interface MotherTongueSearchScreenProps {
+interface OnlineBibleSetupScreenProps {
   onBack: () => void;
   onComplete: () => void;
 }
 
-export const MotherTongueSearchScreen: React.FC<
-  MotherTongueSearchScreenProps
-> = ({ onBack, onComplete }) => {
+export const OnlineBibleSetupScreen: React.FC<OnlineBibleSetupScreenProps> = ({
+  onBack,
+  onComplete,
+}) => {
   const { theme } = useTheme();
   const { isOnline, ensureNetworkAvailable, retryAndExecute } =
     useNetworkForAction();
@@ -44,7 +45,7 @@ export const MotherTongueSearchScreen: React.FC<
 
   // Debug logging for network state
   useEffect(() => {
-    logger.debug('MotherTongueSearchScreen: Network state debug:', {
+    logger.debug('OnlineBibleSetupScreen: Network state debug:', {
       isOnline,
       timestamp: new Date().toISOString(),
     });
@@ -54,13 +55,11 @@ export const MotherTongueSearchScreen: React.FC<
   useEffect(() => {
     if (!isOnline) {
       logger.debug(
-        'MotherTongueSearchScreen: No internet detected, showing modal'
+        'OnlineBibleSetupScreen: No internet detected, showing modal'
       );
       setShowNoInternetModal(true);
     } else {
-      logger.debug(
-        'MotherTongueSearchScreen: Internet available, hiding modal'
-      );
+      logger.debug('OnlineBibleSetupScreen: Internet available, hiding modal');
       setShowNoInternetModal(false);
     }
   }, [isOnline]);
@@ -109,7 +108,7 @@ export const MotherTongueSearchScreen: React.FC<
         });
       } catch (error) {
         logger.debug(
-          'MotherTongueSearchScreen: Network not available for continue action:',
+          'OnlineBibleSetupScreen: Network not available for continue action:',
           error
         );
         setShowNoInternetModal(true);
@@ -125,9 +124,41 @@ export const MotherTongueSearchScreen: React.FC<
         onComplete();
       });
     } catch (error) {
-      logger.debug('MotherTongueSearchScreen: Retry failed:', error);
+      logger.debug('OnlineBibleSetupScreen: Retry failed:', error);
       // Modal will stay open if retry fails
     }
+  };
+
+  const handleSetDefaultVersions = () => {
+    // Set default test versions
+    const defaultAudioVersion: AudioVersion = {
+      id: 'cc8f3110-a366-4d81-88d5-4a2bb7d31062',
+      name: 'BSB',
+      languageEntityId: 'bf937d24-ae29-4219-9102-b8e2b471fee8',
+      languageName: 'English',
+      mediaFileCount: 0,
+      createdAt: '2025-07-31 11:58:57.282+00',
+      updatedAt: '2025-07-31 11:58:57.282+00',
+    };
+
+    const defaultTextVersion: TextVersion = {
+      id: 'b572e95a-9e12-416d-9966-59ec170e4507',
+      name: 'BSB - text',
+      languageEntityId: 'bf937d24-ae29-4219-9102-b8e2b471fee8',
+      languageName: 'English',
+      source: 'text_version',
+      verseCount: 0,
+      createdAt: '2025-07-31 11:59:03.783+00',
+      updatedAt: '2025-07-31 11:59:03.783+00',
+    };
+
+    setCurrentAudioVersion(defaultAudioVersion);
+    setCurrentTextVersion(defaultTextVersion);
+
+    logger.debug('OnlineBibleSetupScreen: Default versions set:', {
+      audio: defaultAudioVersion.name,
+      text: defaultTextVersion.name,
+    });
   };
 
   const canContinue = currentAudioVersion && currentTextVersion;
@@ -279,6 +310,30 @@ export const MotherTongueSearchScreen: React.FC<
           )}
         </View>
 
+        {/* Set Default Versions Button */}
+        <View style={styles.defaultVersionsContainer}>
+          <TouchableOpacity
+            style={[
+              styles.defaultVersionsButton,
+              { backgroundColor: theme.colors.surfaceVariant },
+            ]}
+            onPress={handleSetDefaultVersions}
+            activeOpacity={0.7}>
+            <MaterialIcons
+              name='auto-fix-high'
+              size={20}
+              color={theme.colors.primary}
+            />
+            <Text
+              style={[
+                styles.defaultVersionsButtonText,
+                { color: theme.colors.primary },
+              ]}>
+              Set Default Versions (Test)
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Progress Indicator */}
         <View style={styles.progressContainer}>
           <Text
@@ -419,7 +474,23 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     gap: 16,
-    marginBottom: 32,
+    marginBottom: 24,
+  },
+  defaultVersionsContainer: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  defaultVersionsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  defaultVersionsButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   versionCard: {
     borderRadius: 16,

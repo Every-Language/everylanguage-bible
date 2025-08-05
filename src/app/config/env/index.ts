@@ -14,15 +14,15 @@ interface GlobalWithProcess {
 export const env = {
   supabase: {
     url:
-      Constants.expoConfig?.extra?.['EXPO_PUBLIC_SUPABASE_URL'] ||
+      Constants.expoConfig?.extra?.['EXPO_PUBLIC_SUPABASE_DEV_URL'] ||
       (global as GlobalWithProcess).process?.env?.[
-        'EXPO_PUBLIC_SUPABASE_URL'
+        'EXPO_PUBLIC_SUPABASE_DEV_URL'
       ] ||
       '',
     anonKey:
-      Constants.expoConfig?.extra?.['EXPO_PUBLIC_SUPABASE_ANON_KEY'] ||
+      Constants.expoConfig?.extra?.['EXPO_PUBLIC_SUPABASE_DEV_ANON_KEY'] ||
       (global as GlobalWithProcess).process?.env?.[
-        'EXPO_PUBLIC_SUPABASE_ANON_KEY'
+        'EXPO_PUBLIC_SUPABASE_DEV_ANON_KEY'
       ] ||
       '',
   },

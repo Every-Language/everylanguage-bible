@@ -7,8 +7,8 @@ The onboarding feature uses a slide-based navigation system with three main scre
 ### Screens
 
 1. **OnboardingMainScreen** - The main welcome screen with two navigation cards
-2. **MotherTongueSearchScreen** - Language selection screen
-3. **ImportBibleScreen** - Bible content import screen
+2. **OnlineBibleSetupScreen** - Online Bible setup screen
+3. **OfflineBibleSetupScreen** - Offline Bible setup screen
 
 ### Components
 
@@ -23,8 +23,8 @@ The onboarding feature uses a slide-based navigation system with three main scre
 
 ```
 OnboardingMainScreen
-├── MotherTongueSearchScreen (via "Choose Your Language" card)
-└── ImportBibleScreen (via "Import Bible Content" card)
+├── OnlineBibleSetupScreen (via "Online Bible Setup" card)
+└── OfflineBibleSetupScreen (via "Offline Bible Setup" card)
 ```
 
 Both sub-screens have back buttons that return to the main screen.
@@ -37,13 +37,13 @@ Both sub-screens have back buttons that return to the main screen.
 - Database initialization and verification
 - Two interactive cards for navigation
 
-### MotherTongueSearchScreen
+### OnlineBibleSetupScreen
 
 - Searchable language list
 - Language selection with visual feedback
 - Continue button to return to main screen
 
-### ImportBibleScreen
+### OfflineBibleSetupScreen
 
 - Bible version selection (text and audio)
 - Import progress indicator

@@ -15,14 +15,14 @@ import { useDatabaseStatus } from '../hooks/useDatabaseStatus';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface OnboardingMainScreenProps {
-  onNavigateToMotherTongue: () => void;
-  onNavigateToImportBible: () => void;
+  onNavigateToOnlineBibleSetup: () => void;
+  onNavigateToOfflineBibleSetup: () => void;
   onComplete: () => void;
 }
 
 export const OnboardingMainScreen: React.FC<OnboardingMainScreenProps> = ({
-  onNavigateToMotherTongue,
-  onNavigateToImportBible,
+  onNavigateToOnlineBibleSetup,
+  onNavigateToOfflineBibleSetup,
 }) => {
   const { theme, mode, toggleTheme } = useTheme();
   const { currentLocale, changeLocale, supportedLocales, t } =
@@ -175,7 +175,7 @@ export const OnboardingMainScreen: React.FC<OnboardingMainScreenProps> = ({
                 title={t('onboarding.onlineSetup.title')}
                 description={t('onboarding.onlineSetup.description')}
                 backgroundColor={theme.colors.primary}
-                onPress={onNavigateToMotherTongue}
+                onPress={onNavigateToOnlineBibleSetup}
               />
             </Animated.View>
 
@@ -193,7 +193,7 @@ export const OnboardingMainScreen: React.FC<OnboardingMainScreenProps> = ({
                 title={t('onboarding.offlineSetup.title')}
                 description={t('onboarding.offlineSetup.description')}
                 backgroundColor={theme.colors.secondary}
-                onPress={onNavigateToImportBible}
+                onPress={onNavigateToOfflineBibleSetup}
               />
             </Animated.View>
 

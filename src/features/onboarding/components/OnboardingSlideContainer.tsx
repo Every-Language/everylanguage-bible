@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { View, Dimensions, StyleSheet } from 'react-native';
 import { OnboardingMainScreen } from '../screens/OnboardingMainScreen';
-import { MotherTongueSearchScreen } from '../screens/MotherTongueSearchScreen';
-import { ImportBibleScreen } from '../screens/ImportBibleScreen';
+import { OnlineBibleSetupScreen } from '../screens/OnlineBibleSetupScreen';
+import { OfflineBibleSetupScreen } from '../screens/OfflineBibleSetupScreen';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-type OnboardingScreen = 'main' | 'motherTongue' | 'importBible';
+type OnboardingScreen = 'main' | 'onlineBibleSetup' | 'offlineBibleSetup';
 
 interface OnboardingSlideContainerProps {
   onComplete: () => void;
@@ -17,12 +17,12 @@ export const OnboardingSlideContainer: React.FC<
 > = ({ onComplete }) => {
   const [currentScreen, setCurrentScreen] = useState<OnboardingScreen>('main');
 
-  const handleNavigateToMotherTongue = () => {
-    setCurrentScreen('motherTongue');
+  const handleNavigateToOnlineBibleSetup = () => {
+    setCurrentScreen('onlineBibleSetup');
   };
 
-  const handleNavigateToImportBible = () => {
-    setCurrentScreen('importBible');
+  const handleNavigateToOfflineBibleSetup = () => {
+    setCurrentScreen('offlineBibleSetup');
   };
 
   const handleBackToMain = () => {
@@ -38,21 +38,21 @@ export const OnboardingSlideContainer: React.FC<
       case 'main':
         return (
           <OnboardingMainScreen
-            onNavigateToMotherTongue={handleNavigateToMotherTongue}
-            onNavigateToImportBible={handleNavigateToImportBible}
+            onNavigateToOnlineBibleSetup={handleNavigateToOnlineBibleSetup}
+            onNavigateToOfflineBibleSetup={handleNavigateToOfflineBibleSetup}
             onComplete={handleComplete}
           />
         );
-      case 'motherTongue':
+      case 'onlineBibleSetup':
         return (
-          <MotherTongueSearchScreen
+          <OnlineBibleSetupScreen
             onBack={handleBackToMain}
             onComplete={handleComplete}
           />
         );
-      case 'importBible':
+      case 'offlineBibleSetup':
         return (
-          <ImportBibleScreen
+          <OfflineBibleSetupScreen
             onBack={handleBackToMain}
             onComplete={handleComplete}
           />
