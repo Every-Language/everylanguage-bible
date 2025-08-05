@@ -11,8 +11,8 @@ export {
 } from './useChapterQueue';
 
 export {
-  useChapterAudioInfoQuery,
-  useChapterAudioInfo as useChapterAudioInfoLegacy,
+  useChapterMediaFiles,
+  chapterAudioQueryKeys,
 } from './useChapterAudioInfo';
 
 export {
@@ -25,3 +25,6 @@ export {
   useChapterAudioAvailabilityQuery,
   mediaFilesQueryKeys,
 } from './useMediaFilesQueries';
+
+export { useVerseTextStats } from './useVerseTextStats';
+export { useVerseTextsData } from './useVerseTextsData';

@@ -14,6 +14,7 @@ import {
   useChapterQueue,
   useAudioAvailabilityStats,
 } from '../hooks/useChapterQueue';
+import { useVerseTextStats, useVerseTextsData } from '../hooks';
 import { ChapterAudioInfo } from '../services/ChapterQueueService';
 import type {
   LocalMediaFile,
@@ -81,6 +82,12 @@ export const ChapterQueueExample: React.FC<ChapterQueueExampleProps> = ({
 
   const { stats, loading: statsLoading } =
     useAudioAvailabilityStats(statsOptions);
+
+  // Verse text stats
+  const { data: verseTextStats } = useVerseTextStats();
+
+  // Verse texts data
+  const { data: verseTextsData } = useVerseTextsData();
 
   // Animation for refresh icon
   useEffect(() => {
@@ -296,6 +303,148 @@ export const ChapterQueueExample: React.FC<ChapterQueueExampleProps> = ({
             </View>
           </View>
         </View>
+
+        {/* Verses Text Count Card */}
+        {verseTextStats && (
+          <View style={styles.versesTextContainer}>
+            <Text style={styles.versesTextTitle}>Text Version Details</Text>
+            {verseTextStats.textVersionName ? (
+              <>
+                <View style={styles.versesTextInfo}>
+                  <Text style={styles.versesTextVersion}>
+                    {verseTextStats.textVersionName}
+                  </Text>
+                  <Text style={styles.versesTextLanguage}>
+                    Language: {verseTextStats.languageEntityId}
+                  </Text>
+                </View>
+                <View style={styles.versesTextStatsGrid}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>
+                      {verseTextStats.downloadedVerseTexts.toLocaleString()}
+                    </Text>
+                    <Text style={styles.statLabel}>Downloaded</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>
+                      {verseTextStats.totalVerseTextsForVersion.toLocaleString()}
+                    </Text>
+                    <Text style={styles.statLabel}>Available</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>
+                      {verseTextStats.percentageComplete}%
+                    </Text>
+                    <Text style={styles.statLabel}>Complete</Text>
+                  </View>
+                </View>
+                <View style={styles.progressContainer}>
+                  <View
+                    style={[
+                      styles.progressBar,
+                      {
+                        backgroundColor: COLOR_VARIATIONS.GREEN_SUCCESS,
+                        width: `${verseTextStats.percentageComplete}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </>
+            ) : (
+              <View style={styles.noTextVersionContainer}>
+                <MaterialIcons
+                  name='text-fields'
+                  size={24}
+                  color={COLOR_VARIATIONS.GRAY_MEDIUM}
+                />
+                <Text style={styles.noTextVersionText}>
+                  No text version selected
+                </Text>
+                <Text style={styles.noTextVersionSubtext}>
+                  Select a text version to see download progress
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Verse Texts Data Card */}
+        {verseTextsData && (
+          <View style={styles.versesTextContainer}>
+            <Text style={styles.versesTextTitle}>Verse Texts Database</Text>
+            <View style={styles.versesTextStatsGrid}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {verseTextsData.totalCount.toLocaleString()}
+                </Text>
+                <Text style={styles.statLabel}>Total Records</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {verseTextsData.uniqueVersions.length}
+                </Text>
+                <Text style={styles.statLabel}>Text Versions</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {verseTextsData.averageTextLength}
+                </Text>
+                <Text style={styles.statLabel}>Avg Length</Text>
+              </View>
+            </View>
+
+            <View style={styles.versesTextInfo}>
+              <Text style={styles.versesTextLanguage}>
+                Publish Statuses:{' '}
+                {verseTextsData.uniquePublishStatuses.join(', ')}
+              </Text>
+              {verseTextsData.oldestRecord && (
+                <Text style={styles.versesTextLanguage}>
+                  Oldest: {formatDate(verseTextsData.oldestRecord)}
+                </Text>
+              )}
+              {verseTextsData.newestRecord && (
+                <Text style={styles.versesTextLanguage}>
+                  Newest: {formatDate(verseTextsData.newestRecord)}
+                </Text>
+              )}
+            </View>
+
+            {/* Recent Verse Texts */}
+            {verseTextsData.verseTexts.length > 0 && (
+              <View style={styles.recentVerseTextsContainer}>
+                <Text style={styles.recentVerseTextsTitle}>
+                  Recent Verse Texts
+                </Text>
+                <ScrollView
+                  style={styles.recentVerseTextsList}
+                  nestedScrollEnabled>
+                  {verseTextsData.verseTexts.slice(0, 10).map(verseText => (
+                    <View key={verseText.id} style={styles.verseTextItem}>
+                      <View style={styles.verseTextHeader}>
+                        <Text style={styles.verseTextId}>
+                          Verse {verseText.verse_id}
+                        </Text>
+                        <View style={styles.verseTextStatus}>
+                          <Text style={styles.verseTextStatusText}>
+                            {verseText.publish_status}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.verseTextContent} numberOfLines={2}>
+                        {verseText.verse_text}
+                      </Text>
+                      <Text style={styles.verseTextMeta}>
+                        Version: {verseText.text_version_id || 'N/A'} | Created:{' '}
+                        {formatDate(verseText.created_at)}
+                      </Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        )}
       </View>
     );
   };
@@ -1359,5 +1508,112 @@ const styles = StyleSheet.create({
   backgroundErrorText: {
     fontSize: 12,
     marginTop: 4,
+  },
+  // Verses Text Count Card Styles
+  versesTextContainer: {
+    backgroundColor: COLOR_VARIATIONS.WHITE_PURE,
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: COLOR_VARIATIONS.SHADOW_BLACK,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  versesTextTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: COLOR_VARIATIONS.GRAY_DARK,
+  },
+  versesTextInfo: {
+    marginBottom: 12,
+  },
+  versesTextVersion: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLOR_VARIATIONS.BLUE_PRIMARY,
+    marginBottom: 4,
+  },
+  versesTextLanguage: {
+    fontSize: 14,
+    color: COLOR_VARIATIONS.GRAY_MEDIUM,
+  },
+  versesTextStatsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  noTextVersionContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  noTextVersionText: {
+    fontSize: 16,
+    color: COLOR_VARIATIONS.GRAY_MEDIUM,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  noTextVersionSubtext: {
+    fontSize: 14,
+    color: COLOR_VARIATIONS.GRAY_VERY_DARK,
+    textAlign: 'center',
+  },
+  // Verse Texts Data Card Styles
+  recentVerseTextsContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLOR_VARIATIONS.BLACK_10,
+  },
+  recentVerseTextsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: COLOR_VARIATIONS.GRAY_DARK,
+  },
+  recentVerseTextsList: {
+    maxHeight: 300,
+  },
+  verseTextItem: {
+    backgroundColor: COLOR_VARIATIONS.GRAY_100,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: COLOR_VARIATIONS.BLUE_PRIMARY,
+  },
+  verseTextHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  verseTextId: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLOR_VARIATIONS.BLUE_PRIMARY,
+  },
+  verseTextStatus: {
+    backgroundColor: COLOR_VARIATIONS.GREEN_LIGHT,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  verseTextStatusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLOR_VARIATIONS.GREEN_SUCCESS,
+  },
+  verseTextContent: {
+    fontSize: 14,
+    color: COLOR_VARIATIONS.GRAY_DARK,
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  verseTextMeta: {
+    fontSize: 12,
+    color: COLOR_VARIATIONS.GRAY_MEDIUM,
   },
 });

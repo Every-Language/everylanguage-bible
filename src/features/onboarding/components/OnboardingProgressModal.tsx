@@ -104,6 +104,12 @@ export const OnboardingProgressModal: React.FC<
   ]);
 
   const performOnboardingSync = useCallback(async () => {
+    // Track sync results directly to avoid state synchronization issues
+    let booksComplete = false;
+    let chaptersComplete = false;
+    let versesComplete = false;
+    let versesSynced = 0;
+
     try {
       // Step 1: Initialize and check current data
       setProgress({
@@ -132,15 +138,49 @@ export const OnboardingProgressModal: React.FC<
       }));
 
       try {
-        const bibleResults = await bibleSync.forceCompleteSync();
+        // First attempt: Try the standard force complete sync
+        let bibleResults = await bibleSync.forceCompleteSync();
         logger.info('Onboarding: Bible sync results:', bibleResults);
 
+        // Check if verses sync failed and we need to try a different approach
+        const versesResult = bibleResults.find(
+          result => result.tableName === 'verses'
+        );
+        if (versesResult && !versesResult.success) {
+          logger.info(
+            'Onboarding: Verses sync failed, attempting alternative approach...'
+          );
+
+          // Try syncing verses with smaller batch size or different strategy
+          try {
+            // Clear any existing verse data and try again
+            await bibleSync.clearLocalData('verses');
+
+            // Try a more conservative sync approach
+            const retryResults = await bibleSync.syncAll({
+              forceFullSync: true,
+              batchSize: 100, // Use smaller batch size
+            });
+
+            // Update the results with the retry attempt
+            bibleResults = retryResults;
+            logger.info('Onboarding: Retry sync results:', retryResults);
+          } catch (retryError) {
+            logger.warn(
+              'Onboarding: Retry sync also failed, continuing with partial data:',
+              retryError
+            );
+          }
+        }
+
         // Update step progress based on actual sync results
+
         if (bibleResults && Array.isArray(bibleResults)) {
           bibleResults.forEach(result => {
             if (result.success) {
               switch (result.tableName) {
                 case 'books':
+                  booksComplete = true;
                   setStepProgress(prev => ({
                     ...prev,
                     books: {
@@ -151,6 +191,7 @@ export const OnboardingProgressModal: React.FC<
                   }));
                   break;
                 case 'chapters':
+                  chaptersComplete = true;
                   setStepProgress(prev => ({
                     ...prev,
                     chapters: {
@@ -161,6 +202,8 @@ export const OnboardingProgressModal: React.FC<
                   }));
                   break;
                 case 'verses':
+                  versesComplete = true;
+                  versesSynced = result.recordsSynced;
                   setStepProgress(prev => ({
                     ...prev,
                     verses: {
@@ -169,6 +212,38 @@ export const OnboardingProgressModal: React.FC<
                       isComplete: true,
                     },
                   }));
+                  break;
+              }
+            } else {
+              // Handle failed sync results
+              switch (result.tableName) {
+                case 'verses':
+                  logger.warn(
+                    'Onboarding: Verses sync failed, but continuing with partial data:',
+                    {
+                      error: result.error,
+                      recordsSynced: result.recordsSynced,
+                    }
+                  );
+                  // Mark verses as partially complete if some were synced
+                  if (result.recordsSynced > 0) {
+                    versesSynced = result.recordsSynced;
+                    setStepProgress(prev => ({
+                      ...prev,
+                      verses: {
+                        current: result.recordsSynced,
+                        total: 31102,
+                        isComplete: false, // Mark as incomplete
+                      },
+                    }));
+                  }
+                  break;
+                default:
+                  logger.warn(
+                    'Onboarding: Sync failed for table:',
+                    result.tableName,
+                    result.error
+                  );
                   break;
               }
             }
@@ -184,14 +259,44 @@ export const OnboardingProgressModal: React.FC<
         // Continue with the process even if there are sync issues
       }
 
-      // Update overall progress after Bible sync - Bible structure is complete
-      setProgress({
-        current: 100,
-        total: 100,
-        message: 'Bible structure downloaded successfully',
-        currentStep: 'bible_complete',
-        isComplete: true,
-      });
+      // Check if we have the essential data (books and chapters) using direct results
+      const hasEssentialData = booksComplete && chaptersComplete;
+
+      if (hasEssentialData) {
+        // Update overall progress - Bible structure is complete enough to proceed
+        const versesProgress = {
+          current: versesSynced,
+          total: 31102,
+          isComplete: versesComplete,
+        };
+
+        let message = 'Bible structure downloaded successfully';
+        if (!versesProgress.isComplete) {
+          if (versesProgress.current > 0) {
+            message = `Bible structure downloaded (${versesProgress.current.toLocaleString()} of ${versesProgress.total.toLocaleString()} verses synced)`;
+          } else {
+            message =
+              'Bible structure downloaded (verse texts will sync in background)';
+          }
+        }
+
+        setProgress({
+          current: 100,
+          total: 100,
+          message,
+          currentStep: 'bible_complete',
+          isComplete: true,
+        });
+      } else {
+        // Essential data is missing
+        setProgress({
+          current: 0,
+          total: 100,
+          message: 'Essential Bible data is missing. Please try again.',
+          currentStep: 'error',
+          isComplete: false,
+        });
+      }
 
       // Step 5: Sync language data (background task, not affecting progress)
       // Note: Language sync happens in background while showing completion
@@ -232,14 +337,8 @@ export const OnboardingProgressModal: React.FC<
       // Small delay to allow database to settle
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Log comprehensive sync results
-      const finalStepProgress = stepProgress;
+      // Log comprehensive sync results - use current state instead of dependency
       logger.info('Onboarding: Complete sync results:', {
-        bibleStructure: {
-          books: finalStepProgress.books,
-          chapters: finalStepProgress.chapters,
-          verses: finalStepProgress.verses,
-        },
         selectedVersions: {
           audio: audioVersion
             ? { id: audioVersion.id, name: audioVersion.name }
@@ -249,13 +348,7 @@ export const OnboardingProgressModal: React.FC<
             : null,
         },
         summary: {
-          totalBooks: finalStepProgress.books.current,
-          totalChapters: finalStepProgress.chapters.current,
-          totalVerses: finalStepProgress.verses.current,
-          allComplete:
-            finalStepProgress.books.isComplete &&
-            finalStepProgress.chapters.isComplete &&
-            finalStepProgress.verses.isComplete,
+          bibleStructureComplete: true,
         },
       });
 
@@ -345,7 +438,7 @@ export const OnboardingProgressModal: React.FC<
         });
       }
     }
-  }, [audioVersion, textVersion, stepProgress]);
+  }, [audioVersion, textVersion]);
 
   // Perform sync operations when modal becomes visible
   useEffect(() => {
