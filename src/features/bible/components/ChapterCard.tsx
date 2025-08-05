@@ -120,17 +120,6 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
             />
           </View>
         )}
-        {/* Verses marked indicator */}
-        {chapter.mediaAvailability !== MediaAvailabilityStatus.NONE &&
-          !chapter.versesMarked && (
-            <View style={styles.availabilityIcon}>
-              <MaterialIcons
-                name='schedule'
-                size={16}
-                color={theme.colors.textSecondary}
-              />
-            </View>
-          )}
       </View>
       <View style={styles.chapterActions}>
         {onQueue && (
@@ -144,16 +133,13 @@ export const ChapterCard: React.FC<ChapterCardProps> = ({
             />
           </TouchableOpacity>
         )}
-        {onPlay &&
-          (chapter.mediaAvailability === MediaAvailabilityStatus.COMPLETE ||
-            chapter.mediaAvailability === MediaAvailabilityStatus.PARTIAL) &&
-          chapter.versesMarked && (
-            <PlayButton
-              type='chapter'
-              id={`${chapter.book_id}-${chapter.id}`}
-              onPress={handlePlayPress}
-            />
-          )}
+        {onPlay && (
+          <PlayButton
+            type='chapter'
+            id={`${chapter.book_id}-${chapter.id}`}
+            onPress={handlePlayPress}
+          />
+        )}
       </View>
     </TouchableOpacity>
   );

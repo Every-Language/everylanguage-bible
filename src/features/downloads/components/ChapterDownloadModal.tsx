@@ -27,6 +27,7 @@ import {
 import { queryClient } from '@/shared/services/query/queryClient';
 import { bibleQueryKeys } from '@/features/bible/hooks/useBibleQueries';
 import { mediaFilesQueryKeys } from '@/features/media/hooks/useMediaFilesQueries';
+import { chapterAudioQueryKeys } from '@/features/media/hooks/useChapterAudioInfo';
 import { useCurrentVersions } from '@/features/languages/hooks';
 import { audioVersionValidationService } from '@/features/languages/services/audioVersionValidationService';
 
@@ -62,7 +63,6 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   book,
   chapterTitle,
   chapterId,
-  versionId,
   onClose,
 }) => {
   const { theme } = useTheme();
@@ -107,6 +107,10 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   const [audioVersionError, setAudioVersionError] = useState<string | null>(
     null
   );
+  const [localValidationResult, setLocalValidationResult] = useState<{
+    hasLocalFiles: boolean;
+    isValid: boolean;
+  } | null>(null);
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [currentBatchId, setCurrentBatchId] = useState<string | null>(null);
@@ -132,7 +136,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
       createDownloadCompletionCallback({
         showSuccessNotification: true,
         showErrorNotification: true,
-        autoCloseModal: false, // Set to true if you want auto-close
+        autoCloseModal: true, // Close modal automatically to show refreshed chapter
         refreshDownloads: true,
         // Media file integration
         addToMediaFiles: true,
@@ -145,7 +149,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
           checkStatus: 'checked',
           version: 1,
         },
-        onSuccess: () => {
+        onSuccess: async () => {
           logger.info('All downloads completed successfully');
 
           // Invalidate TanStack Query caches to update chapter data
@@ -195,10 +199,93 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
               queryKey: chapterAudioInfoQueryKeys.all,
             });
 
+            // Invalidate media availability queries that determine play button visibility
+            queryClient.invalidateQueries({
+              queryKey: ['media-availability'],
+            });
+
+            // Invalidate chapters with metadata queries to refresh the chapter list
+            queryClient.invalidateQueries({
+              queryKey: ['chapters-with-metadata'],
+            });
+
+            // Invalidate all books queries to ensure data consistency
+            queryClient.invalidateQueries({
+              queryKey: bibleQueryKeys.books(),
+            });
+
+            // Invalidate specific book query for the current book
+            queryClient.invalidateQueries({
+              queryKey: bibleQueryKeys.book(book.id),
+            });
+
+            // Invalidate main chapters query for the book (used by ChapterScreen)
+            queryClient.invalidateQueries({
+              queryKey: bibleQueryKeys.chapters(book.id),
+            });
+
+            // Invalidate specific media availability query for this chapter
+            queryClient.invalidateQueries({
+              queryKey: ['media-availability', 'chapters', [chapterId]],
+            });
+
+            // Invalidate chapter audio availability query (used by useChapterMediaFiles)
+            queryClient.invalidateQueries({
+              queryKey: chapterAudioQueryKeys.audioAvailability(chapterId),
+            });
+
+            // Force refetch specific queries for immediate UI update
+            try {
+              // Refetch media availability for this specific chapter
+              await queryClient.refetchQueries({
+                queryKey: ['media-availability', 'chapters', [chapterId]],
+              });
+
+              // Refetch chapter audio availability
+              await queryClient.refetchQueries({
+                queryKey: chapterAudioQueryKeys.audioAvailability(chapterId),
+              });
+
+              // Refetch main chapters query for the book
+              await queryClient.refetchQueries({
+                queryKey: bibleQueryKeys.chapters(book.id),
+              });
+
+              // Refetch books queries for data consistency
+              await queryClient.refetchQueries({
+                queryKey: bibleQueryKeys.books(),
+              });
+
+              await queryClient.refetchQueries({
+                queryKey: bibleQueryKeys.book(book.id),
+              });
+
+              logger.info(
+                'Forced refetch of chapter-specific queries for immediate UI update'
+              );
+            } catch (refetchError) {
+              logger.warn(
+                'Failed to force refetch chapter queries:',
+                refetchError
+              );
+            }
+
             logger.info(
               'TanStack Query caches invalidated for chapter:',
               chapterId
             );
+
+            // Show success message to user
+            logger.info(
+              'Chapter refreshed successfully - play button should now be visible (audio availability only)'
+            );
+
+            // Small delay to ensure cache invalidation completes before modal closes
+            setTimeout(() => {
+              logger.info(
+                'Closing modal after successful download and cache refresh'
+              );
+            }, 1000);
           } catch (error) {
             logger.error('Failed to invalidate TanStack Query caches:', error);
           }
@@ -237,7 +324,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
           // Add any media file error logic here
         },
       }),
-    [validMediaFiles, chapterId, setIsDownloading]
+    [validMediaFiles, chapterId, setIsDownloading, book.id]
   );
 
   // Set completion callback when component mounts - only run once
@@ -295,10 +382,40 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
 
       setAudioVersionError(null);
 
+      // Log the validation result for debugging
+      logger.info('Audio version validation completed:', {
+        isValid: validation.isValid,
+        hasAudioForChapter: validation.hasAudioForChapter,
+        versionId: currentAudioVersion?.id,
+        versionName: currentAudioVersion?.name,
+        chapterId,
+      });
+
+      // Store local validation result for UI feedback
+      setLocalValidationResult({
+        hasLocalFiles: validation.hasAudioForChapter,
+        isValid: validation.isValid,
+      });
+
+      // Always proceed with online search, regardless of local file availability
       await ensureNetworkAvailable(async () => {
-        // Use selected audio version instead of hardcoded version
-        const targetVersionId = currentAudioVersion?.id || versionId;
-        await searchMediaFiles(chapterId, targetVersionId);
+        // Use the selected audio version ID (project_id) for searching
+        const targetAudioVersionId = currentAudioVersion?.id;
+
+        if (!targetAudioVersionId) {
+          logger.error('No audio version ID available for search');
+          setAudioVersionError('No audio version selected');
+          return;
+        }
+
+        logger.info('Searching for online media files:', {
+          chapterId,
+          targetAudioVersionId,
+          audioVersionId: currentAudioVersion?.id,
+          audioVersionName: currentAudioVersion?.name,
+          hasLocalFiles: validation.hasAudioForChapter,
+        });
+        await searchMediaFiles(chapterId, targetAudioVersionId);
       });
     } catch (error) {
       logger.warn('Online capabilities check failed:', error);
@@ -307,7 +424,6 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     ensureNetworkAvailable,
     searchMediaFiles,
     chapterId,
-    versionId,
     currentAudioVersion,
   ]);
 
@@ -422,12 +538,20 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   const handleRetryInternetCheck = useCallback(async () => {
     try {
       await retryAndExecute(async () => {
-        await searchMediaFiles(chapterId, versionId);
+        // Use the selected audio version ID (project_id) for searching
+        const targetAudioVersionId = currentAudioVersion?.id;
+
+        if (!targetAudioVersionId) {
+          logger.error('No audio version ID available for retry search');
+          throw new Error('No audio version selected');
+        }
+
+        await searchMediaFiles(chapterId, targetAudioVersionId);
       });
     } catch (error) {
       logger.warn('Retry internet check failed:', error);
     }
-  }, [retryAndExecute, searchMediaFiles, chapterId, versionId]);
+  }, [retryAndExecute, searchMediaFiles, chapterId, currentAudioVersion]);
 
   return (
     <Modal
@@ -523,6 +647,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
             searchResults={searchResults}
             searchError={searchError}
             onFormatFileSize={formatFileSize}
+            localValidationResult={localValidationResult}
           />
 
           {/* Audio Version Error Display */}

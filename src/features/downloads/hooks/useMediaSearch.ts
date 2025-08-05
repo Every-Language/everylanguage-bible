@@ -27,9 +27,23 @@ export const useMediaSearch = () => {
   });
 
   const searchMediaFiles = useCallback(
-    async (chapterId: string, versionId?: string | number) => {
-      // Use provided version ID or fallback to 1 if not specified
-      const targetVersion = versionId ? Number(versionId) : 1;
+    async (chapterId: string, audioVersionId?: string) => {
+      // Validate audio version ID
+      if (!audioVersionId) {
+        logger.warn(
+          'No audio version ID provided, cannot search for media files:',
+          {
+            chapterId,
+          }
+        );
+        setState(prev => ({
+          ...prev,
+          searchError: 'No audio version selected',
+          searchResults: [],
+          isSearching: false,
+        }));
+        return [];
+      }
 
       setState(prev => ({
         ...prev,
@@ -38,7 +52,7 @@ export const useMediaSearch = () => {
       }));
 
       logger.info(
-        `Searching for media files with chapter_id: ${chapterId}, version: ${targetVersion}`
+        `Searching for media files with chapter_id: ${chapterId}, audio_version_id: ${audioVersionId}`
       );
 
       try {
@@ -47,7 +61,7 @@ export const useMediaSearch = () => {
           .from('media_files')
           .select('*')
           .eq('chapter_id', chapterId)
-          .eq('version', targetVersion)
+          .eq('audio_version_id', audioVersionId)
           .is('deleted_at', null);
 
         if (firstError) {
@@ -62,21 +76,21 @@ export const useMediaSearch = () => {
             isSearching: false,
           }));
           logger.info(
-            `Found ${firstSearchData.length} media files for chapter ${chapterId} on first search`
+            `Found ${firstSearchData.length} media files for chapter ${chapterId} (audio version ${audioVersionId}) on first search`
           );
           return firstSearchData;
         }
 
         // If no results found, perform second search with same logic
         logger.info(
-          'No media files found on first search, performing second search...'
+          `No media files found on first search for chapter ${chapterId} (audio version ${audioVersionId}), performing second search...`
         );
 
         const { data: secondSearchData, error: secondError } = await supabase
           .from('media_files')
           .select('*')
           .eq('chapter_id', chapterId)
-          .eq('version', targetVersion)
+          .eq('audio_version_id', audioVersionId)
           .is('deleted_at', null);
 
         if (secondError) {
@@ -88,9 +102,17 @@ export const useMediaSearch = () => {
           searchResults: secondSearchData || [],
           isSearching: false,
         }));
-        logger.info(
-          `Found ${secondSearchData?.length || 0} media files for chapter ${chapterId} on second search`
-        );
+
+        if (secondSearchData && secondSearchData.length > 0) {
+          logger.info(
+            `Found ${secondSearchData.length} media files for chapter ${chapterId} (audio version ${audioVersionId}) on second search`
+          );
+        } else {
+          logger.warn(
+            `No media files found for chapter ${chapterId} (audio version ${audioVersionId}) after both search attempts`
+          );
+        }
+
         return secondSearchData || [];
       } catch (error) {
         logger.error('Error searching media files:', error);

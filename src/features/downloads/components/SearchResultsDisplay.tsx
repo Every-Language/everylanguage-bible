@@ -10,6 +10,10 @@ interface SearchResultsDisplayProps {
   searchResults: Array<{ file_size?: number }>;
   searchError: string | null;
   onFormatFileSize: (bytes: number) => string;
+  localValidationResult?: {
+    hasLocalFiles: boolean;
+    isValid: boolean;
+  } | null;
 }
 
 export const SearchResultsDisplay: React.FC<SearchResultsDisplayProps> = ({
@@ -19,6 +23,7 @@ export const SearchResultsDisplay: React.FC<SearchResultsDisplayProps> = ({
   searchResults,
   searchError,
   onFormatFileSize,
+  localValidationResult,
 }) => {
   const { theme } = useTheme();
 
@@ -43,7 +48,9 @@ export const SearchResultsDisplay: React.FC<SearchResultsDisplayProps> = ({
         <View style={styles.statusRow}>
           <ActivityIndicator size='small' color={theme.colors.primary} />
           <Text style={[styles.statusText, { color: theme.colors.text }]}>
-            Searching for media files...
+            {localValidationResult && !localValidationResult.hasLocalFiles
+              ? 'Checking online availability...'
+              : 'Searching for media files...'}
           </Text>
         </View>
       ) : searchError ? (
@@ -92,7 +99,9 @@ export const SearchResultsDisplay: React.FC<SearchResultsDisplayProps> = ({
           />
           <Text
             style={[styles.statusText, { color: theme.colors.textSecondary }]}>
-            No media files found for this chapter
+            {localValidationResult && !localValidationResult.hasLocalFiles
+              ? 'No audio files available for this chapter (not available locally or online)'
+              : 'No audio files available online for this chapter'}
           </Text>
         </View>
       )}

@@ -154,6 +154,7 @@ export class AudioVersionValidationService {
 
   /**
    * Check if audio version is compatible with a specific chapter
+   * This validates version selection but doesn't block if no local files exist
    */
   async validateVersionForChapter(
     currentAudioVersion: AudioVersion | null,
@@ -169,7 +170,8 @@ export class AudioVersionValidationService {
       };
     }
 
-    // Check if the selected version has audio for this chapter
+    // Check if any media files exist for this chapter in local database
+    // Note: Local database doesn't have audio version filtering, so we just check for any files
     try {
       const { mediaFilesService } = await import(
         '@/shared/services/database/MediaFilesService'
@@ -179,34 +181,20 @@ export class AudioVersionValidationService {
         await mediaFilesService.getMediaFilesByChapterId(chapterId);
       const hasAudioForChapter = mediaFiles.length > 0;
 
-      if (!hasAudioForChapter) {
-        logger.warn('No audio files found for chapter with selected version:', {
-          chapterId,
-          versionId: currentAudioVersion?.id,
-          versionName: currentAudioVersion?.name,
-        });
-
-        return {
-          isValid: false,
-          error: `No audio files available for this chapter in the selected version (${currentAudioVersion?.name}).`,
-          currentVersion: currentAudioVersion,
-          requiresVersionSelection: false,
-          hasAudioForChapter: false,
-        };
-      }
-
+      // Don't fail validation if no local files exist - this allows checking online
       return {
         ...baseValidation,
-        hasAudioForChapter: true,
+        hasAudioForChapter,
       };
     } catch (error) {
-      logger.error('Error checking audio availability for chapter:', error);
+      logger.error(
+        'Error checking local audio availability for chapter:',
+        error
+      );
 
+      // Don't fail validation on error - assume no local files
       return {
-        isValid: false,
-        error: 'Unable to check audio availability for this chapter.',
-        currentVersion: currentAudioVersion,
-        requiresVersionSelection: false,
+        ...baseValidation,
         hasAudioForChapter: false,
       };
     }
