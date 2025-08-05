@@ -2,17 +2,228 @@
 # Sync-rule docs: https://docs.powersync.com/usage/sync-rules
 
 bucket_definitions:
-  # Global bucket for bible content - publicly accessible data
-  global_bible:
+  # ====================
+  # REMOTE TO LOCAL ONLY - Global Bible Content (available to all users)
+  # ====================
+  
+  global_bible_content:
     data:
-      # Sync all bible versions
+      # Core bible structure - always available
       - SELECT * FROM bible_versions
-      
-      # Sync all books with their bible version relationships
       - SELECT * FROM books
-      
-      # Sync all chapters with their book relationships
       - SELECT * FROM chapters
-      
-      # Sync all verses with their chapter relationships
-      - SELECT * FROM verses 
+      - SELECT * FROM verses
+
+  global_image_sets:
+    data:
+      # All image sets are available to browse
+      - SELECT * FROM image_sets
+      # Images that belong to any image set
+      - SELECT * FROM images WHERE set_id IS NOT NULL
+
+  # ====================
+  # REMOTE TO LOCAL ONLY - User-specific Audio/Text Versions
+  # ====================
+  
+  user_audio_versions:
+    # For authenticated users: use user_id, for anonymous: use device_id via users_anon
+    parameters: |
+      SELECT DISTINCT av.id as audio_version_id
+      FROM audio_versions av
+      INNER JOIN user_saved_versions usv ON av.id = usv.audio_version_id
+      WHERE (
+        -- Authenticated user case
+        (request.user_id() IS NOT NULL AND usv.user_id = request.user_id())
+        OR
+        -- Anonymous user case - match device_id through users_anon
+        (request.user_id() IS NULL AND usv.anon_user_id IN (
+          SELECT ua.id FROM users_anon ua WHERE ua.device_id = request.parameters() ->> 'device_id'
+        ))
+      )
+    data:
+      # Sync the audio versions the user has saved
+      - SELECT * FROM audio_versions WHERE id = bucket.audio_version_id
+      # Sync media files belonging to these audio versions
+      - SELECT * FROM media_files WHERE audio_version_id = bucket.audio_version_id
+      # Sync media file verses for these media files
+      - SELECT mfv.* FROM media_files_verses mfv 
+        INNER JOIN media_files mf ON mfv.media_file_id = mf.id 
+        WHERE mf.audio_version_id = bucket.audio_version_id
+      # Sync media file targets for these media files
+      - SELECT mft.* FROM media_files_targets mft 
+        INNER JOIN media_files mf ON mft.media_file_id = mf.id 
+        WHERE mf.audio_version_id = bucket.audio_version_id
+      # Sync media file tags for these media files
+      - SELECT mftag.* FROM media_files_tags mftag 
+        INNER JOIN media_files mf ON mftag.media_file_id = mf.id 
+        WHERE mf.audio_version_id = bucket.audio_version_id
+      # Sync the actual tags referenced by media file tags
+      - SELECT DISTINCT t.* FROM tags t
+        INNER JOIN media_files_tags mftag ON t.id = mftag.tag_id
+        INNER JOIN media_files mf ON mftag.media_file_id = mf.id 
+        WHERE mf.audio_version_id = bucket.audio_version_id
+
+  user_text_versions:
+    # For authenticated users: use user_id, for anonymous: use device_id via users_anon
+    parameters: |
+      SELECT DISTINCT tv.id as text_version_id
+      FROM text_versions tv
+      INNER JOIN user_saved_versions usv ON tv.id = usv.text_version_id
+      WHERE (
+        -- Authenticated user case
+        (request.user_id() IS NOT NULL AND usv.user_id = request.user_id())
+        OR
+        -- Anonymous user case - match device_id through users_anon
+        (request.user_id() IS NULL AND usv.anon_user_id IN (
+          SELECT ua.id FROM users_anon ua WHERE ua.device_id = request.parameters() ->> 'device_id'
+        ))
+      )
+    data:
+      # Sync the text versions the user has saved
+      - SELECT * FROM text_versions WHERE id = bucket.text_version_id
+      # Sync verse texts belonging to these text versions
+      - SELECT * FROM verse_texts WHERE text_version_id = bucket.text_version_id
+
+  # ====================
+  # LOCAL TO REMOTE ONLY - Analytics Data
+  # ====================
+  
+  # NOTE: These buckets intentionally have no 'data' section since they are local-to-remote only
+  # The client will upload this data to the backend, but won't download it back
+  
+  analytics_sessions:
+    # This is a placeholder bucket for local-to-remote sync
+    # Client will handle uploading sessions, share_opens, shares, verse_listens, 
+    # media_file_listens, app_downloads to the backend
+    data: []
+
+  # ====================
+  # TWO-WAY SYNC - User Data (requires authentication for full sync)
+  # ====================
+  
+  user_bookmarks:
+    # Authenticated users get their bookmarks, anonymous users use device_id
+    parameters: |
+      SELECT CASE 
+        WHEN request.user_id() IS NOT NULL THEN request.user_id()
+        ELSE (SELECT ua.id FROM users_anon ua WHERE ua.device_id = request.parameters() ->> 'device_id' LIMIT 1)
+      END as user_identifier
+    data:
+      # User bookmarks
+      - |
+        SELECT * FROM user_bookmarks 
+        WHERE (
+          (request.user_id() IS NOT NULL AND user_id = request.user_id())
+          OR
+          (request.user_id() IS NULL AND anon_user_id = bucket.user_identifier)
+        )
+      # User bookmark folders
+      - |
+        SELECT * FROM user_bookmark_folders 
+        WHERE (
+          (request.user_id() IS NOT NULL AND user_id = request.user_id())
+          OR
+          (request.user_id() IS NULL AND anon_user_id = bucket.user_identifier)
+        )
+      # Passages referenced by user bookmarks
+      - |
+        SELECT DISTINCT p.* FROM passages p
+        INNER JOIN user_bookmarks ub ON p.id = ub.target_id AND ub.target_type = 'passage'
+        WHERE (
+          (request.user_id() IS NOT NULL AND ub.user_id = request.user_id())
+          OR
+          (request.user_id() IS NULL AND ub.anon_user_id = bucket.user_identifier)
+        )
+
+  user_versions:
+    # Two-way sync of user saved versions
+    parameters: |
+      SELECT CASE 
+        WHEN request.user_id() IS NOT NULL THEN request.user_id()
+        ELSE (SELECT ua.id FROM users_anon ua WHERE ua.device_id = request.parameters() ->> 'device_id' LIMIT 1)
+      END as user_identifier
+    data:
+      # User saved versions (audio and text)
+      - |
+        SELECT * FROM user_saved_versions 
+        WHERE (
+          (request.user_id() IS NOT NULL AND user_id = request.user_id())
+          OR
+          (request.user_id() IS NULL AND anon_user_id = bucket.user_identifier)
+        )
+      # User saved image sets
+      - |
+        SELECT * FROM user_saved_image_sets 
+        WHERE (
+          (request.user_id() IS NOT NULL AND user_id = request.user_id())
+          OR
+          (request.user_id() IS NULL AND anon_user_id = bucket.user_identifier)
+        )
+
+  user_playlists:
+    # Two-way sync of user playlists and related data
+    parameters: |
+      SELECT CASE 
+        WHEN request.user_id() IS NOT NULL THEN request.user_id()
+        ELSE (SELECT ua.id FROM users_anon ua WHERE ua.device_id = request.parameters() ->> 'device_id' LIMIT 1)
+      END as user_identifier
+    data:
+      # User playlist groups
+      - |
+        SELECT * FROM user_playlist_groups 
+        WHERE (
+          (request.user_id() IS NOT NULL AND user_id = request.user_id())
+          OR
+          (request.user_id() IS NULL AND anon_user_id = bucket.user_identifier)
+        )
+      # User playlists
+      - |
+        SELECT * FROM user_playlists 
+        WHERE (
+          (request.user_id() IS NOT NULL AND user_id = request.user_id())
+          OR
+          (request.user_id() IS NULL AND anon_user_id = bucket.user_identifier)
+        )
+      # Actual playlists referenced by user_playlists
+      - |
+        SELECT DISTINCT p.* FROM playlists p
+        INNER JOIN user_playlists up ON p.id = up.playlist_id
+        WHERE (
+          (request.user_id() IS NOT NULL AND up.user_id = request.user_id())
+          OR
+          (request.user_id() IS NULL AND up.anon_user_id = bucket.user_identifier)
+        )
+      # Playlist items for user's playlists
+      - |
+        SELECT DISTINCT pi.* FROM playlist_items pi
+        INNER JOIN user_playlists up ON pi.playlist_id = up.playlist_id
+        WHERE (
+          (request.user_id() IS NOT NULL AND up.user_id = request.user_id())
+          OR
+          (request.user_id() IS NULL AND up.anon_user_id = bucket.user_identifier)
+        )
+      # Passages referenced by playlist items
+      - |
+        SELECT DISTINCT pass.* FROM passages pass
+        INNER JOIN playlist_items pi ON pass.id = pi.target_id AND pi.target_type = 'passage'
+        INNER JOIN user_playlists up ON pi.playlist_id = up.playlist_id
+        WHERE (
+          (request.user_id() IS NOT NULL AND up.user_id = request.user_id())
+          OR
+          (request.user_id() IS NULL AND up.anon_user_id = bucket.user_identifier)
+        )
+
+  # ====================
+  # LANGUAGE HIERARCHY DATA - Global access for language selection
+  # ====================
+  
+  language_data:
+    data:
+      # Language entities for language selection UI
+      - SELECT * FROM language_entities
+      # Language aliases for search functionality
+      - SELECT * FROM language_aliases
+      # Language properties for additional metadata
+      - SELECT * FROM language_properties
+      # Language entity sources for version tracking
+      - SELECT * FROM language_entity_sources 
