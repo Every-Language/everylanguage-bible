@@ -30,6 +30,8 @@ import { mediaFilesQueryKeys } from '@/features/media/hooks/useMediaFilesQueries
 import { chapterAudioQueryKeys } from '@/features/media/hooks/useChapterAudioInfo';
 import { useCurrentVersions } from '@/features/languages/hooks';
 import { audioVersionValidationService } from '@/features/languages/services/audioVersionValidationService';
+import { useStreamingDownload } from '../hooks/useStreamingDownload';
+import { MediaTrack } from '@/features/media/types';
 
 // Query Keys for chapter audio info (for invalidation)
 const chapterAudioInfoQueryKeys = {
@@ -101,6 +103,26 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   // Background downloads hook
   const { isProcessing: backgroundProcessing, addBatchToBackgroundQueue } =
     useBackgroundDownloads();
+
+  // Streaming download hook
+  const { state: streamingState, startStreamingDownload } =
+    useStreamingDownload({
+      enableStreaming: true,
+      minBytesForPlayback: 1024 * 1024, // 1MB
+      autoPlayWhenReady: true,
+      onDownloadProgress: progress => {
+        logger.info('Streaming download progress:', progress);
+      },
+      onPlaybackReady: () => {
+        logger.info('Streaming playback ready!');
+      },
+      onDownloadComplete: () => {
+        logger.info('Streaming download completed');
+      },
+      onError: error => {
+        logger.error('Streaming download error:', error);
+      },
+    });
 
   // Audio version validation
   const { currentAudioVersion } = useCurrentVersions();
@@ -427,7 +449,7 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     currentAudioVersion,
   ]);
 
-  // Download all files
+  // Download all files with streaming
   const handleDownload = useCallback(async () => {
     if (searchResults.length === 0) return;
 
@@ -448,46 +470,98 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     setAudioVersionError(null);
 
     try {
-      logger.info('Starting download of files:', {
+      logger.info('Starting streaming download of files:', {
         count: searchResults.length,
-        useBackground: true,
         files: searchResults.map(f => ({
           remote_path: f.remote_path,
           file_size: f.file_size,
         })),
       });
 
-      // Always use background downloads
-      const files = searchResults.map((file, index) => ({
-        filePath: file.remote_path,
-        fileName: `${chapterId}_${index + 1}.mp3`,
-        fileSize: file.file_size, // Pass the file size from search results
-      }));
+      // Create files array with track information for streaming
+      const files = searchResults.map((file, index) => {
+        const track: MediaTrack = {
+          id: `${chapterId}_${index + 1}`,
+          title: `${chapterTitle} - Part ${index + 1}`,
+          subtitle: `${book.name} ${chapterTitle}`,
+          duration: 0, // Will be updated when file is loaded
+          currentTime: 0,
+          isPlaying: false,
+        };
 
-      const downloadIds = await addBatchToBackgroundQueue(files, {
-        priority: 1,
-        batchId: `chapter_${chapterId}_${Date.now()}`,
-        metadata: {
-          chapterId,
-          bookName: book.name,
-          chapterTitle,
-          addToMediaFiles: true,
-          originalSearchResults: validMediaFiles,
-          mediaFileOptions: {
-            chapterId: chapterId,
-            mediaType: 'audio',
-            uploadStatus: 'completed',
-            publishStatus: 'published',
-            checkStatus: 'checked',
-            // Don't override version - let it come from the search results
-            syncVersesData: true, // Automatically sync verses data after download
-          },
-          maxRetries: 3,
-        },
+        return {
+          filePath: file.remote_path,
+          fileName: `${chapterId}_${index + 1}.mp3`,
+          fileSize: file.file_size,
+          ...(index === 0 && { track }), // Only include track for first file
+        };
       });
 
+      // Start streaming download
+      logger.info('About to start streaming download with files:', files);
+
+      try {
+        await startStreamingDownload(files, {
+          streamFirstFile: true,
+          batchId: `chapter_${chapterId}_${Date.now()}`,
+          metadata: {
+            chapterId,
+            bookName: book.name,
+            chapterTitle,
+            addToMediaFiles: true,
+            originalSearchResults: validMediaFiles,
+            mediaFileOptions: {
+              chapterId: chapterId,
+              mediaType: 'audio',
+              uploadStatus: 'completed',
+              publishStatus: 'published',
+              checkStatus: 'checked',
+              syncVersesData: true,
+            },
+            maxRetries: 3,
+          },
+        });
+
+        logger.info('Streaming download started successfully');
+      } catch (streamingError) {
+        logger.warn(
+          'Streaming download failed, falling back to regular download:',
+          streamingError
+        );
+
+        // Fallback to regular download
+        const regularFiles = searchResults.map((file, index) => ({
+          filePath: file.remote_path,
+          fileName: `${chapterId}_${index + 1}.mp3`,
+          fileSize: file.file_size,
+        }));
+
+        const downloadIds = await addBatchToBackgroundQueue(regularFiles, {
+          priority: 1,
+          batchId: `chapter_${chapterId}_${Date.now()}`,
+          metadata: {
+            chapterId,
+            bookName: book.name,
+            chapterTitle,
+            addToMediaFiles: true,
+            originalSearchResults: validMediaFiles,
+            mediaFileOptions: {
+              chapterId: chapterId,
+              mediaType: 'audio',
+              uploadStatus: 'completed',
+              publishStatus: 'published',
+              checkStatus: 'checked',
+              syncVersesData: true,
+            },
+            maxRetries: 3,
+          },
+        });
+
+        logger.info('Fallback to regular download completed:', downloadIds);
+      }
+
       setCurrentBatchId(`chapter_${chapterId}_${Date.now()}`);
-      logger.info('Added files to background download queue:', downloadIds);
+      logger.info('Started streaming download for chapter:', chapterId);
 
       // Don't set isDownloading to false here since downloads are happening in background
       // The download completion callback will handle resetting the state
@@ -498,14 +572,14 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
       }, 2000);
     } catch (error) {
       const errorMsg = (error as Error).message;
-      logger.error('Download batch error:', errorMsg);
+      logger.error('Streaming download error:', errorMsg);
       setDownloadError(errorMsg);
       // Only reset isDownloading on error
       setIsDownloading(false);
     }
   }, [
     searchResults,
-    addBatchToBackgroundQueue,
+    startStreamingDownload,
     setDownloadError,
     chapterId,
     book.name,
@@ -513,7 +587,8 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     onClose,
     validMediaFiles,
     currentAudioVersion,
-  ]); // Remove unnecessary dependencies: backgroundInitialized, downloadFile, handleInitializeDownloadProgress, updateFileProgress
+    addBatchToBackgroundQueue,
+  ]);
 
   // Check online capabilities when modal becomes visible
   useEffect(() => {
@@ -679,6 +754,71 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
             downloadError={downloadError}
           />
 
+          {/* Streaming Status Display */}
+          {streamingState.isStreaming && (
+            <View style={styles.streamingStatusContainer}>
+              <View style={styles.streamingStatusHeader}>
+                <MaterialIcons
+                  name='play-circle-outline'
+                  size={20}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.streamingStatusText,
+                    { color: theme.colors.primary },
+                  ]}>
+                  Streaming Audio
+                </Text>
+              </View>
+
+              {streamingState.isPlaybackReady && (
+                <Text
+                  style={[
+                    styles.streamingStatusSubtext,
+                    { color: theme.colors.success },
+                  ]}>
+                  ✓ Ready for playback
+                </Text>
+              )}
+
+              {!streamingState.isPlaybackReady &&
+                streamingState.isDownloading && (
+                  <View style={styles.streamingProgressContainer}>
+                    <Text
+                      style={[
+                        styles.streamingProgressText,
+                        { color: theme.colors.textSecondary },
+                      ]}>
+                      Buffering...{' '}
+                      {Math.round(streamingState.streamingProgress * 100)}%
+                    </Text>
+                    <View style={styles.streamingProgressBar}>
+                      <View
+                        style={[
+                          styles.streamingProgressFill,
+                          {
+                            width: `${streamingState.streamingProgress * 100}%`,
+                            backgroundColor: theme.colors.primary,
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                )}
+
+              {streamingState.error && (
+                <Text
+                  style={[
+                    styles.streamingStatusSubtext,
+                    { color: theme.colors.error },
+                  ]}>
+                  ✗ {streamingState.error}
+                </Text>
+              )}
+            </View>
+          )}
+
           {/* Network Status Display - only show when there is no internet */}
           {!isOnline && (
             <NetworkStatusDisplay
@@ -835,5 +975,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 8,
     flex: 1,
+  },
+  streamingStatusContainer: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: COLOR_VARIATIONS.BLUE_10,
+    marginBottom: 16,
+  },
+  streamingStatusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  streamingStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  streamingStatusSubtext: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 4,
+  },
+  streamingProgressContainer: {
+    marginTop: 8,
+  },
+  streamingProgressText: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  streamingProgressBar: {
+    height: 4,
+    backgroundColor: COLOR_VARIATIONS.GRAY_200,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  streamingProgressFill: {
+    height: '100%',
+    borderRadius: 2,
   },
 });
