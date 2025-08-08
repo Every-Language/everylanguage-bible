@@ -82,7 +82,7 @@ const images = new Table(
 const sessions = new Table(
   {
     // id column (text) is automatically included
-    anon_user_id: column.text,
+    user_id: column.text,
     device_id: column.text,
     started_at: column.text,
     ended_at: column.text,
@@ -101,7 +101,7 @@ const share_opens = new Table(
   {
     // id column (text) is automatically included
     share_id: column.text,
-    opened_by_anon_user_id: column.text,
+    user_id: column.text,
     device_id: column.text,
     session_id: column.text,
     opened_at: column.text,
@@ -116,7 +116,7 @@ const share_opens = new Table(
 const shares = new Table(
   {
     // id column (text) is automatically included
-    anon_user_id: column.text,
+    user_id: column.text,
     device_id: column.text,
     session_id: column.text,
     shared_at: column.text,
@@ -133,7 +133,7 @@ const shares = new Table(
 const verse_listens = new Table(
   {
     // id column (text) is automatically included
-    anon_user_id: column.text,
+    user_id: column.text,
     device_id: column.text,
     session_id: column.text,
     verse_id: column.text,
@@ -149,7 +149,7 @@ const verse_listens = new Table(
 const media_file_listens = new Table(
   {
     // id column (text) is automatically included
-    anon_user_id: column.text,
+    user_id: column.text,
     device_id: column.text,
     session_id: column.text,
     media_file_id: column.text,
@@ -168,7 +168,7 @@ const app_downloads = new Table(
   {
     // id column (text) is automatically included
     source_share_id: column.text,
-    anon_user_id: column.text,
+    user_id: column.text,
     device_id: column.text,
     installed_at: column.text,
     location: column.text,

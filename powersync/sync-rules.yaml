@@ -43,21 +43,18 @@ bucket_definitions:
   user_current_selections:
       parameters:
         SELECT request.user_id() as user_id 
-        WHERE request.parameters() ->> 'is_authenticated' = 'true'
       data:
         - SELECT * FROM user_current_selections WHERE user_id = bucket.user_id
 
   user_saved_text_versions:
     parameters: 
       SELECT request.user_id() as user_id 
-      WHERE request.parameters() ->> 'is_authenticated' = 'true'
     data:
       - SELECT * FROM user_saved_text_versions WHERE user_id = bucket.user_id
 
   user_saved_audio_versions:
     parameters: 
       SELECT request.user_id() as user_id 
-      WHERE request.parameters() ->> 'is_authenticated' = 'true'
     data:
       - SELECT * FROM user_saved_audio_versions WHERE user_id = bucket.user_id
 
@@ -65,7 +62,6 @@ bucket_definitions:
     parameters: 
       SELECT audio_version_id FROM user_saved_audio_versions 
       WHERE user_id = request.user_id() AND audio_version_id IS NOT NULL
-      AND request.parameters() ->> 'is_authenticated' = 'true'
     data:
       - SELECT * FROM audio_versions WHERE id = bucket.audio_version_id
       - SELECT * FROM media_files WHERE audio_version_id = bucket.audio_version_id
@@ -75,7 +71,6 @@ bucket_definitions:
     parameters: 
       SELECT text_version_id FROM user_saved_text_versions 
       WHERE user_id = request.user_id() AND text_version_id IS NOT NULL
-      AND request.parameters() ->> 'is_authenticated' = 'true'
     data:
       - SELECT * FROM text_versions WHERE id = bucket.text_version_id
       - SELECT * FROM verse_texts WHERE text_version_id = bucket.text_version_id
@@ -83,7 +78,6 @@ bucket_definitions:
   user_bookmarks:
     parameters: 
       SELECT request.user_id() as user_id 
-      WHERE request.parameters() ->> 'is_authenticated' = 'true'
     data:
       - SELECT * FROM user_bookmarks WHERE user_id = bucket.user_id
       - SELECT * FROM user_bookmark_folders WHERE user_id = bucket.user_id
@@ -91,7 +85,6 @@ bucket_definitions:
   user_saved_image_sets:
     parameters: 
       SELECT request.user_id() as user_id 
-      WHERE request.parameters() ->> 'is_authenticated' = 'true'
     data:
       - SELECT * FROM user_saved_image_sets WHERE user_id = bucket.user_id
 
@@ -99,7 +92,6 @@ bucket_definitions:
   user_saved_playlists:
     parameters: 
       SELECT request.user_id() as user_id 
-      WHERE request.parameters() ->> 'is_authenticated' = 'true'
     data:
       - SELECT * FROM user_playlist_groups WHERE user_id = bucket.user_id
       - SELECT * FROM user_playlists WHERE user_id = bucket.user_id
@@ -109,7 +101,6 @@ bucket_definitions:
     parameters: 
       SELECT playlist_id FROM user_playlists 
       WHERE user_id = request.user_id()
-      AND request.parameters() ->> 'is_authenticated' = 'true'
     data:
       - SELECT * FROM playlists WHERE id = bucket.playlist_id
       - SELECT * FROM playlist_items WHERE playlist_id = bucket.playlist_id
