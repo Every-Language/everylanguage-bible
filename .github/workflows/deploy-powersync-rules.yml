@@ -112,7 +112,7 @@ jobs:
           
           echo "🚀 Attempting deployment..."
           set -x
-          npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml --skipConfirmation --verbose
+          npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml --skipConfirmation
           set +x
           echo "✅ Sync rules deployed to development successfully"
 
