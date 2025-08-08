@@ -50,6 +50,7 @@ jobs:
           AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
           ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
           PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
+          INSTANCE_ID: ${{ secrets.POWERSYNC_DEV_INSTANCE_ID }}
         run: |
           echo "🔍 Checking if committed schema matches sync rules..."
           npm run powersync:verify-schema

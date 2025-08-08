@@ -130,6 +130,7 @@ jobs:
           AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
           ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
           PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
+          INSTANCE_ID: ${{ secrets.POWERSYNC_DEV_INSTANCE_ID }}
         run: |
           echo "🔍 Verifying PowerSync schema is consistent with sync rules..."
           npm run powersync:verify-schema
@@ -141,6 +142,7 @@ jobs:
           AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
           ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
           PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
+          INSTANCE_ID: ${{ secrets.POWERSYNC_DEV_INSTANCE_ID }}
         run: |
           echo "🔄 Generating fresh schema to compare..."
           npm run powersync:generate-schema
