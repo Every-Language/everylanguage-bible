@@ -10,4 +10,7 @@ package-lock.json
 yarn.lock
 .git/
 coverage/
-.nyc_output/ 
+.nyc_output/
+
+# PowerSync generated schema - exclude from formatting
+powersync/AppSchema.ts 

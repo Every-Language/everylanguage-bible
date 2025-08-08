@@ -6,7 +6,7 @@ const bible_versions = new Table(
     name: column.text,
     structure_notes: column.text,
     created_at: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -19,7 +19,7 @@ const books = new Table(
     created_at: column.text,
     updated_at: column.text,
     global_order: column.integer,
-    testament: column.text,
+    testament: column.text
   },
   { indexes: {} }
 );
@@ -31,7 +31,7 @@ const chapters = new Table(
     total_verses: column.integer,
     created_at: column.text,
     updated_at: column.text,
-    global_order: column.integer,
+    global_order: column.integer
   },
   { indexes: {} }
 );
@@ -42,7 +42,7 @@ const verses = new Table(
     verse_number: column.integer,
     created_at: column.text,
     updated_at: column.text,
-    global_order: column.integer,
+    global_order: column.integer
   },
   { indexes: {} }
 );
@@ -52,7 +52,7 @@ const image_sets = new Table(
     name: column.text,
     created_at: column.text,
     created_by: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -68,7 +68,7 @@ const images = new Table(
     updated_at: column.text,
     deleted_at: column.text,
     version: column.integer,
-    publish_status: column.text,
+    publish_status: column.text
   },
   { indexes: {} }
 );
@@ -85,7 +85,7 @@ const sessions = new Table(
     app_version: column.text,
     os: column.text,
     os_version: column.text,
-    created_at: column.text,
+    created_at: column.text
   },
   { indexes: {} }
 );
@@ -100,7 +100,7 @@ const share_opens = new Table(
     language_entity_id: column.text,
     location: column.text,
     origin_share_id: column.text,
-    created_at: column.text,
+    created_at: column.text
   },
   { indexes: {} }
 );
@@ -116,7 +116,7 @@ const shares = new Table(
     language_entity_id: column.text,
     location: column.text,
     origin_share_id: column.text,
-    created_at: column.text,
+    created_at: column.text
   },
   { indexes: {} }
 );
@@ -131,7 +131,7 @@ const verse_listens = new Table(
     listened_at: column.text,
     location: column.text,
     connectivity: column.text,
-    created_at: column.text,
+    created_at: column.text
   },
   { indexes: {} }
 );
@@ -148,7 +148,7 @@ const media_file_listens = new Table(
     listened_at: column.text,
     location: column.text,
     connectivity: column.text,
-    created_at: column.text,
+    created_at: column.text
   },
   { indexes: {} }
 );
@@ -164,7 +164,7 @@ const app_downloads = new Table(
     platform: column.text,
     os: column.text,
     os_version: column.text,
-    created_at: column.text,
+    created_at: column.text
   },
   { indexes: {} }
 );
@@ -175,7 +175,7 @@ const user_current_selections = new Table(
     selected_audio_version: column.text,
     selected_text_version: column.text,
     created_at: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -185,7 +185,7 @@ const user_saved_text_versions = new Table(
     user_id: column.text,
     text_version_id: column.text,
     created_at: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -195,7 +195,7 @@ const user_saved_audio_versions = new Table(
     user_id: column.text,
     audio_version_id: column.text,
     created_at: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -209,7 +209,7 @@ const audio_versions = new Table(
     created_at: column.text,
     created_by: column.text,
     updated_at: column.text,
-    deleted_at: column.text,
+    deleted_at: column.text
   },
   { indexes: {} }
 );
@@ -233,7 +233,7 @@ const media_files = new Table(
     start_verse_id: column.text,
     end_verse_id: column.text,
     audio_version_id: column.text,
-    chapter_id: column.text,
+    chapter_id: column.text
   },
   { indexes: {} }
 );
@@ -248,7 +248,7 @@ const media_files_verses = new Table(
     created_at: column.text,
     updated_at: column.text,
     deleted_at: column.text,
-    denormalized_audio_version_id: column.text,
+    denormalized_audio_version_id: column.text
   },
   { indexes: {} }
 );
@@ -263,7 +263,7 @@ const text_versions = new Table(
     created_by: column.text,
     updated_at: column.text,
     deleted_at: column.text,
-    project_id: column.text,
+    project_id: column.text
   },
   { indexes: {} }
 );
@@ -278,7 +278,7 @@ const verse_texts = new Table(
     updated_at: column.text,
     deleted_at: column.text,
     version: column.integer,
-    publish_status: column.text,
+    publish_status: column.text
   },
   { indexes: {} }
 );
@@ -292,7 +292,7 @@ const user_bookmarks = new Table(
     note: column.text,
     color: column.text,
     created_at: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -304,7 +304,7 @@ const user_bookmark_folders = new Table(
     name: column.text,
     color: column.text,
     created_at: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -314,7 +314,7 @@ const user_saved_image_sets = new Table(
     user_id: column.text,
     set_id: column.text,
     created_at: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -325,7 +325,7 @@ const user_playlist_groups = new Table(
     name: column.text,
     description: column.text,
     created_at: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -338,7 +338,7 @@ const user_playlists = new Table(
     name: column.text,
     image_id: column.text,
     created_at: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -350,7 +350,7 @@ const playlists = new Table(
     created_at: column.text,
     created_by: column.text,
     updated_at: column.text,
-    image_id: column.text,
+    image_id: column.text
   },
   { indexes: {} }
 );
@@ -363,7 +363,7 @@ const playlist_items = new Table(
     order_index: column.integer,
     created_by: column.text,
     created_at: column.text,
-    updated_at: column.text,
+    updated_at: column.text
   },
   { indexes: {} }
 );
@@ -394,5 +394,5 @@ export const AppSchema = new Schema({
   user_playlist_groups,
   user_playlists,
   playlists,
-  playlist_items,
+  playlist_items
 });

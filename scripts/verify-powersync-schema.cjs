@@ -52,34 +52,11 @@ function generateTempSchema() {
     "// Alternative: import { column, Schema, Table } from '@powersync/web';"
   );
 
-  // Write to temp file and format with Prettier (exact same process as generate script)
-  const tempFile = path.join(os.tmpdir(), 'temp-expected-schema.ts');
-  fs.writeFileSync(tempFile, schemaContent);
-  
-  try {
-    console.log('🎨 Formatting temporary schema with Prettier...');
-    execSync(`npx prettier --write "${tempFile}"`, { encoding: 'utf8' });
-    const formattedContent = fs.readFileSync(tempFile, 'utf8');
-    const normalized = normalizeSchema(formattedContent);
-    
-    console.log(`🔧 Normalized schema length: ${normalized.length} characters`);
-    console.log(`🔧 Normalized schema preview: "${normalized.substring(0, 150)}..."`);
-    
-    // Clean up temp file
-    if (fs.existsSync(tempFile)) {
-      fs.unlinkSync(tempFile);
-    }
-    
-    return normalized;
-  } catch (prettierError) {
-    // Fallback to non-formatted version if Prettier fails
-    console.warn('⚠️  Prettier formatting failed, using non-formatted schema for comparison');
-    const normalized = normalizeSchema(schemaContent);
-    console.log(`🔧 Normalized schema length: ${normalized.length} characters`);
-    console.log(`🔧 Normalized schema preview: "${normalized.substring(0, 150)}..."`);
-    
-    return normalized;
-  }
+  const normalized = normalizeSchema(schemaContent);
+  console.log(`🔧 Normalized schema length: ${normalized.length} characters`);
+  console.log(`🔧 Normalized schema preview: "${normalized.substring(0, 150)}..."`);
+
+  return normalized;
 }
 
 function verifySchema() {

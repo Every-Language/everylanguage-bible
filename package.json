@@ -113,7 +113,8 @@
     ],
     "*.{json,md}": [
       "prettier --write"
-    ]
+    ],
+    "powersync/AppSchema.ts": []
   },
   "jest": {
     "preset": "jest-expo",
