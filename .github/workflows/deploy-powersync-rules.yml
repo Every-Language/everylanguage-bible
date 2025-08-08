@@ -84,6 +84,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Deploy sync rules to dev
         env:
           AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
@@ -92,7 +95,25 @@ jobs:
           INSTANCE_ID: ${{ secrets.POWERSYNC_DEV_INSTANCE_ID }}
         run: |
           echo "🚀 Deploying sync rules to development environment..."
-          npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml --skipConfirmation
+          echo "🔧 Debug: Environment variables"
+          echo "  PROJECT_ID: ${PROJECT_ID:0:8}..."
+          echo "  ORG_ID: ${ORG_ID:0:8}..."
+          echo "  INSTANCE_ID: ${INSTANCE_ID:0:8}..."
+          echo "  AUTH_TOKEN: ${AUTH_TOKEN:0:8}..."
+          
+          echo "📄 Validating sync rules file exists..."
+          if [ ! -f "powersync/sync-rules.yaml" ]; then
+            echo "❌ Sync rules file not found!"
+            exit 1
+          fi
+          
+          echo "📋 Sync rules file content:"
+          head -10 powersync/sync-rules.yaml
+          
+          echo "🚀 Attempting deployment..."
+          set -x
+          npx powersync instance sync-rules deploy -f powersync/sync-rules.yaml --skipConfirmation --verbose
+          set +x
           echo "✅ Sync rules deployed to development successfully"
 
       - name: Post-deployment validation
@@ -123,6 +144,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Deploy sync rules to production
         env:

@@ -96,7 +96,7 @@ bucket_definitions:
       - SELECT * FROM user_playlist_groups WHERE user_id = bucket.user_id
       - SELECT * FROM user_playlists WHERE user_id = bucket.user_id
 
-  # The actual playlists
+  # The actual playlists themselves
   playlists:
     parameters: 
       SELECT playlist_id FROM user_playlists 
