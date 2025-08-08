@@ -12,7 +12,7 @@ import { useTheme } from '@/shared/hooks';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 import { bibleSync } from '@/shared/services/sync/bible/BibleSyncService';
-import { languageSync } from '@/shared/services/sync/language/LanguageSyncService';
+// Language sync removed - using PowerSync and server-side fuzzy search instead
 import {
   useDataAvailabilityQuery,
   useDataCountsQuery,
@@ -104,10 +104,8 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
         isComplete: false,
       });
 
-      const [bibleUpdateCheck, languageUpdateCheck] = await Promise.all([
-        bibleSync.needsUpdate(),
-        languageSync.needsUpdate(),
-      ]);
+      // Language sync removed - using PowerSync and server-side fuzzy search instead
+      const bibleUpdateCheck = await bibleSync.needsUpdate();
 
       // Step 3: Sync Bible content if needed
       if (bibleUpdateCheck.needsUpdate || !hasData) {
@@ -123,20 +121,10 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
         logger.info('Bible sync results:', bibleResults);
       }
 
-      // Step 4: Sync Language content if needed
-      if (languageUpdateCheck.needsUpdate || !hasData) {
-        setProgress({
-          current: 60,
-          total: 100,
-          message: 'Syncing language data...',
-          isComplete: false,
-        });
-
-        const languageResults = await languageSync.syncAll({
-          forceFullSync: !hasData,
-        });
-        logger.info('Language sync results:', languageResults);
-      }
+      // Step 4: Language sync removed - using PowerSync and server-side fuzzy search instead
+      logger.info(
+        'Language sync skipped - using PowerSync and server-side fuzzy search'
+      );
 
       // Step 5: Verify all tables have data
       setProgress({
@@ -187,7 +175,7 @@ export const SyncProgressModal: React.FC<SyncProgressModalProps> = ({
 
         // Language tables - check if they exist and have data
         {
-          name: 'language_entities_cache',
+          name: 'language_entities_cache_disabled',
           checkFn: () => languageTablesCounts?.languageEntitiesCount || 0,
         },
         {

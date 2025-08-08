@@ -1,20 +1,19 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import {
   View,
   StyleSheet,
   Text,
   RefreshControl,
-  ScrollView,
   TouchableOpacity,
+  FlatList,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/shared/hooks';
-import { useTranslations } from '@/shared/hooks';
 import { useSync } from '@/shared/hooks';
-import { BookGrid } from '../components/BookGrid';
-import { useBooksQuery } from '../hooks/useBibleQueries';
-import type { Book } from '../types';
+import { BookCard } from '../components/BookCard';
+import { usePowerSyncBooksWithMetadata } from '../hooks/usePowerSyncBible';
+import type { BookWithMetadata } from '../services/powerSyncBibleService';
 import type { BibleStackParamList } from '../navigation/BibleStackNavigator';
 import { logger } from '@/shared/utils/logger';
 
@@ -25,68 +24,19 @@ type BibleBooksScreenNavigationProp = NativeStackNavigationProp<
 
 export const BibleBooksScreen: React.FC = () => {
   const { theme } = useTheme();
-  const t = useTranslations();
   const navigation = useNavigation<BibleBooksScreenNavigationProp>();
-  const { syncNow, isSyncing } = useSync();
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [searchQuery] = useState('');
-  const [sortBy] = useState<'name' | 'book_number' | 'global_order'>(
-    'global_order'
-  );
-  const [sortOrder] = useState<'asc' | 'desc'>('asc');
+  const { isSyncing } = useSync();
 
-  // TanStack Query hooks
+  // PowerSync TanStack Query hooks
   const {
     data: books = [],
     isLoading: booksLoading,
     error: booksError,
     refetch: refetchBooks,
     isRefetching,
-  } = useBooksQuery();
+  } = usePowerSyncBooksWithMetadata();
 
-  // Filter and sort books
-  const filteredAndSortedBooks = useMemo(() => {
-    let filtered = [...books];
-
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(book =>
-        book.name.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: string | number;
-      let bValue: string | number;
-
-      switch (sortBy) {
-        case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
-          break;
-        case 'book_number':
-          aValue = a.book_number;
-          bValue = b.book_number;
-          break;
-        case 'global_order':
-        default:
-          aValue = a.global_order || 0;
-          bValue = b.global_order || 0;
-          break;
-      }
-
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return filtered;
-  }, [books, searchQuery, sortBy, sortOrder]);
-
-  const handleBookSelect = (book: Book) => {
-    setSelectedBook(book);
+  const handleBookSelect = (book: BookWithMetadata) => {
     // Navigate to chapters screen using React Navigation
     navigation.navigate('BibleChapters', { book });
   };
@@ -99,63 +49,25 @@ export const BibleBooksScreen: React.FC = () => {
     }
   };
 
-  const handleSyncData = async () => {
-    try {
-      await syncNow();
-    } catch (error) {
-      logger.error('Failed to sync data:', error);
-    }
-  };
+  const renderBookItem = ({ item }: { item: BookWithMetadata }) => (
+    <BookCard
+      book={item}
+      onPress={() => handleBookSelect(item)}
+      showMetadata={true}
+    />
+  );
 
-  if (booksLoading && !isRefetching) {
+  if (booksError) {
     return (
       <View
         style={[
           styles.container,
           { backgroundColor: theme.colors.background },
         ]}>
-        <View
-          style={[
-            styles.centered,
-            { backgroundColor: theme.colors.background },
-          ]}>
-          <Text style={[styles.loadingText, { color: theme.colors.text }]}>
-            {t('loading')}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Show sync button if no data after 3 retry attempts or if there's an error
-  const shouldShowSyncButton =
-    (booksError && filteredAndSortedBooks.length === 0) ||
-    (!booksLoading && !isRefetching && filteredAndSortedBooks.length === 0);
-
-  if (shouldShowSyncButton) {
-    return (
-      <ScrollView
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
-        contentContainerStyle={styles.centered}
-        refreshControl={
-          <RefreshControl
-            refreshing={booksLoading || isSyncing || isRefetching}
-            onRefresh={handleRefresh}
-            tintColor={theme.colors.text}
-          />
-        }>
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: theme.colors.text }]}>
-            {booksError instanceof Error
-              ? booksError.message
-              : 'No Bible data available'}
-          </Text>
-          <Text
-            style={[
-              styles.syncDescription,
-              { color: theme.colors.textSecondary },
-            ]}>
-            Download Bible content to start reading
+          <Text style={[styles.errorText, { color: theme.colors.error }]}>
+            Error loading books:{' '}
+            {booksError instanceof Error ? booksError.message : 'Unknown error'}
           </Text>
           <TouchableOpacity
             style={[
@@ -163,49 +75,42 @@ export const BibleBooksScreen: React.FC = () => {
               { backgroundColor: theme.colors.primary },
             ]}
             onPress={handleRefresh}>
-            <Text
-              style={[
-                styles.retryButtonText,
-                { color: theme.colors.textInverse },
-              ]}>
-              Retry
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.syncButton,
-              { backgroundColor: theme.colors.secondary },
-            ]}
-            onPress={handleSyncData}
-            disabled={isSyncing}>
-            <Text
-              style={[
-                styles.syncButtonText,
-                { color: theme.colors.textInverse },
-              ]}>
-              {isSyncing ? 'Syncing...' : 'Download Bible Data'}
-            </Text>
+            <Text style={[styles.retryText, { color: '#ffffff' }]}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <BookGrid
-        books={filteredAndSortedBooks}
-        selectedBook={selectedBook}
-        onBookSelect={handleBookSelect}
-        loading={booksLoading || isSyncing}
+      <FlatList
+        data={books}
+        renderItem={renderBookItem}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContainer}
         refreshControl={
           <RefreshControl
-            refreshing={booksLoading || isSyncing || isRefetching}
+            refreshing={isRefetching || isSyncing}
             onRefresh={handleRefresh}
-            tintColor={theme.colors.text}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
           />
         }
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={10}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text
+              style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+              {booksLoading ? 'Loading books...' : 'No books available'}
+            </Text>
+          </View>
+        )}
       />
     </View>
   );
@@ -215,49 +120,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  centered: {
+  listContainer: {
+    padding: 16,
+  },
+  errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  errorContainer: {
-    alignItems: 'center',
-    maxWidth: 300,
-  },
   errorText: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 24,
-  },
-  syncDescription: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
+    marginBottom: 16,
   },
   retryButton: {
-    paddingHorizontal: 24,
     paddingVertical: 12,
+    paddingHorizontal: 24,
     borderRadius: 8,
-    marginBottom: 12,
   },
-  retryButtonText: {
+  retryText: {
     fontSize: 16,
     fontWeight: '600',
   },
-  syncButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
   },
-  syncButtonText: {
+  emptyText: {
     fontSize: 16,
-    fontWeight: '600',
+    textAlign: 'center',
   },
 });

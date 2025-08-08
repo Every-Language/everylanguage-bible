@@ -32,7 +32,7 @@ This document outlines the complete technology stack and best practices for the 
 
 ## Data Layer
 
-### SQLite + Drizzle ORM
+### SQLite
 
 - **Purpose**: Local offline-first database
 - **Best Practices**:
@@ -120,55 +120,6 @@ This document outlines the complete technology stack and best practices for the 
   - Use proper video caching strategies
   - Handle device orientation changes
   - Implement accessibility features (captions, audio descriptions)
-
-## User Interface
-
-### Tamagui
-
-- **Purpose**: UI component library and styling system
-- **Best Practices**:
-  - Create consistent design tokens for the app theme
-  - Implement proper dark/light mode support
-  - Use responsive design principles for various screen sizes
-  - Implement accessibility features (ARIA labels, focus management)
-  - Create reusable component variants
-  - Optimize bundle size by using only needed components
-  - Implement proper theme switching mechanisms
-
-## Analytics & Monitoring
-
-### PostHog
-
-- **Purpose**: Geographical user behavior tracking for later language mapping
-- **Best Practices**:
-  - Implement privacy-compliant event tracking
-  - Use feature flags for gradual rollouts
-  - Create meaningful event taxonomies
-  - Implement proper user identification (anonymous by default)
-  - Use cohort analysis for user segmentation
-  - Implement custom dashboards for ministry insights
-
-### Custom Offline Analytics Queue
-
-- **Purpose**: Queue analytics events for offline scenarios
-- **Best Practices**:
-  - Implement persistent queue using SQLite
-  - Use exponential backoff for retry logic
-  - Batch events for efficient network usage
-  - Handle queue size limits and cleanup
-  - Implement proper error handling and logging
-  - Ensure data privacy in queued events
-
-### Sentry
-
-- **Purpose**: Error monitoring and performance tracking
-- **Best Practices**:
-  - Configure proper error filtering and sampling
-  - Implement custom error boundaries
-  - Use performance monitoring for critical user flows
-  - Set up proper alerting for critical errors
-  - Implement user feedback collection
-  - Use release tracking for deployment monitoring
 
 ## Internationalization
 

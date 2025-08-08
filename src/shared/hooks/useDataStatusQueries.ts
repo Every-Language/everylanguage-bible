@@ -145,12 +145,10 @@ export const useLanguageTablesCountsQuery = () => {
         availableVersionsResult,
         userSavedVersionsResult,
       ] = await Promise.all([
-        databaseManager.executeQuery<{ count: number }>(
-          'SELECT COUNT(*) as count FROM language_entities_cache'
-        ),
-        databaseManager.executeQuery<{ count: number }>(
-          'SELECT COUNT(*) as count FROM available_versions_cache'
-        ),
+        // Language entities cache removed - using server-side fuzzy search instead
+        Promise.resolve([{ count: 0 }]),
+        // Available versions cache removed - using server-side fuzzy search instead
+        Promise.resolve([{ count: 0 }]),
         databaseManager.executeQuery<{ count: number }>(
           'SELECT COUNT(*) as count FROM user_saved_versions'
         ),

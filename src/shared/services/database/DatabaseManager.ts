@@ -461,46 +461,11 @@ class DatabaseManager {
     logger.info('Migrating database to version 3: Adding availability columns');
 
     try {
-      // Check if language_entities_cache table exists
-      const languageTableExists = await this.db.getFirstAsync<{
-        count: number;
-      }>(
-        `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='language_entities_cache'`
+      // Language entities cache migration removed - using server-side fuzzy search instead
+      // Language entities cache migration removed - using server-side fuzzy search instead
+      logger.info(
+        'Language entities cache migration skipped - using server-side fuzzy search instead'
       );
-
-      if (languageTableExists && languageTableExists.count > 0) {
-        // Add availability columns to language_entities_cache table
-        const languageTableInfo = await this.db.getAllAsync(
-          'PRAGMA table_info(language_entities_cache)'
-        );
-
-        const hasAvailableVersions = languageTableInfo.some(
-          (col: unknown) =>
-            (col as { name: string }).name === 'has_available_versions'
-        );
-
-        if (!hasAvailableVersions) {
-          await this.db.execAsync(
-            'ALTER TABLE language_entities_cache ADD COLUMN has_available_versions BOOLEAN DEFAULT 0'
-          );
-          await this.db.execAsync(
-            'ALTER TABLE language_entities_cache ADD COLUMN audio_versions_count INTEGER DEFAULT 0'
-          );
-          await this.db.execAsync(
-            'ALTER TABLE language_entities_cache ADD COLUMN text_versions_count INTEGER DEFAULT 0'
-          );
-          await this.db.execAsync(
-            'ALTER TABLE language_entities_cache ADD COLUMN last_availability_check TEXT DEFAULT CURRENT_TIMESTAMP'
-          );
-          logger.info(
-            'Added availability columns to language_entities_cache table'
-          );
-        }
-      } else {
-        logger.info(
-          'language_entities_cache table does not exist yet, skipping migration for this table'
-        );
-      }
 
       // Check if available_versions_cache table exists
       const versionsTableExists = await this.db.getFirstAsync<{

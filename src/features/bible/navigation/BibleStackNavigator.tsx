@@ -1,16 +1,17 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { Book, Chapter } from '../types';
+import type { BookWithMetadata } from '../services/powerSyncBibleService';
+import type { Chapter } from '../types';
 
 // Type definitions for the Bible stack
 export type BibleStackParamList = {
   BibleBooks: undefined;
   BibleChapters: {
-    book: Book;
+    book: BookWithMetadata;
   };
   BibleVerses: {
-    book: Book;
+    book: BookWithMetadata;
     chapter: Chapter;
   };
 };

@@ -9,15 +9,10 @@ import { MediaPlayerSheet } from '@/features/media/components/MediaPlayerSheet';
 import { VersionSelectionModal } from '@/features/languages/components';
 import { AuthScreen, ProfileScreen } from '@/features/auth';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import {
-  useCurrentVersions,
-  useSavedVersions,
-} from '@/features/languages/hooks';
-import { AudioVersion, TextVersion } from '@/features/languages/types';
+// Language management is now handled internally by VersionSelectionModal
 import { HomeTabNavigator, HomeContainer } from '../components';
 import { useHomeNavigation } from '../hooks';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { logger } from '@/shared/utils/logger';
 
 export const HomeScreen: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -30,14 +25,7 @@ export const HomeScreen: React.FC = () => {
   const [showAudioVersionModal, setShowAudioVersionModal] = useState(false);
   const [showTextVersionModal, setShowTextVersionModal] = useState(false);
 
-  // Language selection hooks
-  const {
-    currentAudioVersion,
-    currentTextVersion,
-    setAudioVersion,
-    setTextVersion,
-  } = useCurrentVersions();
-  const { savedAudioVersions, savedTextVersions } = useSavedVersions();
+  // The new VersionSelectionModal handles current version management internally via PowerSync
 
   const handleProfilePress = () => {
     setShowProfileModal(true);
@@ -64,17 +52,7 @@ export const HomeScreen: React.FC = () => {
     setShowTextVersionModal(true);
   };
 
-  const handleAudioVersionSelect = (version: AudioVersion | TextVersion) => {
-    // logger.log('Selected audio version:', version);
-    setAudioVersion(version as AudioVersion);
-    setShowAudioVersionModal(false);
-  };
-
-  const handleTextVersionSelect = (version: AudioVersion | TextVersion) => {
-    logger.log('Selected text version:', version);
-    setTextVersion(version as TextVersion);
-    setShowTextVersionModal(false);
-  };
+  // The new VersionSelectionModal handles selection internally
 
   if (isLoading) {
     return (
@@ -143,9 +121,6 @@ export const HomeScreen: React.FC = () => {
         visible={showAudioVersionModal}
         onClose={() => setShowAudioVersionModal(false)}
         versionType='audio'
-        savedVersions={savedAudioVersions}
-        currentVersion={currentAudioVersion}
-        onVersionSelect={handleAudioVersionSelect}
         title='Select Audio Version'
       />
 
@@ -153,9 +128,6 @@ export const HomeScreen: React.FC = () => {
         visible={showTextVersionModal}
         onClose={() => setShowTextVersionModal(false)}
         versionType='text'
-        savedVersions={savedTextVersions}
-        currentVersion={currentTextVersion}
-        onVersionSelect={handleTextVersionSelect}
         title='Select Text Version'
       />
     </>

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useTheme } from '@/shared/hooks';
 import { useUnifiedMediaPlayer } from '@/features/media/hooks/useUnifiedMediaPlayer';
-import { useCurrentVersions } from '@/features/languages/hooks/useLanguageSelection';
+import { useCurrentVersions } from '@/features/languages/hooks';
 
 import type { ViewStyle } from 'react-native';
 

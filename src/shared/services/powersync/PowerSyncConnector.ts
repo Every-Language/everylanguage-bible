@@ -1,11 +1,12 @@
-import {
-  PowerSyncBackendConnector,
-  UpdateType,
-  AbstractPowerSyncDatabase,
-} from '@powersync/react-native';
+import { UpdateType, AbstractPowerSyncDatabase } from '@powersync/react-native';
 import { supabase } from '@/shared/services/api/supabase';
 import { env } from '@/app/config/env';
 import { logger } from '@/shared/utils/logger';
+import type {
+  PowerSyncBackendConnector,
+  SupabaseAuthResponse,
+  PowerSyncCredentials,
+} from './types';
 
 /**
  * PowerSync Backend Connector
@@ -17,8 +18,10 @@ export class PowerSyncConnector implements PowerSyncBackendConnector {
   /**
    * Get credentials for connecting to PowerSync
    * Called every few minutes to refresh the connection
+   *
+   * @returns PowerSync credentials with authentication parameters
    */
-  async fetchCredentials() {
+  async fetchCredentials(): Promise<PowerSyncCredentials | null> {
     try {
       logger.info('PowerSync: Fetching credentials...');
 
@@ -33,7 +36,7 @@ export class PowerSyncConnector implements PowerSyncBackendConnector {
       const {
         data: { session },
         error: sessionError,
-      } = await supabase.auth.getSession();
+      }: SupabaseAuthResponse = await supabase.auth.getSession();
 
       if (sessionError) {
         logger.error(
@@ -57,12 +60,23 @@ export class PowerSyncConnector implements PowerSyncBackendConnector {
         accessToken = await this.getOrCreateAnonymousSession();
       }
 
-      const credentials = {
+      // Determine if user is authenticated
+      const isAuthenticated = session?.user?.aud === 'authenticated';
+      // && session?.user?.is_anonymous !== true;
+
+      const credentials: PowerSyncCredentials = {
         endpoint: env.powersync.url,
         token: accessToken,
+        // Pass authentication status to sync rules as required by sync-rules.yaml
+        parameters: {
+          is_authenticated: isAuthenticated ? 'true' : 'false',
+        },
       };
 
-      logger.info('PowerSync: Credentials fetched successfully');
+      logger.info('PowerSync: Credentials fetched successfully', {
+        isAuthenticated,
+        userId: session?.user?.id,
+      });
       return credentials;
     } catch (error) {
       logger.error('PowerSync: Failed to fetch credentials:', error);
@@ -108,7 +122,6 @@ export class PowerSyncConnector implements PowerSyncBackendConnector {
       const transaction = await database.getNextCrudTransaction();
 
       if (!transaction) {
-        // No pending changes
         return;
       }
 
@@ -116,7 +129,6 @@ export class PowerSyncConnector implements PowerSyncBackendConnector {
         `PowerSync: Uploading ${transaction.crud.length} operations...`
       );
 
-      // Process each operation in the transaction
       for (const op of transaction.crud) {
         const table = op.table;
         const record = { ...op.opData, id: op.id };
@@ -128,17 +140,14 @@ export class PowerSyncConnector implements PowerSyncBackendConnector {
         try {
           switch (op.op) {
             case UpdateType.PUT:
-              // CREATE or UPDATE record
               await this.upsertRecord(table, record);
               break;
 
             case UpdateType.PATCH:
-              // UPDATE existing record
               await this.updateRecord(table, record);
               break;
 
             case UpdateType.DELETE:
-              // DELETE record
               await this.deleteRecord(table, op.id);
               break;
 
@@ -150,9 +159,6 @@ export class PowerSyncConnector implements PowerSyncBackendConnector {
             `PowerSync: Failed to process ${op.op} on ${table}:`,
             operationError
           );
-          // For public data, we might want to skip failed operations rather than fail the entire transaction
-          // Uncomment the next line if you want to continue with other operations on failure:
-          // continue;
           throw operationError;
         }
       }
@@ -166,10 +172,13 @@ export class PowerSyncConnector implements PowerSyncBackendConnector {
     }
   }
 
-  /**
-   * Upsert (INSERT or UPDATE) a record in Supabase
-   */
-  private async upsertRecord(table: string, record: any): Promise<void> {
+  private async upsertRecord(
+    table: string,
+    record: Record<string, unknown>
+  ): Promise<void> {
+    // Using 'any' here is necessary because Supabase's typed client doesn't support
+    // dynamic table names, but PowerSync needs to work with any table defined in sync rules
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
       .from(table)
       .upsert(record, { onConflict: 'id' });
@@ -178,15 +187,19 @@ export class PowerSyncConnector implements PowerSyncBackendConnector {
       throw error;
     }
 
-    logger.debug(`PowerSync: Upserted record in ${table}:`, { id: record.id });
+    logger.debug(`PowerSync: Upserted record in ${table}:`, {
+      id: record['id'],
+    });
   }
 
-  /**
-   * Update an existing record in Supabase
-   */
-  private async updateRecord(table: string, record: any): Promise<void> {
+  private async updateRecord(
+    table: string,
+    record: Record<string, unknown>
+  ): Promise<void> {
     const { id, ...updateData } = record;
 
+    // Using 'any' here is necessary because Supabase's typed client doesn't support dynamic table names, but PowerSync needs to work with any table defined in sync rules
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
       .from(table)
       .update(updateData)
@@ -199,10 +212,9 @@ export class PowerSyncConnector implements PowerSyncBackendConnector {
     logger.debug(`PowerSync: Updated record in ${table}:`, { id });
   }
 
-  /**
-   * Delete a record from Supabase
-   */
   private async deleteRecord(table: string, id: string): Promise<void> {
+    // Using 'any' here is necessary because Supabase's typed client doesn't support dynamic table names, but PowerSync needs to work with any table defined in sync rules
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).from(table).delete().eq('id', id);
 
     if (error) {

@@ -2,35 +2,73 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
+  Modal,
   TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Alert,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/shared/hooks';
-import { SlideUpModal } from '@/shared/components/ui/SlideUpModal';
-import { COLOR_VARIATIONS } from '@/shared/constants/theme';
-import { Button } from '@/shared/components/ui/Button';
-import {
-  VersionSelectionModalProps,
-  VersionListItemProps,
-  AudioVersion,
-  TextVersion,
-  LanguageEntity,
-} from '../types';
-import { LanguageHierarchyBrowser } from './LanguageHierarchyBrowser';
-import { useLanguageSelection } from '../hooks/useLanguageSelection';
-import { logger } from '@/shared/utils/logger';
+import { useTheme } from '../../../shared/hooks/useThemeFromStore';
+import { useUserVersions } from '../hooks/useUserVersions';
+import { useLanguageSearch } from '../hooks/useLanguageSearch';
+import type { AudioVersion, TextVersion } from '../types/entities';
+import type { LanguageSearchResult } from '../services/fuzzySearchService';
+import { fuzzySearchService } from '../services/fuzzySearchService';
+import { logger } from '../../../shared/utils/logger';
 
-// Individual Version List Item Component
-const VersionListItem: React.FC<VersionListItemProps> = ({
+export interface VersionSelectionModalProps {
+  visible: boolean;
+  onClose: () => void;
+  versionType: 'audio' | 'text';
+  title?: string;
+}
+
+type ModalView = 'versions' | 'languageSearch' | 'versionSelection';
+
+interface VersionItemProps {
+  version: AudioVersion | TextVersion;
+  isSelected?: boolean;
+  isAlreadySaved?: boolean;
+  onSelect: (version: AudioVersion | TextVersion) => void;
+  onRemove?: (versionId: string) => void;
+  showRemove?: boolean;
+}
+
+const VersionItem: React.FC<VersionItemProps> = ({
   version,
-  isSelected,
+  isSelected = false,
+  isAlreadySaved = false,
   onSelect,
   onRemove,
-  showRemoveButton = false,
+  showRemove = false,
 }) => {
   const { theme } = useTheme();
+
+  const handleRemove = useCallback(() => {
+    if (onRemove) {
+      Alert.alert(
+        'Remove Version',
+        `Are you sure you want to remove "${version.name}" from your saved versions?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: () => onRemove(version.id),
+          },
+        ]
+      );
+    }
+  }, [version, onRemove]);
+
+  const handlePress = useCallback(() => {
+    if (!isAlreadySaved) {
+      onSelect(version);
+    }
+  }, [version, onSelect, isAlreadySaved]);
 
   return (
     <TouchableOpacity
@@ -38,87 +76,64 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
         styles.versionItem,
         {
           backgroundColor: isSelected
-            ? theme.colors.surfaceVariant
-            : theme.colors.surface,
+            ? theme.colors.primary + '20'
+            : isAlreadySaved
+              ? theme.colors.surface + '80'
+              : theme.colors.surface,
           borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+          opacity: isAlreadySaved ? 0.6 : 1,
         },
       ]}
-      onPress={() => onSelect(version)}
-      activeOpacity={0.7}>
+      onPress={handlePress}
+      disabled={isAlreadySaved}>
       <View style={styles.versionContent}>
         <View style={styles.versionInfo}>
-          <Text
-            style={[
-              styles.versionName,
-              { color: theme.colors.text },
-              isSelected
-                ? styles.selectedVersionName
-                : styles.unselectedVersionName,
-            ]}
-            numberOfLines={2}>
+          <Text style={[styles.versionName, { color: theme.colors.text }]}>
             {version.name}
           </Text>
-
           <Text
-            style={[styles.languageName, { color: theme.colors.textSecondary }]}
-            numberOfLines={1}>
-            {version.languageName}
+            style={[
+              styles.versionLanguage,
+              { color: theme.colors.textSecondary },
+            ]}>
+            {version.languageName || 'Unknown Language'}
           </Text>
-
-          <View style={styles.versionMeta}>
-            {'mediaFileCount' in version ? (
-              <Text
-                style={[
-                  styles.metaText,
-                  { color: theme.colors.textSecondary },
-                ]}>
-                {version.mediaFileCount} audio files
-              </Text>
-            ) : (
-              <Text
-                style={[
-                  styles.metaText,
-                  {
-                    color:
-                      version.verseCount === 0
-                        ? theme.colors.error || '#ff4444'
-                        : theme.colors.textSecondary,
-                  },
-                ]}>
-                {version.verseCount} verses • {version.source}
-                {version.verseCount === 0 && ' • ⚠️ No data'}
-              </Text>
-            )}
-          </View>
         </View>
 
         <View style={styles.versionActions}>
           {isSelected && (
-            <View
-              style={[
-                styles.selectedIndicator,
-                { backgroundColor: theme.colors.primary },
-              ]}>
-              <Ionicons
-                name='checkmark'
-                size={16}
-                color={theme.colors.textInverse}
-              />
-            </View>
+            <Ionicons
+              name='checkmark-circle'
+              size={20}
+              color={theme.colors.primary}
+              style={styles.selectedIcon}
+            />
           )}
-
-          {showRemoveButton && onRemove && (
+          {isAlreadySaved && (
+            <Text
+              style={[
+                styles.alreadySavedText,
+                { color: theme.colors.textSecondary },
+              ]}>
+              Already Saved
+            </Text>
+          )}
+          {!isAlreadySaved && !isSelected && (
+            <Text style={[styles.selectText, { color: theme.colors.primary }]}>
+              Select
+            </Text>
+          )}
+          {showRemove && onRemove && (
             <TouchableOpacity
+              onPress={handleRemove}
               style={[
                 styles.removeButton,
-                { backgroundColor: theme.colors.error },
-              ]}
-              onPress={() => onRemove(version.id)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                { backgroundColor: theme.colors.error + '20' },
+              ]}>
               <Ionicons
-                name='trash'
-                size={14}
-                color={theme.colors.textInverse}
+                name='trash-outline'
+                size={16}
+                color={theme.colors.error}
               />
             </TouchableOpacity>
           )}
@@ -128,380 +143,764 @@ const VersionListItem: React.FC<VersionListItemProps> = ({
   );
 };
 
-// Main VersionSelectionModal Component
+interface SearchResultItemProps {
+  result: LanguageSearchResult;
+  onSelect: (result: LanguageSearchResult) => void;
+  versionType: 'audio' | 'text';
+  isAvailable: boolean;
+}
+
+const SearchResultItem: React.FC<SearchResultItemProps> = ({
+  result,
+  onSelect,
+  versionType,
+  isAvailable,
+}) => {
+  const { theme } = useTheme();
+
+  const handlePress = useCallback(() => {
+    if (isAvailable) {
+      onSelect(result);
+    }
+  }, [result, onSelect, isAvailable]);
+
+  const getVersionCount = () => {
+    if (versionType === 'audio') {
+      return result.audio_version_count || 0;
+    } else {
+      return result.text_version_count || 0;
+    }
+  };
+
+  const versionCount = getVersionCount();
+  const regionText =
+    result.regions && Array.isArray(result.regions) && result.regions.length > 0
+      ? result.regions[0].region_name
+      : '';
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.searchResultItem,
+        {
+          backgroundColor: isAvailable
+            ? theme.colors.surface
+            : theme.colors.background,
+          borderBottomColor: theme.colors.border,
+        },
+        !isAvailable && { opacity: 0.6 },
+      ]}
+      onPress={handlePress}
+      disabled={!isAvailable}>
+      <View style={styles.searchResultContent}>
+        <View style={styles.searchResultInfo}>
+          <Text
+            style={[
+              styles.searchResultName,
+              {
+                color: isAvailable
+                  ? theme.colors.text
+                  : theme.colors.textSecondary,
+              },
+            ]}>
+            {result.alias_name}
+          </Text>
+
+          {result.alias_name !== result.entity_name && (
+            <Text
+              style={[
+                styles.searchResultEntityName,
+                { color: theme.colors.textSecondary },
+              ]}>
+              {result.entity_name}
+            </Text>
+          )}
+
+          {regionText && (
+            <Text
+              style={[
+                styles.searchResultRegion,
+                { color: theme.colors.textSecondary },
+              ]}>
+              {regionText}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.searchResultActions}>
+          <Text
+            style={[
+              styles.searchResultCount,
+              {
+                color: isAvailable
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary,
+              },
+            ]}>
+            {versionCount} {versionType}
+          </Text>
+          {!isAvailable && (
+            <Text
+              style={[
+                styles.notAvailableText,
+                { color: theme.colors.textSecondary },
+              ]}>
+              Not available
+            </Text>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
 export const VersionSelectionModal: React.FC<VersionSelectionModalProps> = ({
   visible,
   onClose,
-  onVersionSelect,
   versionType,
-  currentVersion,
-  savedVersions,
   title,
 }) => {
   const { theme } = useTheme();
-  const { addToSavedVersions, removeFromSavedVersions } =
-    useLanguageSelection();
-  const [showLanguageBrowser, setShowLanguageBrowser] = useState(false);
-  const [isLoading] = useState(false);
+  const [currentView, setCurrentView] = useState<ModalView>('versions');
+  const [selectedLanguage, setSelectedLanguage] =
+    useState<LanguageSearchResult | null>(null);
+  const [languageVersions, setLanguageVersions] = useState<
+    (AudioVersion | TextVersion)[]
+  >([]);
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const {
+    savedAudioVersions,
+    savedTextVersions,
+    currentAudioVersion,
+    currentTextVersion,
+    isLoading,
+    error,
+    setCurrentAudioVersion,
+    setCurrentTextVersion,
+    removeSavedVersion,
+    clearError,
+    isVersionSaved,
+  } = useUserVersions();
+
+  const {
+    isSearching,
+    availableResults,
+    unavailableResults,
+    error: searchError,
+    searchAudioVersions,
+    searchTextVersions,
+    clearResults,
+    clearError: clearSearchError,
+  } = useLanguageSearch();
+
+  const savedVersions =
+    versionType === 'audio' ? savedAudioVersions : savedTextVersions;
+  const currentVersion =
+    versionType === 'audio' ? currentAudioVersion : currentTextVersion;
 
   const handleVersionSelect = useCallback(
-    (version: AudioVersion | TextVersion) => {
-      onVersionSelect(version);
-      onClose();
-    },
-    [onVersionSelect, onClose]
-  );
-
-  const handleAddNewVersion = useCallback(() => {
-    setShowLanguageBrowser(true);
-  }, []);
-
-  const handleLanguageBrowserClose = useCallback(() => {
-    setShowLanguageBrowser(false);
-  }, []);
-
-  const handleLanguageSelect = useCallback((_language: LanguageEntity) => {
-    // This would navigate to available versions for the selected language
-    // For now, we'll just close the browser
-    setShowLanguageBrowser(false);
-  }, []);
-
-  const handleVersionAdd = useCallback(
-    async (version: AudioVersion | TextVersion, type: 'audio' | 'text') => {
+    async (version: AudioVersion | TextVersion) => {
       try {
-        // First add the version to saved versions
-        await addToSavedVersions(version, type);
-
-        // Then select it as the current version
-        onVersionSelect(version);
-
-        setShowLanguageBrowser(false);
+        if (versionType === 'audio') {
+          await setCurrentAudioVersion(version as AudioVersion);
+        } else {
+          await setCurrentTextVersion(version as TextVersion);
+        }
         onClose();
       } catch (error) {
-        logger.error('Error adding version:', error);
-        // Still select the version even if saving fails
-        onVersionSelect(version);
-        setShowLanguageBrowser(false);
-        onClose();
+        logger.error('Error selecting version:', error);
       }
     },
-    [addToSavedVersions, onVersionSelect, onClose]
+    [versionType, setCurrentAudioVersion, setCurrentTextVersion, onClose]
   );
 
   const handleRemoveVersion = useCallback(
     async (versionId: string) => {
       try {
-        await removeFromSavedVersions(versionId, versionType);
-        logger.info(`Removed ${versionType} version:`, versionId);
+        await removeSavedVersion(versionId, versionType);
       } catch (error) {
         logger.error('Error removing version:', error);
       }
     },
-    [removeFromSavedVersions, versionType]
+    [removeSavedVersion, versionType]
   );
 
-  const handleDebugTextVersions = useCallback(async () => {
-    logger.debug('🔍 DEBUG: Checking text versions for verse data...');
-    logger.debug(
-      '🔍 DEBUG: Current saved versions:',
-      savedVersions.map(v => ({
-        name: v.name,
-        languageName: v.languageName,
-        verseCount: 'verseCount' in v ? v.verseCount : 'N/A',
-        source: 'source' in v ? v.source : 'N/A',
-      }))
-    );
+  const handleAddNewVersion = useCallback(() => {
+    setCurrentView('languageSearch');
+  }, []);
 
-    // Check which versions have actual verse data
-    const versionsWithData = savedVersions.filter(
-      v => 'verseCount' in v && v.verseCount > 0
-    );
+  const handleLanguageSelect = useCallback(
+    async (language: LanguageSearchResult) => {
+      try {
+        setIsLoadingVersions(true);
+        setSelectedLanguage(language);
 
-    logger.debug(
-      '🔍 DEBUG: Versions with verse data:',
-      versionsWithData.map(v => ({
-        name: v.name,
-        verseCount: 'verseCount' in v ? v.verseCount : 0,
-      }))
-    );
+        // Convert and load versions
+        const versions =
+          fuzzySearchService.convertVersionsToInternalFormat(language);
+        const availableVersions =
+          versionType === 'audio' ? versions.audio : versions.text;
+        setLanguageVersions(availableVersions);
 
-    if (versionsWithData.length === 0) {
-      logger.debug('🔍 DEBUG: ❌ No text versions have verse data available!');
-      logger.debug(
-        '🔍 DEBUG: This is why you\'re seeing "Text not available for MCV"'
-      );
-    } else {
-      logger.debug(
-        '🔍 DEBUG: ✅ Found',
-        versionsWithData.length,
-        'text versions with data'
-      );
+        setCurrentView('versionSelection');
+        logger.info(
+          `Loaded ${availableVersions.length} ${versionType} versions for language ${language.entity_name}`
+        );
+      } catch (error) {
+        logger.error('Error loading versions:', error);
+        Alert.alert(
+          'Error',
+          `Failed to load ${versionType} versions. Please try again.`
+        );
+      } finally {
+        setIsLoadingVersions(false);
+      }
+    },
+    [versionType]
+  );
+
+  const handleVersionFromLanguageSelect = useCallback(
+    async (version: AudioVersion | TextVersion) => {
+      try {
+        // This will automatically save the version and set it as current
+        if (versionType === 'audio') {
+          await setCurrentAudioVersion(version as AudioVersion);
+        } else {
+          await setCurrentTextVersion(version as TextVersion);
+        }
+
+        // Close modal
+        onClose();
+      } catch (error) {
+        logger.error('Error selecting version from language:', error);
+      }
+    },
+    [versionType, setCurrentAudioVersion, setCurrentTextVersion, onClose]
+  );
+
+  const handleBackToVersions = useCallback(() => {
+    setCurrentView('versions');
+    setSearchQuery('');
+    setHasSearched(false);
+    clearResults();
+    clearSearchError();
+  }, [clearResults, clearSearchError]);
+
+  const handleBackToLanguageSearch = useCallback(() => {
+    setCurrentView('languageSearch');
+    setSelectedLanguage(null);
+    setLanguageVersions([]);
+  }, []);
+
+  const handleSearch = useCallback(() => {
+    if (searchQuery.length < 2) {
+      clearResults();
+      setHasSearched(false);
+      return;
     }
-  }, [savedVersions]);
 
-  const renderCurrentVersion = () => {
-    if (!currentVersion) {
-      return (
-        <View
-          style={[
-            styles.currentVersionContainer,
-            { backgroundColor: theme.colors.surface },
-          ]}>
-          <Text
-            style={[
-              styles.currentVersionLabel,
-              { color: theme.colors.textSecondary },
-            ]}>
-            Current {versionType} version
-          </Text>
-          <Text
-            style={[
-              styles.noVersionText,
-              { color: theme.colors.textSecondary },
-            ]}>
-            No {versionType} version selected
-          </Text>
-        </View>
-      );
+    setHasSearched(true);
+
+    if (versionType === 'audio') {
+      return searchAudioVersions(searchQuery);
+    } else {
+      return searchTextVersions(searchQuery);
+    }
+  }, [
+    searchQuery,
+    versionType,
+    searchAudioVersions,
+    searchTextVersions,
+    clearResults,
+  ]);
+
+  const handleLanguageSearchSelect = useCallback(
+    async (result: LanguageSearchResult) => {
+      try {
+        // Check that this language actually has versions available
+        const versionCount =
+          versionType === 'audio'
+            ? result.audio_version_count || 0
+            : result.text_version_count || 0;
+
+        if (versionCount === 0) {
+          Alert.alert(
+            'No Versions Available',
+            `This language doesn't have any ${versionType} versions available.`
+          );
+          return;
+        }
+
+        await handleLanguageSelect(result);
+      } catch (error) {
+        logger.error('Error selecting language:', error);
+        Alert.alert('Error', 'Failed to select language. Please try again.');
+      }
+    },
+    [versionType, handleLanguageSelect]
+  );
+
+  const handleCloseModal = useCallback(() => {
+    // Reset all state
+    setCurrentView('versions');
+    setSelectedLanguage(null);
+    setLanguageVersions([]);
+    setSearchQuery('');
+    setHasSearched(false);
+    clearResults();
+    clearError();
+    clearSearchError();
+    onClose();
+  }, [clearResults, clearError, clearSearchError, onClose]);
+
+  const renderHeader = () => {
+    let headerTitle = title || `Select ${versionType} version`;
+    let showBackButton = false;
+    let backAction = handleBackToVersions;
+
+    if (currentView === 'languageSearch') {
+      headerTitle = `Search ${versionType} versions`;
+      showBackButton = true;
+      backAction = handleBackToVersions;
+    } else if (currentView === 'versionSelection') {
+      headerTitle = `${versionType} versions`;
+      showBackButton = true;
+      backAction = handleBackToLanguageSearch;
     }
 
     return (
-      <View
-        style={[
-          styles.currentVersionContainer,
-          { backgroundColor: theme.colors.surface },
-        ]}>
-        <Text
-          style={[
-            styles.currentVersionLabel,
-            { color: theme.colors.textSecondary },
-          ]}>
-          Current {versionType} version
-        </Text>
-
-        <View style={styles.currentVersionInfo}>
-          <View style={styles.currentVersionIcon}>
+      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+        {showBackButton ? (
+          <TouchableOpacity onPress={backAction} style={styles.backButton}>
             <Ionicons
-              name={versionType === 'audio' ? 'volume-high' : 'book'}
-              size={20}
+              name='arrow-back'
+              size={24}
               color={theme.colors.primary}
             />
-          </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.backButton} />
+        )}
 
-          <View style={styles.currentVersionText}>
-            <Text
-              style={[styles.currentVersionName, { color: theme.colors.text }]}
-              numberOfLines={1}>
-              {currentVersion.name}
-            </Text>
-            <Text
-              style={[
-                styles.currentVersionLanguage,
-                { color: theme.colors.textSecondary },
-              ]}
-              numberOfLines={1}>
-              {currentVersion.languageName}
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
-  const renderSavedVersions = () => {
-    if (savedVersions.length === 0) {
-      return (
-        <View style={styles.emptyState}>
-          <Ionicons
-            name={
-              versionType === 'audio' ? 'volume-high-outline' : 'book-outline'
-            }
-            size={48}
-            color={theme.colors.textSecondary}
-          />
-          <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
-            No saved {versionType} versions
-          </Text>
-          <Text
-            style={[
-              styles.emptyStateMessage,
-              { color: theme.colors.textSecondary },
-            ]}>
-            Add your first {versionType} version to get started
-          </Text>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.versionsContainer}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-          Saved {versionType} versions ({savedVersions.length})
+        <Text style={[styles.title, { color: theme.colors.text }]}>
+          {headerTitle}
         </Text>
 
-        <View style={styles.versionsList}>
-          {savedVersions.map(version => (
-            <VersionListItem
-              key={version.id}
-              version={version}
-              isSelected={currentVersion?.id === version.id}
-              onSelect={handleVersionSelect}
-              onRemove={handleRemoveVersion}
-              showRemoveButton={true}
-            />
-          ))}
-        </View>
+        <TouchableOpacity onPress={handleCloseModal}>
+          <Text style={[styles.doneButton, { color: theme.colors.primary }]}>
+            Done
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   };
 
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator color={theme.colors.primary} size='large' />
-          <Text
-            style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-            Loading...
+  const renderVersionsView = () => (
+    <>
+      {/* Error Message */}
+      {error && (
+        <View
+          style={[
+            styles.errorContainer,
+            { backgroundColor: theme.colors.error + '20' },
+          ]}>
+          <Text style={[styles.errorText, { color: theme.colors.error }]}>
+            {error}
           </Text>
         </View>
-      );
-    }
+      )}
 
-    return (
-      <>
-        {renderCurrentVersion()}
-        {renderSavedVersions()}
-
-        {/* Footer Button */}
-        <View style={styles.footer}>
-          <Button
-            title={`Add New ${versionType === 'audio' ? 'Audio' : 'Text'} Version`}
-            onPress={handleAddNewVersion}
-            variant='primary'
-            fullWidth
-            disabled={isLoading}
-          />
-
-          {/* DEBUG: Add button to check available data */}
-          {versionType === 'text' && (
-            <Button
-              title='🔍 Debug: Check Text Versions'
-              onPress={handleDebugTextVersions}
-              variant='secondary'
-              fullWidth
-              style={styles.marginTop8}
-            />
-          )}
+      {/* Loading State */}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size='large' color={theme.colors.primary} />
+          <Text
+            style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+            Loading your saved versions...
+          </Text>
         </View>
-      </>
-    );
-  };
+      ) : (
+        <>
+          {/* Add New Version Button */}
+          <View style={styles.addButtonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.addButton,
+                { backgroundColor: theme.colors.primary },
+              ]}
+              onPress={handleAddNewVersion}>
+              <Ionicons name='add' size={20} color='white' />
+              <Text style={[styles.addButtonText, { color: 'white' }]}>
+                Add new {versionType} version
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-  // Fixed Header Component
-  const renderHeader = () => (
-    <View style={styles.headerContent}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
+          {/* Saved Versions List */}
+          <ScrollView style={styles.scrollView}>
+            {savedVersions.length > 0 ? (
+              <>
+                <View
+                  style={[
+                    styles.sectionHeader,
+                    { backgroundColor: theme.colors.surface },
+                  ]}>
+                  <Text
+                    style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                    Your saved {versionType} versions ({savedVersions.length})
+                  </Text>
+                </View>
 
-      <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-        <Ionicons name='close' size={24} color={theme.colors.textSecondary} />
-      </TouchableOpacity>
-    </View>
+                {savedVersions.map(version => (
+                  <VersionItem
+                    key={version.id}
+                    version={version}
+                    isSelected={currentVersion?.id === version.id}
+                    onSelect={handleVersionSelect}
+                    onRemove={handleRemoveVersion}
+                    showRemove={true}
+                  />
+                ))}
+              </>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text
+                  style={[
+                    styles.emptyText,
+                    { color: theme.colors.textSecondary },
+                  ]}>
+                  No saved {versionType} versions.{'\n'}
+                  Add one to get started.
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </>
+      )}
+    </>
   );
 
-  return (
+  const renderLanguageSearchView = () => (
     <>
-      <SlideUpModal
-        visible={visible && !showLanguageBrowser}
-        onClose={onClose}
-        header={renderHeader()}
-        snapPoints={['70%']}>
-        {renderContent()}
-      </SlideUpModal>
+      {/* Search Input */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={[
+            styles.searchInput,
+            {
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.surface,
+              color: theme.colors.text,
+            },
+          ]}
+          placeholder={`Search for ${versionType} versions...`}
+          placeholderTextColor={theme.colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize='none'
+          autoCorrect={false}
+          returnKeyType='search'
+          onSubmitEditing={handleSearch}
+        />
+      </View>
 
-      {/* Language Browser Modal */}
-      <LanguageHierarchyBrowser
-        visible={showLanguageBrowser}
-        onClose={handleLanguageBrowserClose}
-        onLanguageSelect={handleLanguageSelect}
-        onVersionSelect={handleVersionAdd}
-        mode='browse'
-        title={`Add ${versionType === 'audio' ? 'Audio' : 'Text'} Version`}
-      />
+      {/* Error Message */}
+      {searchError && (
+        <View
+          style={[
+            styles.errorContainer,
+            { backgroundColor: theme.colors.error + '20' },
+          ]}>
+          <Text style={[styles.errorText, { color: theme.colors.error }]}>
+            {searchError}
+          </Text>
+        </View>
+      )}
+
+      {/* Loading */}
+      {isSearching && (
+        <View style={styles.searchLoadingContainer}>
+          <ActivityIndicator size='large' color={theme.colors.primary} />
+          <Text
+            style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+            Searching...
+          </Text>
+        </View>
+      )}
+
+      {/* Results */}
+      <ScrollView style={styles.scrollView}>
+        {hasSearched && !isSearching && (
+          <>
+            {/* Available Results */}
+            {availableResults.length > 0 && (
+              <View>
+                <View
+                  style={[
+                    styles.sectionHeader,
+                    { backgroundColor: theme.colors.surface },
+                  ]}>
+                  <Text
+                    style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                    Available ({availableResults.length})
+                  </Text>
+                </View>
+                {availableResults.map((result: LanguageSearchResult) => (
+                  <SearchResultItem
+                    key={result.entity_id}
+                    result={result}
+                    onSelect={handleLanguageSearchSelect}
+                    versionType={versionType}
+                    isAvailable={true}
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* Unavailable Results */}
+            {unavailableResults.length > 0 && (
+              <View>
+                <View
+                  style={[
+                    styles.sectionHeader,
+                    { backgroundColor: theme.colors.surface },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      { color: theme.colors.textSecondary },
+                    ]}>
+                    Not Available ({unavailableResults.length})
+                  </Text>
+                </View>
+                {unavailableResults.map((result: LanguageSearchResult) => (
+                  <SearchResultItem
+                    key={result.entity_id}
+                    result={result}
+                    onSelect={handleLanguageSearchSelect}
+                    versionType={versionType}
+                    isAvailable={false}
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* No Results */}
+            {availableResults.length === 0 &&
+              unavailableResults.length === 0 && (
+                <View style={styles.emptyContainer}>
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      { color: theme.colors.textSecondary },
+                    ]}>
+                    {`No languages found for "${searchQuery}".\nTry a different search term.`}
+                  </Text>
+                </View>
+              )}
+          </>
+        )}
+
+        {/* Initial State */}
+        {!hasSearched && searchQuery.length < 2 && (
+          <View style={styles.emptyContainer}>
+            <Text
+              style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+              Type at least 2 characters to search for languages.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
     </>
+  );
+
+  const renderVersionSelectionView = () => (
+    <>
+      {/* Language Info */}
+      {selectedLanguage && (
+        <View
+          style={[
+            styles.languageInfo,
+            { backgroundColor: theme.colors.surface },
+          ]}>
+          <Text style={[styles.languageInfoName, { color: theme.colors.text }]}>
+            {selectedLanguage.alias_name}
+          </Text>
+          {selectedLanguage.alias_name !== selectedLanguage.entity_name && (
+            <Text
+              style={[
+                styles.languageInfoEntity,
+                { color: theme.colors.textSecondary },
+              ]}>
+              {selectedLanguage.entity_name}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Loading */}
+      {isLoadingVersions && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size='large' color={theme.colors.primary} />
+          <Text
+            style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+            Loading {versionType} versions...
+          </Text>
+        </View>
+      )}
+
+      {/* Versions List */}
+      <ScrollView style={styles.scrollView}>
+        {!isLoadingVersions && languageVersions.length > 0 && (
+          <>
+            <View
+              style={[
+                styles.sectionHeader,
+                { backgroundColor: theme.colors.surface },
+              ]}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                Available {versionType} versions ({languageVersions.length})
+              </Text>
+            </View>
+
+            {languageVersions.map(version => {
+              const alreadySaved = isVersionSaved(version.id, versionType);
+              return (
+                <VersionItem
+                  key={version.id}
+                  version={version}
+                  onSelect={handleVersionFromLanguageSelect}
+                  isAlreadySaved={alreadySaved}
+                />
+              );
+            })}
+          </>
+        )}
+
+        {/* No Versions Message */}
+        {!isLoadingVersions && languageVersions.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Text
+              style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+              No {versionType} versions available for this language.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </>
+  );
+
+  // Use handleSearch when searchQuery changes
+  React.useEffect(() => {
+    if (currentView === 'languageSearch') {
+      const cleanup = handleSearch();
+      return cleanup || (() => {});
+    }
+  }, [handleSearch, currentView]);
+
+  return (
+    <Modal
+      visible={visible}
+      animationType='slide'
+      presentationStyle='pageSheet'
+      onRequestClose={handleCloseModal}>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: theme.colors.background },
+        ]}>
+        {renderHeader()}
+
+        {currentView === 'versions' && renderVersionsView()}
+        {currentView === 'languageSearch' && renderLanguageSearchView()}
+        {currentView === 'versionSelection' && renderVersionSelectionView()}
+      </View>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  headerContent: {
+  container: {
+    flex: 1,
+  },
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    width: 40,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
     flex: 1,
+    textAlign: 'center',
   },
-  closeButton: {
-    padding: 4,
-  },
-  currentVersionContainer: {
-    marginTop: 16,
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
-  },
-  currentVersionLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  currentVersionInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  currentVersionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLOR_VARIATIONS.BLUE_10,
-  },
-  currentVersionText: {
-    flex: 1,
-  },
-  currentVersionName: {
+  doneButton: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontWeight: '500',
   },
-  currentVersionLanguage: {
+  errorContainer: {
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 8,
+  },
+  errorText: {
+    textAlign: 'center',
     fontSize: 14,
   },
-  noVersionText: {
-    fontSize: 16,
-    fontStyle: 'italic',
-  },
-  versionsContainer: {
+  loadingContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  searchLoadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  addButtonContainer: {
+    padding: 16,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+  },
+  addButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  sectionHeader: {
+    padding: 16,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
-  },
-  versionsList: {
-    gap: 8,
   },
   versionItem: {
     borderWidth: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
   },
   versionContent: {
     flexDirection: 'row',
@@ -510,81 +909,97 @@ const styles = StyleSheet.create({
   },
   versionInfo: {
     flex: 1,
-    marginRight: 12,
   },
   versionName: {
     fontSize: 16,
+    fontWeight: '500',
     marginBottom: 4,
   },
-  languageName: {
+  versionLanguage: {
     fontSize: 14,
-    marginBottom: 4,
-  },
-  versionMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metaText: {
-    fontSize: 12,
   },
   versionActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  selectedIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+  selectedIcon: {
+    marginRight: 8,
+  },
+  alreadySavedText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  selectText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   removeButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
+    padding: 8,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  emptyContainer: {
+    padding: 40,
     alignItems: 'center',
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    gap: 12,
-    minHeight: 200,
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  emptyText: {
     textAlign: 'center',
+    fontSize: 16,
   },
-  emptyStateMessage: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
+  searchContainer: {
+    padding: 16,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  searchInput: {
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+  },
+  searchResultItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  searchResultContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 16,
-    minHeight: 200,
   },
-  loadingText: {
-    fontSize: 14,
+  searchResultInfo: {
+    flex: 1,
   },
-  footer: {
-    marginTop: 16,
-    paddingTop: 16,
-  },
-  marginTop8: {
-    marginTop: 8,
-  },
-  selectedVersionName: {
-    fontWeight: '600',
-  },
-  unselectedVersionName: {
+  searchResultName: {
+    fontSize: 16,
     fontWeight: '500',
+    marginBottom: 4,
+  },
+  searchResultEntityName: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  searchResultRegion: {
+    fontSize: 12,
+  },
+  searchResultActions: {
+    alignItems: 'flex-end',
+  },
+  searchResultCount: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  notAvailableText: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  languageInfo: {
+    padding: 16,
+  },
+  languageInfoName: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  languageInfoEntity: {
+    fontSize: 14,
+    marginTop: 2,
   },
 });

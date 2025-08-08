@@ -1,0 +1,53 @@
+---
+description: Feature-first architecture and codebase organization patterns
+globs: ["src/features/**/*", "src/shared/**/*"]
+alwaysApply: false
+---
+
+# Feature-First Architecture
+
+## Directory Structure
+```
+src/features/[featureName]/
+├── components/     # Feature-specific UI components
+├── hooks/         # Feature-specific hooks
+├── services/      # API calls and business logic
+├── types/         # Feature-specific types
+├── screens/       # Feature screens
+└── index.ts       # Public API exports
+```
+
+## Import Rules
+```typescript
+// ✅ GOOD: From shared utilities
+import { formatDate } from '@/shared/utils/date';
+import { Button } from '@/shared/components/ui';
+
+// ✅ GOOD: From same feature
+import { useAuth } from '../hooks/useAuth';
+import { LoginForm } from '../components/LoginForm';
+
+// ✅ GOOD: From feature's public API
+import { authService } from '@/features/auth';
+
+// ❌ AVOID: Cross-feature direct imports
+import { BibleReader } from '@/features/bible/components/BibleReader';
+```
+
+## Feature Module Guidelines
+- **Self-contained**: All feature code in one directory
+- **Cohesive**: Related functionality grouped together
+- **Loosely coupled**: Minimal cross-feature dependencies
+- **Public API**: Clean exports via index.ts files
+
+## Shared Resources
+- Place in `/shared` only if used by 2+ features
+- Keep shared code generic and stable
+- Document shared utilities thoroughly
+- Use proper TypeScript exports
+
+## Service Layer
+- Separate API calls from UI components
+- Use proper error handling and typing
+- Implement offline-first patterns
+- Use TanStack Query for caching

@@ -12,9 +12,7 @@ export type {
 export { bibleSync } from './bible/BibleSyncService';
 export type { BibleSyncOptions } from './bible/BibleSyncService';
 
-// Export language sync service
-export { languageSync } from './language/LanguageSyncService';
-export type { LanguageSyncOptions } from './language/LanguageSyncService';
+// Language sync service removed - using PowerSync and server-side fuzzy search instead
 
 // Export media sync service
 export { MediaFilesVersesSyncService } from './media';

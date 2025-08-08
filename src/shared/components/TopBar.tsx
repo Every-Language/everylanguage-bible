@@ -10,10 +10,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/hooks';
 import { SyncStatusPill } from './SyncStatusPill';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
-import {
-  AudioVersionSelector,
-  TextVersionSelector,
-} from '@/features/languages/components';
 import { useCurrentVersions } from '@/features/languages/hooks';
 
 interface TopBarProps {
@@ -38,7 +34,6 @@ export const TopBar: React.FC<TopBarProps> = ({
   onTextVersionPress,
 }) => {
   const { theme } = useTheme();
-
   const { currentAudioVersion, currentTextVersion } = useCurrentVersions();
 
   return (
@@ -60,36 +55,69 @@ export const TopBar: React.FC<TopBarProps> = ({
         <View style={styles.rightSection}>
           {showLanguageSelection && (
             <>
-              <View style={styles.versionSelector}>
-                <AudioVersionSelector
-                  currentVersion={currentAudioVersion}
-                  onPress={onAudioVersionPress || (() => {})}
-                  size='sm'
-                  variant='compact'
+              {/* Audio Version Button */}
+              <TouchableOpacity
+                style={[
+                  styles.versionButton,
+                  { borderColor: theme.colors.border },
+                ]}
+                onPress={onAudioVersionPress || (() => {})}>
+                <Ionicons
+                  name='volume-high'
+                  size={16}
+                  color={theme.colors.primary}
                 />
-              </View>
-              <View style={styles.versionSelector}>
-                <TextVersionSelector
-                  currentVersion={currentTextVersion}
-                  onPress={onTextVersionPress || (() => {})}
-                  size='sm'
-                  variant='compact'
+                <Text
+                  style={[styles.versionText, { color: theme.colors.text }]}>
+                  {currentAudioVersion?.name || 'Audio'}
+                </Text>
+                <Ionicons
+                  name='chevron-down'
+                  size={14}
+                  color={theme.colors.textSecondary}
                 />
-              </View>
+              </TouchableOpacity>
+
+              {/* Text Version Button */}
+              <TouchableOpacity
+                style={[
+                  styles.versionButton,
+                  { borderColor: theme.colors.border },
+                ]}
+                onPress={onTextVersionPress || (() => {})}>
+                <Ionicons
+                  name='document-text'
+                  size={16}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={[styles.versionText, { color: theme.colors.text }]}>
+                  {currentTextVersion?.name || 'Text'}
+                </Text>
+                <Ionicons
+                  name='chevron-down'
+                  size={14}
+                  color={theme.colors.textSecondary}
+                />
+              </TouchableOpacity>
             </>
           )}
 
           {showSyncStatus && (
-            <SyncStatusPill {...(onSyncPress && { onPress: onSyncPress })} />
+            <TouchableOpacity
+              style={styles.syncButton}
+              onPress={onSyncPress}
+              activeOpacity={0.7}>
+              <SyncStatusPill />
+            </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name='search' size={20} color={theme.colors.text} />
-          </TouchableOpacity>
-
           {showProfile && (
-            <TouchableOpacity style={styles.iconButton} onPress={onMenuPress}>
-              <Ionicons name='menu' size={20} color={theme.colors.text} />
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={onMenuPress}
+              activeOpacity={0.7}>
+              <Ionicons name='menu' size={24} color={theme.colors.text} />
             </TouchableOpacity>
           )}
         </View>
@@ -121,14 +149,24 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
   },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
+  versionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  versionSelector: {
-    marginHorizontal: 4,
+  versionText: {
+    marginHorizontal: 8,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  syncButton: {
+    padding: 8,
+  },
+  menuButton: {
+    padding: 8,
   },
 });

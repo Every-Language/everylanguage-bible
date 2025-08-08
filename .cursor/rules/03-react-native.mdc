@@ -1,0 +1,46 @@
+
+# React Native & Expo Patterns
+
+## Component Structure
+- Use functional components with TypeScript
+- Props interface above component definition
+- Use `React.memo()` for expensive components
+- Handle loading, error, and empty states
+
+## Expo Managed Workflow
+- Use `expo-*` packages over `react-native-*` when available
+- Configure permissions in `app.json`
+- Use EAS Build for all builds
+- Use `expo start --tunnel` for restricted networks
+
+## Performance Optimizations
+- Use `FlatList` for lists > 10 items
+- Implement `getItemLayout` for known item heights
+- Use `removeClippedSubviews` for long lists
+- Use `useNativeDriver: true` for animations
+
+## Navigation
+- Use React Navigation v6+ patterns
+- Type navigation params properly
+- Use `useFocusEffect` for screen-specific effects
+- Implement proper deep linking
+
+## Media & Assets
+- Use `expo-audio` for audio playback
+- Configure background audio properly
+- Use proper image optimization and caching
+- Handle audio interruptions (calls, notifications)
+
+## PowerSync Database (Offline-First)
+Use PowerSync hooks for database access
+
+## Required Patterns
+- **NO hardcoded text strings** - always use `t('key')`
+- **NO inline styles** - always use theme system
+- **Database access** - use PowerSync hooks and TanStack Query
+- **Offline-first** - assume no network connectivity
+
+## State Management
+- Use Zustand for global state
+- Keep stores modular and focused
+- Use proper error boundaries

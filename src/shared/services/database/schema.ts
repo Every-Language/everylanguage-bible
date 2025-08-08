@@ -72,35 +72,7 @@ export interface UserSavedVersion {
   synced_at: string;
 }
 
-export interface LanguageEntityCache {
-  id: string;
-  name: string;
-  level: string; // Changed from hardcoded union to flexible string
-  parent_id: string | null;
-  created_at: string;
-  updated_at: string;
-  synced_at: string;
-  // New availability fields
-  has_available_versions?: boolean;
-  audio_versions_count?: number;
-  text_versions_count?: number;
-  last_availability_check?: string;
-}
-
-export interface AvailableVersionCache {
-  id: string;
-  version_type: string; // Flexible string instead of hardcoded union
-  language_entity_id: string;
-  version_id: string; // project_id or text_version_id
-  version_name: string;
-  created_at: string;
-  updated_at: string;
-  synced_at: string;
-  // New availability fields
-  is_available: boolean;
-  published_content_count: number;
-  last_availability_check: string;
-}
+// Language entities cache interfaces removed - using server-side fuzzy search instead
 
 // Media Files Table Interface (Non-syncing table)
 export interface LocalMediaFile {
@@ -238,41 +210,7 @@ export const createTables = async (
     )
   `);
 
-  // Cache for language entities (for offline access)
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS language_entities_cache (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      level TEXT NOT NULL,
-      parent_id TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      has_available_versions BOOLEAN DEFAULT 0,
-      audio_versions_count INTEGER DEFAULT 0,
-      text_versions_count INTEGER DEFAULT 0,
-      last_availability_check TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (parent_id) REFERENCES language_entities_cache (id)
-    )
-  `);
-
-  // Cache for available versions (audio/text)
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS available_versions_cache (
-      id TEXT PRIMARY KEY,
-      version_type TEXT NOT NULL,
-      language_entity_id TEXT NOT NULL,
-      version_id TEXT NOT NULL,
-      version_name TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      synced_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      is_available BOOLEAN DEFAULT 0,
-      published_content_count INTEGER DEFAULT 0,
-      last_availability_check TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (language_entity_id) REFERENCES language_entities_cache (id)
-    )
-  `);
+  // Language entities cache tables removed - using server-side fuzzy search instead
 
   // Media Files Table (Non-syncing table)
   await db.execAsync(`
@@ -391,25 +329,7 @@ export const createTables = async (
     'CREATE INDEX IF NOT EXISTS idx_user_saved_versions_version_id ON user_saved_versions(version_id)'
   );
 
-  await db.execAsync(
-    'CREATE INDEX IF NOT EXISTS idx_language_entities_cache_parent ON language_entities_cache(parent_id)'
-  );
-  await db.execAsync(
-    'CREATE INDEX IF NOT EXISTS idx_language_entities_cache_level ON language_entities_cache(level)'
-  );
-  await db.execAsync(
-    'CREATE INDEX IF NOT EXISTS idx_language_entities_cache_name ON language_entities_cache(name)'
-  );
-
-  await db.execAsync(
-    'CREATE INDEX IF NOT EXISTS idx_available_versions_cache_language ON available_versions_cache(language_entity_id)'
-  );
-  await db.execAsync(
-    'CREATE INDEX IF NOT EXISTS idx_available_versions_cache_type ON available_versions_cache(version_type)'
-  );
-  await db.execAsync(
-    'CREATE INDEX IF NOT EXISTS idx_available_versions_cache_version_id ON available_versions_cache(version_id)'
-  );
+  // Language entities cache indexes removed - using server-side fuzzy search instead
 
   // Media Files Table Indexes
   await db.execAsync(
@@ -596,14 +516,14 @@ export const migrateMediaFilesTable = async (
 
     // Check current table schema
     const tableInfo = await db.getAllAsync('PRAGMA table_info(media_files)');
-    logger.info('Current media_files table schema:', {
-      columns: (tableInfo as Array<Record<string, unknown>>).map(col => ({
-        name: col['name'] as string,
-        type: col['type'] as string,
-        notnull: col['notnull'] as number,
-        pk: col['pk'] as number,
-      })),
-    });
+    // logger.info('Current media_files table schema:', {
+    //   columns: (tableInfo as Array<Record<string, unknown>>).map(col => ({
+    //     name: col['name'] as string,
+    //     type: col['type'] as string,
+    //     notnull: col['notnull'] as number,
+    //     pk: col['pk'] as number,
+    //   })),
+    // });
 
     // Check if start_verse_id and end_verse_id columns exist
     const hasStartVerseId = (tableInfo as Array<Record<string, unknown>>).some(

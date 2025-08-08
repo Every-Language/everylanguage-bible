@@ -1,14 +1,15 @@
-// Components
-export * from './components';
+// Types
+export * from './types';
 
 // Hooks
 export * from './hooks';
 
 // Services
-export { languageService, userVersionsService } from './services';
+export * from './services';
 
-// Store
-export { useLanguageSelectionStore } from './store';
-
-// Types
-export * from './types';
+// Components (selective export to avoid conflicts)
+export {
+  VersionSelectionModal,
+  LanguageSearchModal,
+  VersionSelectionFromLanguageModal,
+} from './components';

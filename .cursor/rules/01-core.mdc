@@ -1,0 +1,35 @@
+---
+description: Core React Native and TypeScript development standards for optimal LLM assistance
+globs: ["**/*.{ts,tsx,js,jsx}"]
+alwaysApply: true
+---
+
+# Core Development Standards
+
+## Language & Framework
+- Use **TypeScript strict mode** for all new code
+- React Native with New Architecture (Fabric + TurboModules)
+- Expo Managed Workflow - NO native folders
+
+## Code Quality
+- **Functional components** with hooks over class components
+- **Named exports** over default exports for better imports
+- **Explicit types** - avoid `any`, use specific interfaces
+- **Early returns** to reduce nesting and improve readability
+
+## Performance
+- Use `FlatList` with `getItemLayout` for large lists
+- Use `transform: [{scale}]` instead of width/height for animations
+- Use `useNativeDriver: true` for animations
+- Use `InteractionManager.runAfterInteractions()` for heavy tasks
+- Implement `React.memo()` for expensive components
+
+## Error Handling
+- Implement proper error boundaries
+- Use proper type guards with `unknown` types
+- Handle async operations with try/catch and proper error states
+- Never suppress errors - log and handle appropriately
+
+@02-typescript.mdc
+@03-react-native.mdc
+@04-feature-architecture.mdc

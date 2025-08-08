@@ -1,32 +1,28 @@
 /**
- * Clean services export - refactored architecture
+ * Clean services export - new PowerSync-based architecture
  */
 
-// Export repository layer (data access)
-export {
-  languageRepository,
-  type LanguageRepositoryInterface,
-  LanguageRepositoryError,
-} from './data/languageRepository';
-
-export {
-  userVersionsRepository,
-  type UserVersionsRepositoryInterface,
-  UserVersionsRepositoryError,
-} from './data/userVersionsRepository';
-
-// Export domain services (business logic)
-export {
-  languageService,
-  type LanguageServiceInterface,
-  LanguageServiceError,
-} from './domain/languageService';
-
+// Core User Versions Service (PowerSync-based)
 export {
   userVersionsService,
-  type UserVersionsServiceInterface,
-  UserVersionsServiceError,
-} from './domain/userVersionsService';
+  UserVersionsService,
+} from './userVersionsService';
 
-// Export availability service (to be refactored later)
-export { availabilityService } from './availabilityService';
+// Enhanced Language Search Service (with debouncing)
+export {
+  languageSearchService,
+  LanguageSearchService,
+} from './languageSearchService';
+
+// Fuzzy Search Service (server-side API)
+export { fuzzySearchService, FuzzySearchService } from './fuzzySearchService';
+export type {
+  LanguageSearchResult,
+  FuzzySearchOptions,
+  LanguageSearchWithVersionsOptions,
+  AudioVersionDetail,
+  TextVersionDetail,
+} from './fuzzySearchService';
+
+// Note: Legacy services have been removed in favor of the new PowerSync-based architecture
+// If you need the old functionality, please migrate to userVersionsService

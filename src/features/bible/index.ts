@@ -1,37 +1,30 @@
-// Bible types
-export type {
-  Book,
-  Chapter,
-  Verse,
-  BooksState,
-  ChaptersState,
-  VersesState,
-  BooksFilters,
-  BibleNavigationState,
-  BookSortBy,
-} from './types';
+// Hooks - both legacy and PowerSync versions during migration
+export * from './hooks';
 
-// Bible screens
-export { BibleBooksScreen } from './screens/BibleBooksScreen';
-export { BibleContainerScreen } from './screens/BibleContainerScreen';
-export { ChapterScreen } from './screens/ChapterScreen';
-export { VersesScreen } from './screens/VersesScreen';
+// Types
+export * from './types';
 
-// Bible services
+// Navigation
+export * from './navigation';
+
+// Utilities (including migration helpers)
+export * from './utils';
+
+// Legacy service (to be deprecated)
 export { bibleService } from './services/bibleService';
 
-// Bible hooks
-export { useBooksQuery } from './hooks/useBibleQueries';
-export { useChapters } from './hooks/useChapters';
-export { useVerses } from './hooks/useVerses';
+// New PowerSync service (preferred)
+export { powerSyncBibleService } from './services/powerSyncBibleService';
 
-// Bible components
+// Export specific components to avoid conflicts
 export { BookCard } from './components/BookCard';
 export { BookGrid } from './components/BookGrid';
 export { BookList } from './components/BookList';
 export { ChapterCard } from './components/ChapterCard';
 export { VerseCard } from './components/VerseCard';
 
-// Bible navigation (React Navigation)
-export { BibleStackNavigator } from './navigation/BibleStackNavigator';
-export type { BibleStackParamList } from './navigation/BibleStackNavigator';
+// Export specific screens
+export { BibleBooksScreen } from './screens/BibleBooksScreen';
+export { BibleContainerScreen } from './screens/BibleContainerScreen';
+export { ChapterScreen } from './screens/ChapterScreen';
+export { VersesScreen } from './screens/VersesScreen';

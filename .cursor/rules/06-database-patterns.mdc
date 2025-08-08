@@ -1,0 +1,168 @@
+---
+description: PowerSync database patterns for offline-first development
+globs: ["src/**/*Service.ts", "src/**/*Hook.ts", "src/**/use*.ts"]
+alwaysApply: false
+---
+
+# PowerSync Database Patterns
+
+## Core Principles
+- **Offline-first**: App must function completely without network
+- **PowerSync handles sync**: Don't implement custom sync logic
+- **Use TanStack Query**: For caching and optimistic updates
+- **Type-safe queries**: Use proper TypeScript interfaces
+
+## Database Access Patterns
+```typescript
+// ✅ GOOD: Use PowerSync hooks with TanStack Query
+import { usePowerSync } from '@/shared/hooks/usePowerSync';
+import { useSync } from '@/shared/hooks/useSyncFromStore';
+import { localDataService } from '@/shared/services/database/LocalDataService';
+
+const { data: verses, isLoading, error } = useQuery({
+  queryKey: ['verses', chapterId],
+  queryFn: () => localDataService.getVersesForUI(chapterId),
+  enabled: isInitialized && !!chapterId,
+  staleTime: 5 * 60 * 1000, // 5 minutes
+});
+
+// Direct PowerSync access when needed
+const { execute, getAll, get, watch } = usePowerSync();
+const result = await getAll('SELECT * FROM verses WHERE chapter_id = ?', [chapterId]);
+```
+
+## Service Layer Patterns
+```typescript
+// ✅ GOOD: Create service methods for complex queries
+export class BibleService {
+  async getChapterVerses(chapterId: string): Promise<Verse[]> {
+    const powersync = PowerSyncSystem.getInstance();
+    return await powersync.getAll(
+      'SELECT * FROM verses WHERE chapter_id = ? ORDER BY verse_number',
+      [chapterId]
+    );
+  }
+  
+  async searchVerses(query: string): Promise<Verse[]> {
+    const powersync = PowerSyncSystem.getInstance();
+    return await powersync.getAll(
+      'SELECT * FROM verses WHERE text LIKE ? LIMIT 100',
+      [`%${query}%`]
+    );
+  }
+}
+```
+
+## Query Key Patterns
+```typescript
+// ✅ GOOD: Structured query keys for proper caching
+export const bibleQueryKeys = {
+  all: ['bible'] as const,
+  books: () => [...bibleQueryKeys.all, 'books'] as const,
+  chapters: (bookId: string) => [...bibleQueryKeys.all, 'chapters', bookId] as const,
+  verses: (chapterId: string) => [...bibleQueryKeys.all, 'verses', chapterId] as const,
+  search: (query: string) => [...bibleQueryKeys.all, 'search', query] as const,
+} as const;
+```
+
+## Error Handling
+```typescript
+// ✅ GOOD: Handle database errors gracefully
+const { data: verses, error } = useQuery({
+  queryKey: bibleQueryKeys.verses(chapterId),
+  queryFn: async () => {
+    try {
+      return await localDataService.getVersesForUI(chapterId);
+    } catch (error) {
+      logger.error('Failed to fetch verses:', error);
+      throw new Error('Failed to load verses. Please try again.');
+    }
+  },
+  retry: (failureCount, error) => {
+    // Retry database errors up to 3 times
+    return failureCount < 3;
+  },
+});
+```
+
+## Optimistic Updates
+```typescript
+// ✅ GOOD: Optimistic updates for bookmarks
+const addBookmarkMutation = useMutation({
+  mutationFn: async (verse: Verse) => {
+    return await localDataService.addBookmark(verse.id);
+  },
+  onMutate: async (verse) => {
+    // Cancel outgoing refetches
+    await queryClient.cancelQueries({ queryKey: ['bookmarks'] });
+    
+    // Snapshot previous value
+    const previousBookmarks = queryClient.getQueryData(['bookmarks']);
+    
+    // Optimistically update
+    queryClient.setQueryData(['bookmarks'], (old: Verse[]) => [...old, verse]);
+    
+    return { previousBookmarks };
+  },
+  onError: (err, verse, context) => {
+    // Rollback on error
+    queryClient.setQueryData(['bookmarks'], context?.previousBookmarks);
+  },
+});
+```
+
+## Real-time Updates
+```typescript
+// ✅ GOOD: Use PowerSync watch for real-time updates
+const useRealtimeVerses = (chapterId: string) => {
+  const { watch } = usePowerSync();
+  const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    if (!watch) return;
+    
+    const watchHandle = watch(
+      'SELECT * FROM verses WHERE chapter_id = ?',
+      [chapterId],
+      { tables: ['verses'] }
+    );
+    
+    watchHandle.subscribe((result) => {
+      queryClient.setQueryData(['verses', chapterId], result.rows);
+    });
+    
+    return () => watchHandle.unsubscribe();
+  }, [chapterId, watch, queryClient]);
+};
+```
+
+## Common Anti-Patterns to Avoid
+```typescript
+// ❌ AVOID: Direct database calls without proper hooks
+const verses = await database.execute('SELECT * FROM verses');
+
+// ❌ AVOID: Implementing custom sync logic
+const syncVerses = () => {
+  // PowerSync handles this automatically
+};
+
+// ❌ AVOID: Not handling offline state
+if (navigator.onLine) {
+  fetchData(); // App should work offline
+}
+
+// ❌ AVOID: Blocking the UI with large queries
+const allVerses = await database.getAll('SELECT * FROM verses'); // Too much data
+
+// ❌ AVOID: Not using query invalidation
+await addBookmark(verse);
+// Should invalidate related queries
+```
+
+## Performance Best Practices
+- Use proper indexes in your PowerSync schema
+- Limit query results with LIMIT clauses
+- Use pagination for large datasets
+- Implement proper query key invalidation
+- Use React.memo() for expensive verse components
+- Implement virtual scrolling for long lists

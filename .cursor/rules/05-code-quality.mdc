@@ -1,0 +1,99 @@
+
+# Code Quality & Documentation
+
+## Code Organization
+- One component per file
+- Descriptive file and function names
+- Use barrel exports in index.ts files
+- Group related functionality together
+
+## Comments & Documentation
+- Document complex business logic
+- Use JSDoc for public APIs
+- Avoid obvious comments
+- Explain WHY, not WHAT
+
+## Testing Patterns
+- Write unit tests for business logic
+- Test components with React Native Testing Library
+- Mock external dependencies properly
+- Test error scenarios and edge cases
+
+## LLM Optimization
+- Use descriptive variable names
+- Keep functions focused and small
+- Avoid deep nesting (max 3 levels)
+- Use meaningful commit messages
+
+## Error Handling
+- Use proper try/catch blocks
+- Log errors with context
+- Provide user-friendly error messages
+- Handle network failures gracefully
+
+## Performance
+- Implement proper loading states
+- Use React.memo() judiciously
+- Optimize bundle size with lazy loading
+- Monitor memory usage and leaks
+
+## Security
+- Validate all inputs
+- Use proper authentication patterns
+- Store sensitive data securely
+- Implement proper permission checks
+
+## Offline-First Database Rules
+```typescript
+// ✅ GOOD: Use PowerSync with TanStack Query
+const { data: verses } = useQuery({
+  queryKey: ['verses', chapterId],
+  queryFn: () => localDataService.getVerses(chapterId),
+  enabled: isInitialized,
+});
+
+// ❌ AVOID: Direct SQL without proper hooks
+const verses = await database.execute('SELECT * FROM verses');
+```
+
+## Theme System Rules
+```typescript
+// ✅ GOOD: Use theme system
+const useStyles = createThemedStyles((theme) => ({
+  container: { backgroundColor: theme.colors.background },
+}));
+
+// ❌ AVOID: Inline styles or hardcoded colors
+<View style={{ backgroundColor: '#ffffff' }} />
+<Text style={{ color: 'red', fontSize: 16 }} />
+```
+
+## Internationalization Rules
+```typescript
+// ✅ GOOD: Use translation keys
+const { t } = useTranslation();
+<Text>{t('common.loading')}</Text>
+<Text>{t('bible.chapter', { number: 1 })}</Text>
+
+// ❌ AVOID: Hardcoded strings
+<Text>Loading...</Text>
+<Text>Chapter 1</Text>
+<Text>{`Chapter ${number}`}</Text>
+```
+
+## Required Imports
+```typescript
+// For database operations
+import { usePowerSync } from '@/shared/hooks/usePowerSync';
+import { useSync } from '@/shared/hooks/useSyncFromStore';
+import { localDataService } from '@/shared/services/database/LocalDataService';
+
+// For theming
+import { createThemedStyles } from '@/shared/utils/theme';
+import { useThemeFromStore } from '@/shared/hooks/useThemeFromStore';
+
+// For translations
+import { useTranslation } from 'react-i18next';
+```
+- Store sensitive data securely
+- Implement proper permission checks

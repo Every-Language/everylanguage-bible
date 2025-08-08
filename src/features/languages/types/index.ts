@@ -6,9 +6,6 @@ export * from './entities';
 // Service interfaces and DTOs
 export * from './services';
 
-// Store types
-export * from './store';
-
 // UI component types
 export * from './ui';
 

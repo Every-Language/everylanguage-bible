@@ -1,6 +1,6 @@
 import * as TaskManager from 'expo-task-manager';
 import { bibleSync } from './bible/BibleSyncService';
-import { languageSync } from './language/LanguageSyncService';
+// Language sync removed - using PowerSync and server-side fuzzy search instead
 import { MediaFilesVersesSyncService } from './media';
 import { logger } from '../../utils/logger';
 
@@ -44,14 +44,13 @@ export class BackgroundSyncService {
         }
         this.lastBackgroundCheck = now;
 
-        // Check for updates in bible, language, and media content
+        // Check for updates in bible and media content
+        // Language sync removed - using PowerSync and server-side fuzzy search instead
         const mediaFilesVersesSync = MediaFilesVersesSyncService.getInstance();
-        const [bibleUpdateCheck, languageUpdateCheck, mediaUpdateCheck] =
-          await Promise.all([
-            bibleSync.needsUpdate(),
-            languageSync.needsUpdate(),
-            mediaFilesVersesSync.needsUpdate(),
-          ]);
+        const [bibleUpdateCheck, mediaUpdateCheck] = await Promise.all([
+          bibleSync.needsUpdate(),
+          mediaFilesVersesSync.needsUpdate(),
+        ]);
 
         let hasNewData = false;
 
@@ -62,12 +61,7 @@ export class BackgroundSyncService {
           hasNewData = true;
         }
 
-        if (languageUpdateCheck.needsUpdate) {
-          logger.info('Background sync: Language content updates detected');
-          // Use smaller batch size for background sync
-          await languageSync.syncAll({ batchSize: 100 });
-          hasNewData = true;
-        }
+        // Language sync removed - using PowerSync and server-side fuzzy search instead
 
         if (mediaUpdateCheck.needsUpdate) {
           logger.info('Background sync: Media files verses updates detected');
@@ -170,13 +164,11 @@ export class BackgroundSyncService {
    */
   async checkForChanges(): Promise<boolean> {
     try {
-      // Check for updates in both bible and language content
-      const [bibleUpdateCheck, languageUpdateCheck] = await Promise.all([
-        bibleSync.needsUpdate(),
-        languageSync.needsUpdate(),
-      ]);
+      // Check for updates in bible content only
+      // Language sync removed - using PowerSync and server-side fuzzy search instead
+      const bibleUpdateCheck = await bibleSync.needsUpdate();
 
-      return bibleUpdateCheck.needsUpdate || languageUpdateCheck.needsUpdate;
+      return bibleUpdateCheck.needsUpdate;
     } catch (error: unknown) {
       const err = error as Error;
       logger.error('Error in checkForChanges:', {
@@ -196,17 +188,9 @@ export class BackgroundSyncService {
   async hasRemoteChanges(tableName: string): Promise<boolean> {
     try {
       // Check which service should handle this table
-      const languageTables = [
-        'language_entities_cache',
-        'available_versions_cache',
-        'user_saved_versions',
-      ];
-
-      if (languageTables.includes(tableName)) {
-        return await languageSync.hasRemoteChanges(tableName);
-      } else {
-        return await bibleSync.hasRemoteChanges(tableName);
-      }
+      // Language tables removed - using PowerSync and server-side fuzzy search instead
+      // All remaining tables are handled by bible sync
+      return await bibleSync.hasRemoteChanges(tableName);
     } catch (error: unknown) {
       const err = error as Error;
       logger.error(`Error checking for remote changes in ${tableName}:`, {
@@ -225,14 +209,11 @@ export class BackgroundSyncService {
    */
   async checkForRemoteChanges(): Promise<void> {
     try {
-      const [bibleUpdateCheck, languageUpdateCheck] = await Promise.all([
-        bibleSync.needsUpdate(),
-        languageSync.needsUpdate(),
-      ]);
+      // Language sync removed - using PowerSync and server-side fuzzy search instead
+      const bibleUpdateCheck = await bibleSync.needsUpdate();
 
       const allChangedTables = [
         ...(bibleUpdateCheck.needsUpdate ? bibleUpdateCheck.tables : []),
-        ...(languageUpdateCheck.needsUpdate ? languageUpdateCheck.tables : []),
       ];
 
       if (allChangedTables.length > 0) {
@@ -310,21 +291,14 @@ export class BackgroundSyncService {
     try {
       logger.info('Starting manual content sync...');
 
-      const [bibleUpdateCheck, languageUpdateCheck] = await Promise.all([
-        bibleSync.needsUpdate(),
-        languageSync.needsUpdate(),
-      ]);
+      // Language sync removed - using PowerSync and server-side fuzzy search instead
+      const bibleUpdateCheck = await bibleSync.needsUpdate();
 
       let syncedContent = [];
 
       if (bibleUpdateCheck.needsUpdate) {
         await bibleSync.syncAll({ batchSize: 200 });
         syncedContent.push('Bible content');
-      }
-
-      if (languageUpdateCheck.needsUpdate) {
-        await languageSync.syncAll({ batchSize: 200 });
-        syncedContent.push('Language content');
       }
 
       if (syncedContent.length > 0) {

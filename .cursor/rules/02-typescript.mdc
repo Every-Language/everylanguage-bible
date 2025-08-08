@@ -1,0 +1,42 @@
+---
+description: TypeScript best practices and type safety standards
+globs: ["**/*.{ts,tsx}"]
+alwaysApply: false
+---
+
+# TypeScript Best Practices
+
+## Type Definitions
+- Use `interface` for object shapes, `type` for unions/intersections
+- Define strict prop interfaces for React components
+- Use `Record<K, V>` for key-value objects
+- Prefer `unknown` over `any` for unchecked types
+
+## Function Types
+- Use function declarations for named functions
+- Use arrow functions for callbacks and inline functions
+- Always type function parameters and return types
+- Use generic constraints: `<T extends SomeType>`
+
+## Import/Export Patterns
+```typescript
+// Preferred exports
+export const MyComponent = () => {};
+export type MyType = {};
+export interface MyInterface {}
+
+// Imports
+import type { MyType } from './types';
+import { MyComponent } from './components';
+```
+
+## Common Types
+- Use `React.FC<Props>` for components with children
+- Use `React.ComponentProps<'button'>` for extending native elements
+- Use `NonNullable<T>` and `Partial<T>` utilities
+- Create shared types in `/types` directories
+
+## Error Handling
+- Type error objects: `Error | AuthError | DatabaseError`
+- Use discriminated unions for state management
+- Implement type guards for runtime checks

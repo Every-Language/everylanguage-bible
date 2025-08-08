@@ -9,14 +9,10 @@ import {
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/shared/hooks';
 import { useNetworkForAction } from '@/shared/hooks/useNetworkState';
-import { LanguageHierarchyBrowser } from '@/features/languages/components/LanguageHierarchyBrowser';
+import { VersionSelectionModal } from '@/features/languages/components';
+import { useUserVersions } from '@/features/languages/hooks';
 import { NoInternetModal } from '@/shared/components';
 import { logger } from '@/shared/utils/logger';
-import type {
-  AudioVersion,
-  TextVersion,
-  LanguageEntity,
-} from '@/features/languages/types';
 import { COLOR_VARIATIONS } from '@/shared/constants/theme';
 
 interface MotherTongueSearchScreenProps {
@@ -31,11 +27,8 @@ export const MotherTongueSearchScreen: React.FC<
   const { isOnline, ensureNetworkAvailable, retryAndExecute } =
     useNetworkForAction();
 
-  // State for version selection
-  const [currentAudioVersion, setCurrentAudioVersion] =
-    useState<AudioVersion | null>(null);
-  const [currentTextVersion, setCurrentTextVersion] =
-    useState<TextVersion | null>(null);
+  // Get current versions from the new PowerSync-based hook
+  const { currentAudioVersion, currentTextVersion } = useUserVersions();
 
   // State for modals
   const [showNoInternetModal, setShowNoInternetModal] = useState(false);
@@ -73,31 +66,7 @@ export const MotherTongueSearchScreen: React.FC<
     setShowTextVersionBrowser(true);
   };
 
-  const handleAudioVersionSelect = (
-    version: AudioVersion | TextVersion,
-    type: 'audio' | 'text'
-  ) => {
-    // Handle audio version selection
-    if (type === 'audio') {
-      setCurrentAudioVersion(version as AudioVersion);
-    }
-    setShowAudioVersionBrowser(false);
-  };
-
-  const handleTextVersionSelect = (
-    version: AudioVersion | TextVersion,
-    type: 'audio' | 'text'
-  ) => {
-    // Handle text version selection
-    if (type === 'text') {
-      setCurrentTextVersion(version as TextVersion);
-    }
-    setShowTextVersionBrowser(false);
-  };
-
-  const handleLanguageSelect = (_language: LanguageEntity) => {
-    // Handle language selection
-  };
+  // The new VersionSelectionModal handles selection internally through PowerSync
 
   const handleContinue = async () => {
     if (currentAudioVersion && currentTextVersion) {
@@ -134,7 +103,7 @@ export const MotherTongueSearchScreen: React.FC<
 
   const renderVersionCard = (
     type: 'audio' | 'text',
-    currentVersion: AudioVersion | TextVersion | null,
+    currentVersion: any | null,
     onPress: () => void,
     isSelected: boolean
   ) => {
@@ -335,23 +304,19 @@ export const MotherTongueSearchScreen: React.FC<
         onClose={() => setShowNoInternetModal(false)}
       />
 
-      {/* Language Hierarchy Browser for Text Versions */}
-      <LanguageHierarchyBrowser
+      {/* Version Selection Modal for Text Versions */}
+      <VersionSelectionModal
         visible={showTextVersionBrowser}
         onClose={() => setShowTextVersionBrowser(false)}
-        onLanguageSelect={handleLanguageSelect}
-        onVersionSelect={handleTextVersionSelect}
-        mode='browse'
+        versionType='text'
         title='Select Text Version'
       />
 
-      {/* Language Hierarchy Browser for Audio Versions */}
-      <LanguageHierarchyBrowser
+      {/* Version Selection Modal for Audio Versions */}
+      <VersionSelectionModal
         visible={showAudioVersionBrowser}
         onClose={() => setShowAudioVersionBrowser(false)}
-        onLanguageSelect={handleLanguageSelect}
-        onVersionSelect={handleAudioVersionSelect}
-        mode='browse'
+        versionType='audio'
         title='Select Audio Version'
       />
     </SafeAreaView>

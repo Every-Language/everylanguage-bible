@@ -28,7 +28,7 @@ import { queryClient } from '@/shared/services/query/queryClient';
 import { bibleQueryKeys } from '@/features/bible/hooks/useBibleQueries';
 import { mediaFilesQueryKeys } from '@/features/media/hooks/useMediaFilesQueries';
 import { useCurrentVersions } from '@/features/languages/hooks';
-import { audioVersionValidationService } from '@/features/languages/services/audioVersionValidationService';
+import { useAudioVersionValidation } from '@/features/media/hooks/useAudioVersionValidation';
 
 // Query Keys for chapter audio info (for invalidation)
 const chapterAudioInfoQueryKeys = {
@@ -104,6 +104,8 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
 
   // Audio version validation
   const { currentAudioVersion } = useCurrentVersions();
+  const { validateForDownload, getValidationError } =
+    useAudioVersionValidation();
   const [audioVersionError, setAudioVersionError] = useState<string | null>(
     null
   );
@@ -280,16 +282,12 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
   const handleOnlineCapabilitiesCheck = useCallback(async () => {
     try {
       // Validate audio version before searching
-      const validation =
-        await audioVersionValidationService.validateVersionForChapter(
-          currentAudioVersion,
-          chapterId
-        );
+      const isValid = await validateForDownload(chapterId);
 
-      if (!validation.isValid) {
-        setAudioVersionError(
-          validation.error || 'Audio version validation failed'
-        );
+      if (!isValid) {
+        const errorMessage =
+          getValidationError() || 'Audio version validation failed';
+        setAudioVersionError(errorMessage);
         return;
       }
 
@@ -309,6 +307,8 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     chapterId,
     versionId,
     currentAudioVersion,
+    validateForDownload,
+    getValidationError,
   ]);
 
   // Download all files
@@ -316,14 +316,11 @@ export const ChapterDownloadModal: React.FC<ChapterDownloadModalProps> = ({
     if (searchResults.length === 0) return;
 
     // Validate audio version before downloading
-    const validation =
-      await audioVersionValidationService.validateForDownload(
-        currentAudioVersion
-      );
-    if (!validation.isValid) {
-      setAudioVersionError(
-        validation.error || 'Audio version validation failed'
-      );
+    const isValid = await validateForDownload();
+    if (!isValid) {
+      const errorMessage =
+        getValidationError() || 'Audio version validation failed';
+      setAudioVersionError(errorMessage);
       return;
     }
 

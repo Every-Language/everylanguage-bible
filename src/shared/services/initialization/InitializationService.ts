@@ -1,8 +1,9 @@
-import DatabaseManager, { DatabaseState } from '../database/DatabaseManager';
 import { backgroundSyncService } from '../sync/BackgroundSyncService';
-import { localDataService } from '../database/LocalDataService';
-import { initializeCombinedLanguageSelectionStore } from '../../../features/languages/store';
-import { logger } from '@/shared/utils/logger';
+import DatabaseManager, { DatabaseState } from '../database/DatabaseManager';
+import { LocalDataService } from '../database/LocalDataService';
+import { powerSyncSystem } from '../powersync/PowerSyncSystem';
+import { powerSyncConnectionManager } from '../powersync/PowerSyncConnectionManager';
+import { logger } from '../../utils/logger';
 
 interface InitializationStep {
   name: string;
@@ -42,7 +43,8 @@ export class InitializationService {
   }
 
   /**
-   * Initialize all app services in proper order
+   * Initialize all app services in proper order following PowerSync best practices
+   * Separates offline-capable services from network-dependent ones
    */
   async initialize(): Promise<void> {
     // Return existing promise if initialization is in progress
@@ -76,32 +78,39 @@ export class InitializationService {
     this.isInitializing = true;
     this.initializationError = null;
 
+    // Define initialization steps following PowerSync best practices
     const steps: InitializationStep[] = [
       {
-        name: 'Database',
+        name: 'Database Manager',
         execute: () => DatabaseManager.getInstance().initialize(),
         required: true,
         timeout: 10000,
       },
       {
-        name: 'Language Selection Store',
-        execute: () => initializeCombinedLanguageSelectionStore(),
-        required: false,
-        timeout: 15000, // Increased timeout for language sync operations
+        name: 'PowerSync Database',
+        execute: () => powerSyncSystem.initialize(),
+        required: true,
+        timeout: 8000,
+      },
+      {
+        name: 'PowerSync Connection Manager',
+        execute: () => powerSyncConnectionManager.initialize(),
+        required: false, // Optional - app works offline without this
+        timeout: 5000,
       },
       {
         name: 'Background Sync',
         execute: () => backgroundSyncService.initialize(),
-        required: false,
+        required: false, // Optional - for background processing
         timeout: 5000,
       },
       {
         name: 'Local Data Service',
         execute: async () => {
           // Verify database is accessible
-          await localDataService.getBooks();
+          await LocalDataService.getInstance().getBooks();
         },
-        required: false,
+        required: false, // Optional - just a verification step
         timeout: 3000,
       },
     ];
@@ -154,6 +163,9 @@ export class InitializationService {
       this.isInitializing = false;
 
       logger.info('🎉 App initialization completed successfully');
+
+      // Log initialization summary
+      this.logInitializationSummary();
     } catch (error) {
       this.isInitializing = false;
       this.initializationError =
@@ -163,6 +175,42 @@ export class InitializationService {
       logger.error('💥 App initialization failed:', error);
       throw this.initializationError;
     }
+  }
+
+  /**
+   * Log a summary of initialization results
+   */
+  private logInitializationSummary(): void {
+    const completed = this.progress.completedSteps.filter(
+      step => !step.includes('(failed)')
+    );
+    const failed = this.progress.completedSteps.filter(step =>
+      step.includes('(failed)')
+    );
+
+    logger.info('📋 Initialization Summary:', {
+      total: this.progress.totalSteps,
+      completed: completed.length,
+      failed: failed.length,
+      services: {
+        successful: completed,
+        failed: failed.map(step => step.replace(' (failed)', '')),
+      },
+    });
+
+    // Log offline capabilities
+    const hasPowerSyncDb = completed.some(step =>
+      step.includes('PowerSync Database')
+    );
+    const hasPowerSyncConnection = completed.some(step =>
+      step.includes('PowerSync Connection Manager')
+    );
+
+    logger.info('🔄 App Capabilities:', {
+      canWorkOffline: hasPowerSyncDb,
+      canSync: hasPowerSyncConnection,
+      mode: hasPowerSyncConnection ? 'Online + Offline' : 'Offline Only',
+    });
   }
 
   private async executeWithTimeout(
@@ -268,6 +316,44 @@ export class InitializationService {
    */
   getDatabaseState(): DatabaseState {
     return DatabaseManager.getInstance().currentState;
+  }
+
+  /**
+   * Get PowerSync connection state for debugging
+   */
+  getPowerSyncState() {
+    try {
+      return {
+        database: {
+          isInitialized: powerSyncSystem.isInitialized,
+          isConnected: powerSyncSystem.isConnected,
+          status: powerSyncSystem.getStatus(),
+        },
+        connectionManager: powerSyncConnectionManager.getState(),
+      };
+    } catch {
+      return {
+        database: { error: 'Failed to get PowerSync database state' },
+        connectionManager: { error: 'Failed to get connection manager state' },
+      };
+    }
+  }
+
+  /**
+   * Check if the app can work offline (core functionality available)
+   */
+  canWorkOffline(): boolean {
+    const dbReady = DatabaseManager.getInstance().isReady();
+    const powerSyncDbReady = powerSyncSystem.isInitialized;
+    return dbReady && powerSyncDbReady;
+  }
+
+  /**
+   * Check if the app can sync (network functionality available)
+   */
+  canSync(): boolean {
+    const connectionState = powerSyncConnectionManager.getState();
+    return connectionState.isInitialized && connectionState.isConnected;
   }
 }
 
