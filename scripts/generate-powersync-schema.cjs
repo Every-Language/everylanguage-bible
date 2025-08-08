@@ -52,16 +52,28 @@ function generateSchema() {
       fs.mkdirSync(schemaDir, { recursive: true });
     }
 
-    // Normalize and write the modified schema to the output file
-    const normalizedSchema = normalizeSchema(schemaContent);
-    fs.writeFileSync(SCHEMA_OUTPUT_FILE, normalizedSchema);
+    // Write the schema first, then format it with Prettier
+    fs.writeFileSync(SCHEMA_OUTPUT_FILE, schemaContent);
+    
+    // Format the file with Prettier to match project style
+    try {
+      console.log('🎨 Formatting schema with Prettier...');
+      execSync(`npx prettier --write "${SCHEMA_OUTPUT_FILE}"`, { encoding: 'utf8' });
+      console.log('✅ Schema formatted successfully');
+    } catch (prettierError) {
+      console.warn('⚠️  Prettier formatting failed, but schema was generated');
+      console.warn('   Run `npx prettier --write powersync/AppSchema.ts` manually if needed');
+    }
+    
+    // Read the final formatted content for table extraction
+    const finalContent = fs.readFileSync(SCHEMA_OUTPUT_FILE, 'utf8');
 
     console.log(`✅ Schema generated successfully: ${SCHEMA_OUTPUT_FILE}`);
     console.log('');
     console.log('📋 Generated schema includes the following tables:');
     
     // Extract table names from the schema for summary
-    const tableMatches = normalizedSchema.match(/const (\w+) = new Table/g);
+    const tableMatches = finalContent.match(/const (\w+) = new Table/g);
     if (tableMatches) {
       tableMatches.forEach(match => {
         const tableName = match.match(/const (\w+) =/)[1];
