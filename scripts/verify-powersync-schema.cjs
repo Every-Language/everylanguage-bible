@@ -23,11 +23,21 @@ function generateTempSchema() {
     throw new Error(`Sync rules file not found: ${SYNC_RULES_FILE}`);
   }
 
+  // Debug: Show environment variables
+  console.log('🔧 PowerSync CLI environment:');
+  console.log(`   PROJECT_ID: ${process.env.PROJECT_ID ? 'set' : 'not set'}`);
+  console.log(`   ORG_ID: ${process.env.ORG_ID ? 'set' : 'not set'}`);
+  console.log(`   AUTH_TOKEN: ${process.env.AUTH_TOKEN ? 'set' : 'not set'}`);
+  console.log(`   INSTANCE_ID: ${process.env.INSTANCE_ID ? 'set' : 'not set'}`);
+
   // Generate schema using PowerSync CLI
   const output = execSync(
     `npx powersync instance sync-rules generate-schema -f "${SYNC_RULES_FILE}" -l js`,
     { encoding: 'utf8' }
   );
+
+  console.log(`🔧 Raw CLI output length: ${output.length} characters`);
+  console.log(`🔧 Raw CLI output preview: "${output.substring(0, 150)}..."`);
 
   // Modify the generated schema to use React Native imports
   let schemaContent = output;
@@ -42,7 +52,11 @@ function generateTempSchema() {
     "// Alternative: import { column, Schema, Table } from '@powersync/web';"
   );
 
-  return normalizeSchema(schemaContent);
+  const normalized = normalizeSchema(schemaContent);
+  console.log(`🔧 Normalized schema length: ${normalized.length} characters`);
+  console.log(`🔧 Normalized schema preview: "${normalized.substring(0, 150)}..."`);
+
+  return normalized;
 }
 
 function verifySchema() {
@@ -85,6 +99,30 @@ function verifySchema() {
       console.error('');
       console.error('🔧 The committed schema file differs from what would be generated from the current sync rules.');
       console.error('');
+      
+      // Enhanced debugging output
+      console.error('🔍 Debugging information:');
+      console.error(`   Committed schema length: ${committedSchema.length} characters`);
+      console.error(`   Expected schema length:  ${expectedSchema.length} characters`);
+      
+      // Show a sample of each for comparison
+      const committedSample = committedSchema.substring(0, 200);
+      const expectedSample = expectedSchema.substring(0, 200);
+      console.error('');
+      console.error('📄 First 200 characters of committed schema:');
+      console.error(`   "${committedSample}..."`);
+      console.error('');
+      console.error('📄 First 200 characters of expected schema:');
+      console.error(`   "${expectedSample}..."`);
+      console.error('');
+      
+      // Check for specific differences
+      if (committedSchema.includes('@powersync/web') && expectedSchema.includes('@powersync/react-native')) {
+        console.error('⚠️  Import difference detected: committed uses @powersync/web, expected uses @powersync/react-native');
+      } else if (committedSchema.includes('@powersync/react-native') && expectedSchema.includes('@powersync/web')) {
+        console.error('⚠️  Import difference detected: committed uses @powersync/react-native, expected uses @powersync/web');
+      }
+      
       console.error('💡 To fix this, run:');
       console.error('   npm run powersync:generate-schema');
       console.error('');
