@@ -1,6 +1,5 @@
 import { column, Schema, Table } from '@powersync/react-native';
 // Alternative: import { column, Schema, Table } from '@powersync/web';
-
 const bible_versions = new Table(
   {
     // id column (text) is automatically included
@@ -11,7 +10,6 @@ const bible_versions = new Table(
   },
   { indexes: {} }
 );
-
 const books = new Table(
   {
     // id column (text) is automatically included
@@ -25,7 +23,6 @@ const books = new Table(
   },
   { indexes: {} }
 );
-
 const chapters = new Table(
   {
     // id column (text) is automatically included
@@ -38,7 +35,6 @@ const chapters = new Table(
   },
   { indexes: {} }
 );
-
 const verses = new Table(
   {
     // id column (text) is automatically included
@@ -50,7 +46,6 @@ const verses = new Table(
   },
   { indexes: {} }
 );
-
 const image_sets = new Table(
   {
     // id column (text) is automatically included
@@ -61,7 +56,6 @@ const image_sets = new Table(
   },
   { indexes: {} }
 );
-
 const images = new Table(
   {
     // id column (text) is automatically included
@@ -78,7 +72,6 @@ const images = new Table(
   },
   { indexes: {} }
 );
-
 const sessions = new Table(
   {
     // id column (text) is automatically included
@@ -96,7 +89,6 @@ const sessions = new Table(
   },
   { indexes: {} }
 );
-
 const share_opens = new Table(
   {
     // id column (text) is automatically included
@@ -112,7 +104,6 @@ const share_opens = new Table(
   },
   { indexes: {} }
 );
-
 const shares = new Table(
   {
     // id column (text) is automatically included
@@ -129,7 +120,6 @@ const shares = new Table(
   },
   { indexes: {} }
 );
-
 const verse_listens = new Table(
   {
     // id column (text) is automatically included
@@ -145,7 +135,6 @@ const verse_listens = new Table(
   },
   { indexes: {} }
 );
-
 const media_file_listens = new Table(
   {
     // id column (text) is automatically included
@@ -163,7 +152,6 @@ const media_file_listens = new Table(
   },
   { indexes: {} }
 );
-
 const app_downloads = new Table(
   {
     // id column (text) is automatically included
@@ -180,7 +168,6 @@ const app_downloads = new Table(
   },
   { indexes: {} }
 );
-
 const user_current_selections = new Table(
   {
     // id column (text) is automatically included
@@ -192,7 +179,6 @@ const user_current_selections = new Table(
   },
   { indexes: {} }
 );
-
 const user_saved_text_versions = new Table(
   {
     // id column (text) is automatically included
@@ -203,7 +189,6 @@ const user_saved_text_versions = new Table(
   },
   { indexes: {} }
 );
-
 const user_saved_audio_versions = new Table(
   {
     // id column (text) is automatically included
@@ -214,7 +199,6 @@ const user_saved_audio_versions = new Table(
   },
   { indexes: {} }
 );
-
 const audio_versions = new Table(
   {
     // id column (text) is automatically included
@@ -229,7 +213,6 @@ const audio_versions = new Table(
   },
   { indexes: {} }
 );
-
 const media_files = new Table(
   {
     // id column (text) is automatically included
@@ -254,7 +237,6 @@ const media_files = new Table(
   },
   { indexes: {} }
 );
-
 const media_files_verses = new Table(
   {
     // id column (text) is automatically included
@@ -270,7 +252,6 @@ const media_files_verses = new Table(
   },
   { indexes: {} }
 );
-
 const text_versions = new Table(
   {
     // id column (text) is automatically included
@@ -286,7 +267,6 @@ const text_versions = new Table(
   },
   { indexes: {} }
 );
-
 const verse_texts = new Table(
   {
     // id column (text) is automatically included
@@ -302,7 +282,6 @@ const verse_texts = new Table(
   },
   { indexes: {} }
 );
-
 const user_bookmarks = new Table(
   {
     // id column (text) is automatically included
@@ -317,7 +296,6 @@ const user_bookmarks = new Table(
   },
   { indexes: {} }
 );
-
 const user_bookmark_folders = new Table(
   {
     // id column (text) is automatically included
@@ -330,7 +308,6 @@ const user_bookmark_folders = new Table(
   },
   { indexes: {} }
 );
-
 const user_saved_image_sets = new Table(
   {
     // id column (text) is automatically included
@@ -341,7 +318,6 @@ const user_saved_image_sets = new Table(
   },
   { indexes: {} }
 );
-
 const user_playlist_groups = new Table(
   {
     // id column (text) is automatically included
@@ -353,7 +329,6 @@ const user_playlist_groups = new Table(
   },
   { indexes: {} }
 );
-
 const user_playlists = new Table(
   {
     // id column (text) is automatically included
@@ -367,7 +342,6 @@ const user_playlists = new Table(
   },
   { indexes: {} }
 );
-
 const playlists = new Table(
   {
     // id column (text) is automatically included
@@ -380,7 +354,6 @@ const playlists = new Table(
   },
   { indexes: {} }
 );
-
 const playlist_items = new Table(
   {
     // id column (text) is automatically included
@@ -394,7 +367,6 @@ const playlist_items = new Table(
   },
   { indexes: {} }
 );
-
 export const AppSchema = new Schema({
   bible_versions,
   books,

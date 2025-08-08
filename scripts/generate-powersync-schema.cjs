@@ -7,6 +7,14 @@ const path = require('path');
 const SYNC_RULES_FILE = 'powersync/sync-rules.yaml';
 const SCHEMA_OUTPUT_FILE = 'powersync/AppSchema.ts';
 
+function normalizeSchema(content) {
+  // Normalize whitespace and line endings for comparison
+  return content
+    .replace(/\r\n/g, '\n') // Convert Windows line endings
+    .replace(/\s+$/gm, '') // Remove trailing whitespace
+    .trim();
+}
+
 function generateSchema() {
   console.log('🔄 Generating PowerSync schema from sync rules...');
 
@@ -44,15 +52,16 @@ function generateSchema() {
       fs.mkdirSync(schemaDir, { recursive: true });
     }
 
-    // Write the modified schema to the output file
-    fs.writeFileSync(SCHEMA_OUTPUT_FILE, schemaContent);
+    // Normalize and write the modified schema to the output file
+    const normalizedSchema = normalizeSchema(schemaContent);
+    fs.writeFileSync(SCHEMA_OUTPUT_FILE, normalizedSchema);
 
     console.log(`✅ Schema generated successfully: ${SCHEMA_OUTPUT_FILE}`);
     console.log('');
     console.log('📋 Generated schema includes the following tables:');
     
     // Extract table names from the schema for summary
-    const tableMatches = schemaContent.match(/const (\w+) = new Table/g);
+    const tableMatches = normalizedSchema.match(/const (\w+) = new Table/g);
     if (tableMatches) {
       tableMatches.forEach(match => {
         const tableName = match.match(/const (\w+) =/)[1];
