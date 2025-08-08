@@ -126,6 +126,10 @@ jobs:
 
       - name: Verify PowerSync schema consistency
         if: steps.powersync-changes.outputs.changes == 'true'
+        env:
+          AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
+          ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
+          PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
         run: |
           echo "🔍 Verifying PowerSync schema is consistent with sync rules..."
           npm run powersync:verify-schema
@@ -133,6 +137,10 @@ jobs:
 
       - name: Check for uncommitted schema changes
         if: steps.powersync-changes.outputs.changes == 'true'
+        env:
+          AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
+          ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
+          PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
         run: |
           echo "🔄 Generating fresh schema to compare..."
           npm run powersync:generate-schema

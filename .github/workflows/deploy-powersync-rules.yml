@@ -46,6 +46,10 @@ jobs:
           echo "✅ Sync rules YAML syntax is valid"
 
       - name: Verify schema is in sync with sync rules
+        env:
+          AUTH_TOKEN: ${{ secrets.POWERSYNC_API_TOKEN }}
+          ORG_ID: ${{ secrets.POWERSYNC_ORG_ID }}
+          PROJECT_ID: ${{ secrets.POWERSYNC_PROJECT_ID }}
         run: |
           echo "🔍 Checking if committed schema matches sync rules..."
           npm run powersync:verify-schema
